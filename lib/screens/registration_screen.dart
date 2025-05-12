@@ -1,5 +1,8 @@
+// lib/screens/registration_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+import 'login_screen.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -17,6 +20,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   String? _notificationStyle;
   String? _frequency;
   String? _tone;
+  String? _username;
+  String? _password;
 
   final _storage = const FlutterSecureStorage();
 
@@ -27,12 +32,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     await _storage.write(key: 'notificationStyle', value: _notificationStyle);
     await _storage.write(key: 'frequency', value: _frequency);
     await _storage.write(key: 'tone', value: _tone);
+    await _storage.write(key: 'username', value: _username);
+    await _storage.write(key: 'password', value: _password);
   }
 
   bool _isEmailValid(String email) {
-    return RegExp(r'^[^@\\s]+@[^@\\s]+\\.com\$').hasMatch(email);
+    return RegExp(r'^[^@]+@[^@]+\.(com)$').hasMatch(email);
   }
-
 
   bool _isNumeric(String input) => int.tryParse(input) != null;
 
@@ -95,6 +101,18 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     .toList(),
                 onChanged: (value) => setState(() => _tone = value),
                 validator: (value) => value == null ? 'Select tone' : null,
+              ), TextFormField(
+                decoration: const InputDecoration(labelText: 'Username'),
+                validator: (value) =>
+                value == null || value.isEmpty ? 'Enter a username' : null,
+                onChanged: (val) => _username = val,
+              ),
+              TextFormField(
+                decoration: const InputDecoration(labelText: 'Password'),
+                obscureText: true,
+                validator: (value) =>
+                value == null || value.length < 6 ? 'Password must be at least 6 characters' : null,
+                onChanged: (val) => _password = val,
               ),
               const SizedBox(height: 30),
               ElevatedButton(
@@ -105,6 +123,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       const SnackBar(content: Text('Preferences saved securely')),
                     );
                     Navigator.pop(context);
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    );
                   }
                 },
                 child: const Text('Continue'),
