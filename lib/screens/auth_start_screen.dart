@@ -1,5 +1,6 @@
 // lib/screens/auth_start_screen.dart
 import 'package:flutter/material.dart';
+import 'login_screen.dart';
 import 'registration_screen.dart';
 
 class AuthStartScreen extends StatelessWidget {
@@ -24,7 +25,11 @@ class AuthStartScreen extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             ElevatedButton(
-              onPressed: () {},
+              onPressed: () {
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()));
+
+              },
               child: const Text('Login'),
             ),
           ],
