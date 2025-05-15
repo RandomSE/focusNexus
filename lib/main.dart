@@ -1,13 +1,20 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'screens/auth_start_screen.dart';
+import 'screens/dashboard_screen.dart';
 
-void main() {
-  runApp(const FocusNexusApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final storage = FlutterSecureStorage();
+  final loggedIn = await storage.read(key: 'loggedIn');
+
+  runApp(FocusNexusApp(initialRoute: loggedIn == 'true' ? 'dashboard' : 'auth'));
 }
 
 class FocusNexusApp extends StatelessWidget {
-  const FocusNexusApp({super.key});
+  final String initialRoute;
+  const FocusNexusApp({super.key, required this.initialRoute});
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +25,31 @@ class FocusNexusApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const AuthStartScreen(),
+      initialRoute: initialRoute,
+      routes: {
+        'auth': (_) => const AuthStartScreen(),
+        'dashboard': (_) => const DashboardScreen(),
+        'settings': (_) => PlaceholderScreen('Settings'),
+        'reward': (_) => PlaceholderScreen('Avatar Customization'),
+        'chat': (_) => PlaceholderScreen('AI Chat / Therapist Space'),
+        'reminders': (_) => PlaceholderScreen('Reminders'),
+        'achievements': (_) => PlaceholderScreen('Achievements'),
+        'tasks': (_) => PlaceholderScreen('Tasks'),
+        'goals': (_) => PlaceholderScreen('Goal Setting'),
+      },
+    );
+  }
+}
+
+class PlaceholderScreen extends StatelessWidget {
+  final String title;
+  const PlaceholderScreen(this.title, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: Center(child: Text('$title screen coming soon...')),
     );
   }
 }

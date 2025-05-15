@@ -12,31 +12,31 @@ class DashboardScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16.0),
         children: [
           ElevatedButton(
-            onPressed: () {},
+            onPressed: () => Navigator.pushNamed(context, 'settings'),
             child: const Text('Settings'),
           ),
           ElevatedButton(
-            onPressed: () {},
+            onPressed: () => Navigator.pushNamed(context, 'reward'),
             child: const Text('Reward: Avatar'),
           ),
           ElevatedButton(
-            onPressed: () {},
+            onPressed: () => Navigator.pushNamed(context, 'chat'),
             child: const Text('AI Chat / Therapist Space'),
           ),
           ElevatedButton(
-            onPressed: () {},
+            onPressed: () => Navigator.pushNamed(context, 'reminders'),
             child: const Text('Reminders'),
           ),
           ElevatedButton(
-            onPressed: () {},
+            onPressed: () => Navigator.pushNamed(context, 'achievements'),
             child: const Text('Achievements'),
           ),
           ElevatedButton(
-            onPressed: () {},
+            onPressed: () => Navigator.pushNamed(context, 'tasks'),
             child: const Text('Tasks'),
           ),
           ElevatedButton(
-            onPressed: () {},
+            onPressed: () => Navigator.pushNamed(context, 'goals'),
             child: const Text('Goal Setting'),
           ),
         ],
