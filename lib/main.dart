@@ -1,6 +1,7 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:focusNexus/screens/goals_screen.dart';
 import 'screens/auth_start_screen.dart';
 import 'screens/dashboard_screen.dart';
 
@@ -35,7 +36,7 @@ class FocusNexusApp extends StatelessWidget {
         'reminders': (_) => PlaceholderScreen('Reminders'),
         'achievements': (_) => PlaceholderScreen('Achievements'),
         'tasks': (_) => PlaceholderScreen('Tasks'),
-        'goals': (_) => PlaceholderScreen('Goal Setting'),
+        'goals': (_) => const GoalsScreen(),
       },
     );
   }
