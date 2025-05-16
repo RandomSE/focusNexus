@@ -156,100 +156,153 @@ class _GoalsScreenState extends State<GoalsScreen> {
     );
   }
 
+  // ✅ Fixed overflow in goals build method with full scroll-safe layout
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(title: const Text('Goals')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  DropdownButtonFormField(
-                    value: _category,
-                    items: _categories.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-                    onChanged: (val) => setState(() => _category = val ?? 'Productivity'),
-                    decoration: const InputDecoration(labelText: 'Category'),
-                  ),
-                  DropdownButtonFormField(
-                    value: _complexity,
-                    items: _levels.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-                    onChanged: (val) => setState(() => _complexity = val ?? 'Low'),
-                    decoration: const InputDecoration(labelText: 'Complexity'),
-                  ),
-                  DropdownButtonFormField(
-                    value: _effort,
-                    items: _levels.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-                    onChanged: (val) => setState(() => _effort = val ?? 'Low'),
-                    decoration: const InputDecoration(labelText: 'Effort Required'),
-                  ),
-                  DropdownButtonFormField(
-                    value: _motivation,
-                    items: _levels.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-                    onChanged: (val) => setState(() => _motivation = val ?? 'Low'),
-                    decoration: const InputDecoration(labelText: 'Motivation Needed'),
-                  ),
-                  TextFormField(
-                    controller: _titleController,
-                    decoration: const InputDecoration(labelText: 'Goal Title'),
-                    validator: (v) => v == null || v.isEmpty ? 'Title required' : null,
-                  ),
-                  DropdownButtonFormField<String>(
-                    hint: const Text('Template (optional)'),
-                    items: _templates.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-                    onChanged: (val) => _titleController.text = val ?? '',
-                  ),
-                  TextFormField(
-                    controller: _timeController,
-                    decoration: const InputDecoration(labelText: 'Time Required in minutes'),
-                    validator: (v) => v == null || v.isEmpty ? 'Enter time needed' : null,
-                  ),
-                  TextFormField(
-                    controller: _stepsController,
-                    decoration: const InputDecoration(labelText: 'Steps (if any)'),
-                    validator: (v) => v == null || v.isEmpty ? 'Describe steps or type "None"' : null,
-                  ),
-                  const SizedBox(height: 10),
-                  ElevatedButton(onPressed: _createGoal, child: const Text('Add Goal')),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            Expanded(
-              child: ListView.builder(
-                itemCount: _activeGoals.length,
-                itemBuilder: (_, i) {
-                  final g = _activeGoals[i];
-                  return ListTile(
-                    title: Text(g['title']),
-                    subtitle: Text('${g['points']} pts | ${g['category']}'),
-                    onTap: () => _viewGoalDetails(g),
-                    trailing: Wrap(
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) =>
+              SingleChildScrollView(
+                padding: const EdgeInsets.all(16.0),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: IntrinsicHeight(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        IconButton(
-                          icon: const Icon(Icons.check),
-                          onPressed: () => _completeGoal(i),
-                          tooltip: 'Mark Complete',
+                        Form(
+                          key: _formKey,
+                          child: Column(
+                            children: [
+                              DropdownButtonFormField(
+                                value: _category,
+                                items: _categories
+                                    .map((e) =>
+                                    DropdownMenuItem(value: e, child: Text(e)))
+                                    .toList(),
+                                onChanged: (val) =>
+                                    setState(() =>
+                                    _category = val ?? 'Productivity'),
+                                decoration: const InputDecoration(
+                                    labelText: 'Category'),
+                              ),
+                              DropdownButtonFormField(
+                                value: _complexity,
+                                items: _levels
+                                    .map((e) =>
+                                    DropdownMenuItem(value: e, child: Text(e)))
+                                    .toList(),
+                                onChanged: (val) =>
+                                    setState(() => _complexity = val ?? 'Low'),
+                                decoration: const InputDecoration(
+                                    labelText: 'Complexity'),
+                              ),
+                              DropdownButtonFormField(
+                                value: _effort,
+                                items: _levels
+                                    .map((e) =>
+                                    DropdownMenuItem(value: e, child: Text(e)))
+                                    .toList(),
+                                onChanged: (val) =>
+                                    setState(() => _effort = val ?? 'Low'),
+                                decoration: const InputDecoration(
+                                    labelText: 'Effort Required'),
+                              ),
+                              DropdownButtonFormField(
+                                value: _motivation,
+                                items: _levels
+                                    .map((e) =>
+                                    DropdownMenuItem(value: e, child: Text(e)))
+                                    .toList(),
+                                onChanged: (val) =>
+                                    setState(() => _motivation = val ?? 'Low'),
+                                decoration: const InputDecoration(
+                                    labelText: 'Motivation Needed'),
+                              ),
+                              TextFormField(
+                                controller: _titleController,
+                                decoration: const InputDecoration(
+                                    labelText: 'Goal Title'),
+                                validator: (v) =>
+                                v == null || v.isEmpty
+                                    ? 'Title required'
+                                    : null,
+                              ),
+                              DropdownButtonFormField<String>(
+                                hint: const Text('Template (optional)'),
+                                items: _templates
+                                    .map((e) =>
+                                    DropdownMenuItem(value: e, child: Text(e)))
+                                    .toList(),
+                                onChanged: (val) =>
+                                _titleController.text = val ?? '',
+                              ),
+                              TextFormField(
+                                controller: _timeController,
+                                decoration: const InputDecoration(
+                                    labelText: 'Time Required in minutes'),
+                                validator: (v) =>
+                                v == null || v.isEmpty
+                                    ? 'Enter time needed'
+                                    : null,
+                              ),
+                              TextFormField(
+                                controller: _stepsController,
+                                decoration: const InputDecoration(
+                                    labelText: 'Steps (if any)'),
+                                validator: (v) =>
+                                v == null || v.isEmpty
+                                    ? 'Describe steps or type "None"'
+                                    : null,
+                              ),
+                              const SizedBox(height: 10),
+                              ElevatedButton(onPressed: _createGoal,
+                                  child: const Text('Add Goal')),
+                            ],
+                          ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.delete),
-                          onPressed: () => _removeGoal(i),
-                          tooltip: 'Remove Goal',
+                        const SizedBox(height: 20),
+                        SizedBox(
+                          height: 300,
+                          child: ListView.builder(
+                            itemCount: _activeGoals.length,
+                            itemBuilder: (_, i) {
+                              final g = _activeGoals[i];
+                              return ListTile(
+                                title: Text(g['title']),
+                                subtitle: Text(
+                                    '${g['points']} pts | ${g['category']}'),
+                                onTap: () => _viewGoalDetails(g),
+                                trailing: Wrap(
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.check),
+                                      onPressed: () => _completeGoal(i),
+                                      tooltip: 'Mark Complete',
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete),
+                                      onPressed: () => _removeGoal(i),
+                                      tooltip: 'Remove Goal',
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: _viewCompletedGoals,
+                          child: const Text('View Completed Goals'),
                         ),
                       ],
                     ),
-                  );
-                },
+                  ),
+                ),
               ),
-            ),
-            ElevatedButton(
-              onPressed: _viewCompletedGoals,
-              child: const Text('View Completed Goals'),
-            )
-          ],
         ),
       ),
     );
