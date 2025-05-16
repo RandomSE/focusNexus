@@ -1,8 +1,7 @@
-// lib/screens/dashboard_screen.dart
+// lib/screens/dashboard_screen.dart (replaced with final version that can be updated live)
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-// 🔁 Convert DashboardScreen to StatefulWidget
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -12,6 +11,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _points = 0;
+  final _storage = const FlutterSecureStorage();
 
   @override
   void initState() {
@@ -20,24 +20,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _loadPoints() async {
+    final stored = await _storage.read(key: 'points');
+    final value = stored == null ? 50 : int.tryParse(stored) ?? 50;
+    if (stored == null) await _storage.write(key: 'points', value: '50');
+    setState(() => _points = value);
+  }
+
+  static Future<void> addPoints(int amount, String source) async {
     final storage = FlutterSecureStorage();
-    final points = await storage.read(key: 'points');
-    if (points == null) {
-      await storage.write(key: 'points', value: '50');
-      setState(() => _points = 50);
-    } else {
-      setState(() => _points = int.tryParse(points) ?? 50);
+    final stored = await storage.read(key: 'points');
+    final current = int.tryParse(stored ?? '50') ?? 50;
+    final newTotal = current + amount;
+    await storage.write(key: 'points', value: newTotal.toString());
+  }
+
+  static Future<void> refreshDashboardPoints(BuildContext context) async {
+    final state = context.findAncestorStateOfType<_DashboardScreenState>();
+    if (state != null) {
+      await state._loadPoints();
     }
   }
 
-  Future<void> addUserPoints(int amount, String source) async {
-    final storage = FlutterSecureStorage();
-    final current = await storage.read(key: 'points');
-    final currentValue = int.tryParse(current ?? '50') ?? 50;
-    final newTotal = currentValue + amount;
-    await storage.write(key: 'points', value: newTotal.toString());
-    setState(() => _points = newTotal);
-  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -72,8 +75,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: const Text('Tasks'),
           ),
           ElevatedButton(
-              onPressed: () => Navigator.pushNamed(context, 'goals'),
-              child: const Text('Goal Setting')),
+            onPressed: () => Navigator.pushNamed(context, 'goals').then((_) => _loadPoints()),
+            child: const Text('Goal Setting'),
+          ),
         ],
       ),
     );
