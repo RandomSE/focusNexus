@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../utils/common_utils.dart';
+
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -12,11 +14,14 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   int _points = 0;
   final _storage = const FlutterSecureStorage();
+  double userFontSize = 14.0;
+  String userTheme = 'light';
 
   @override
   void initState() {
     super.initState();
     _loadPoints();
+    CommonUtils.getUserPreferences(this);
   }
 
   Future<void> _loadPoints() async {

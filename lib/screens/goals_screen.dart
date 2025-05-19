@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert';
 
+import '../utils/common_utils.dart';
+
 class GoalsScreen extends StatefulWidget {
   const GoalsScreen({super.key});
 
@@ -23,15 +25,10 @@ class _GoalsScreenState extends State<GoalsScreen> {
   String _complexity = 'Low';
   String _effort = 'Low';
   String _motivation = 'Low';
+  double userFontSize = 14.0;
+  String userTheme = 'light';
   final _categories = ['Productivity', 'Health', 'Learning'];
   final _levels = ['Low', 'Medium', 'High'];
-  final _templates = [
-    'Clean your room',
-    '5-minute walk',
-    'Make a meal',
-    'Take a shower',
-    'Compliment someone',
-  ];
   final Map<String, Map<String, dynamic>> _templateDetails = {
     'Clean your room': {
       'category': 'Productivity', 'complexity': 'Low', 'effort': 'Low', 'motivation': 'Medium', 'time': '10', 'steps': '1'
@@ -49,15 +46,28 @@ class _GoalsScreenState extends State<GoalsScreen> {
       'category': 'Social', 'complexity': 'Low', 'effort': 'Low', 'motivation': 'Low', 'time': '1', 'steps': '1'
     },
   };
-
   List<Map<String, dynamic>> _activeGoals = [];
   List<Map<String, dynamic>> _completedGoals = [];
   final _storage = const FlutterSecureStorage();
+  Map<String, Map<String, dynamic>> _userTemplates = {};
 
   @override
   void initState() {
     super.initState();
     _loadGoals();
+    _loadTemplates();
+    CommonUtils.getUserPreferences(this);
+  }
+
+  Future<void> _loadTemplates() async {
+    final userT = await _storage.read(key: 'userTemplates');
+    setState(() {
+      _userTemplates = userT != null ? Map<String, Map<String, dynamic>>.from(json.decode(userT)) : {};
+    });
+  }
+
+  Future<void> _saveTemplates() async {
+    await _storage.write(key: 'userTemplates', value: json.encode(_userTemplates));
   }
 
   Future<void> _loadGoals() async {
@@ -227,6 +237,126 @@ class _GoalsScreenState extends State<GoalsScreen> {
     );
   }
 
+  // ✅ Enhanced Template Manager: full field editing support for base and custom templates
+  void _openTemplateManager() {
+    final TextEditingController _templateName = TextEditingController();
+    final TextEditingController _templateTime = TextEditingController();
+    final TextEditingController _templateSteps = TextEditingController();
+    String _templateCategory = _categories.first;
+    String _templateComplexity = _levels.first;
+    String _templateEffort = _levels.first;
+    String _templateMotivation = _levels.first;
+
+    showDialog(
+      context: context,
+      builder: (_) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Manage Templates'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: _templateName,
+                  decoration: const InputDecoration(labelText: 'Template Name'),
+                ),
+                DropdownButtonFormField(
+                  value: _templateCategory,
+                  decoration: const InputDecoration(labelText: 'Category'),
+                  items: _categories.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                  onChanged: (v) => setState(() => _templateCategory = v!),
+                ),
+                DropdownButtonFormField(
+                  value: _templateComplexity,
+                  decoration: const InputDecoration(labelText: 'Complexity'),
+                  items: _levels.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                  onChanged: (v) => setState(() => _templateComplexity = v!),
+                ),
+                DropdownButtonFormField(
+                  value: _templateEffort,
+                  decoration: const InputDecoration(labelText: 'Effort'),
+                  items: _levels.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                  onChanged: (v) => setState(() => _templateEffort = v!),
+                ),
+                DropdownButtonFormField(
+                  value: _templateMotivation,
+                  decoration: const InputDecoration(labelText: 'Motivation'),
+                  items: _levels.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                  onChanged: (v) => setState(() => _templateMotivation = v!),
+                ),
+                TextField(
+                  controller: _templateTime,
+                  decoration: const InputDecoration(labelText: 'Time (minutes)'),
+                ),
+                TextField(
+                  controller: _templateSteps,
+                  decoration: const InputDecoration(labelText: 'Steps'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final name = _templateName.text.trim();
+                    if (name.isEmpty) return;
+                    final data = {
+                      'category': _templateCategory,
+                      'complexity': _templateComplexity,
+                      'effort': _templateEffort,
+                      'motivation': _templateMotivation,
+                      'time': _templateTime.text.trim(),
+                      'steps': _templateSteps.text.trim(),
+                    };
+
+                    if (_templateDetails.containsKey(name)) {
+                      setState(() => _templateDetails[name] = data);
+                    } else {
+                      setState(() => _userTemplates[name] = data);
+                    }
+                    _saveTemplates();
+                    _templateName.clear();
+                    _templateTime.clear();
+                    _templateSteps.clear();
+                  },
+                  child: const Text('Save Template'),
+                ),
+                const Divider(),
+                const Text('Templates:'),
+                ...[..._templateDetails.keys, ..._userTemplates.keys].map((name) => ListTile(
+                  title: Text(name),
+                  trailing: _userTemplates.containsKey(name)
+                      ? IconButton(
+                    icon: const Icon(Icons.delete),
+                    onPressed: () {
+                      setState(() {
+                        _userTemplates.remove(name);
+                        _saveTemplates();
+                      });
+                    },
+                  )
+                      : null,
+                  onTap: () {
+                    final t = _templateDetails[name] ?? _userTemplates[name]!;
+                    setState(() {
+                      _templateName.text = name;
+                      _templateCategory = t['category'];
+                      _templateComplexity = t['complexity'];
+                      _templateEffort = t['effort'];
+                      _templateMotivation = t['motivation'];
+                      _templateTime.text = t['time'];
+                      _templateSteps.text = t['steps'];
+                    });
+                  },
+                )),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+          ],
+        ),
+      ),
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -249,11 +379,14 @@ class _GoalsScreenState extends State<GoalsScreen> {
                             children: [
                               DropdownButtonFormField<String>(
                                 hint: const Text('Template (optional)'),
-                                items: _templates.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                                items: [
+                                  ..._templateDetails.keys,
+                                  ..._userTemplates.keys
+                                ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
                                 onChanged: (val) {
                                   if (val == null) return;
                                   _titleController.text = val;
-                                  final data = _templateDetails[val]!;
+                                  final data = _templateDetails[val] ?? _userTemplates[val]!;
                                   setState(() {
                                     _category = data['category'];
                                     _complexity = data['complexity'];
@@ -357,6 +490,10 @@ class _GoalsScreenState extends State<GoalsScreen> {
                               ElevatedButton(
                                 onPressed: _createGoal,
                                 child: const Text('Add Goal'),
+                              ),
+                              ElevatedButton(
+                                onPressed: _openTemplateManager,
+                                child: const Text('Manage Templates'),
                               ),
                             ],
                           ),
