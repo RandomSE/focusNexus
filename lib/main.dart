@@ -11,11 +11,20 @@ void main() async {
   final storage = FlutterSecureStorage();
   final loggedIn = await storage.read(key: 'loggedIn');
 
-  runApp(FocusNexusApp(initialRoute: loggedIn == 'true' ? 'dashboard' : 'auth'));
+  runApp(
+    FocusNexusApp(initialRoute: loggedIn == 'true' ? 'dashboard' : 'auth'),
+  );
+}
+
+Future<String> _getRewardTitle() async {
+  final storage = FlutterSecureStorage();
+  final reward = await storage.read(key: 'rewardType') ?? 'Avatar';
+  return reward;
 }
 
 class FocusNexusApp extends StatelessWidget {
   final String initialRoute;
+
   const FocusNexusApp({super.key, required this.initialRoute});
 
   @override
@@ -32,7 +41,18 @@ class FocusNexusApp extends StatelessWidget {
         'auth': (_) => const AuthStartScreen(),
         'dashboard': (_) => const DashboardScreen(),
         'settings': (_) => const SettingsScreen(),
-        'reward': (_) => PlaceholderScreen('Avatar Customization'),
+        'reward':
+            (_) => FutureBuilder<String>(
+              future: _getRewardTitle(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Scaffold(
+                    body: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                return PlaceholderScreen(snapshot.data!);
+              },
+            ),
         'chat': (_) => PlaceholderScreen('AI Chat / Therapist Space'),
         'reminders': (_) => PlaceholderScreen('Reminders'),
         'achievements': (_) => PlaceholderScreen('Achievements'),
@@ -45,6 +65,7 @@ class FocusNexusApp extends StatelessWidget {
 
 class PlaceholderScreen extends StatelessWidget {
   final String title;
+
   const PlaceholderScreen(this.title, {super.key});
 
   @override

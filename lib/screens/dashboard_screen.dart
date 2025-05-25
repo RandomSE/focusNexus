@@ -16,12 +16,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final _storage = const FlutterSecureStorage();
   double userFontSize = 14.0;
   String userTheme = 'light';
+  String rewardType = 'Avatar';
 
   @override
   void initState() {
     super.initState();
     _loadPoints();
     CommonUtils.getUserPreferences(this);
+    _loadRewardType();
+  }
+
+  Future<void> _loadRewardType() async {
+    final storage = FlutterSecureStorage();
+    final stored = await storage.read(key: 'rewardType');
+    setState(() {
+      rewardType = stored ?? 'Avatar';
+    });
   }
 
   Future<void> _loadPoints() async {
@@ -61,7 +71,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pushNamed(context, 'reward'),
-            child: const Text('Reward: Avatar'),
+            child: Text('Reward: $rewardType'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pushNamed(context, 'chat'),

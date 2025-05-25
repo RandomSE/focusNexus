@@ -1,4 +1,4 @@
-// lib/screens/settings_screen.dart (Menu updated)
+// lib/screens/settings_screen.dart (Fixed Remember Me & Log Out)
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -58,7 +58,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-
   Future<void> _save(String key, String value) => _storage.write(key: key, value: value);
 
   @override
@@ -85,12 +84,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
             }),
             decoration: const InputDecoration(labelText: 'Theme'),
           ),
-          DropdownButtonFormField(
+          DropdownButtonFormField<String>(
             value: ['Avatar', 'Mini-game', 'Leaderboard'].contains(_rewardType) ? _rewardType : 'Avatar',
             items: ['Avatar', 'Mini-game', 'Leaderboard']
                 .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                 .toList(),
-            onChanged: (val) => _save('rewardType', val!),
+            onChanged: (val) => setState(() {
+              _rewardType = val!;
+              _save('rewardType', _rewardType);
+            }),
             decoration: const InputDecoration(labelText: 'Reward Type'),
           ),
           DropdownButtonFormField(
@@ -115,6 +117,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onChanged: (v) => setState(() {
               _rememberMe = v;
               _save('rememberMe', v.toString());
+              if (!v) _storage.write(key: 'loggedIn', value: 'false');
             }),
           ),
           SwitchListTile(
@@ -182,7 +185,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: const Text('Clear Preferences and Reset Assistant'),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.pushReplacementNamed(context, 'login'),
+            onPressed: () async {
+              await _storage.write(key: 'loggedIn', value: 'false');
+              if (!_rememberMe) await _storage.deleteAll();
+              if (!mounted) return;
+              Navigator.pushReplacementNamed(context, 'auth');
+            },
             child: const Text('Log Out'),
           )
         ],
