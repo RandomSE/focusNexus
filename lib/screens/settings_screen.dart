@@ -1,6 +1,5 @@
-// lib/screens/settings_screen.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:focusNexus/utils/BaseState.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -9,72 +8,21 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
-  final _storage = const FlutterSecureStorage();
-
-  double _fontSize = 14.0;
-  String _theme = 'light';
-  String _rewardType = 'Avatar';
-  String _notificationStyle = 'Minimal';
-  String _notificationFrequency = 'Medium';
-  bool _rememberMe = false;
-  bool _highContrast = false;
-  bool _dyslexiaFont = false;
-  double _bgBrightness = 0.5;
-  bool _aiEncouragement = true;
-  bool _dailyAffirmations = true;
-  bool _skipToday = false;
-  bool _pauseGoals = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadSettings();
-  }
-
-  Future<void> _loadSettings() async {
-    _fontSize = double.tryParse(await _read('fontSize')) ?? 14.0;
-    _theme = await _read('theme') ?? 'light';
-    _rewardType = await _read('rewardType') ?? 'Avatar';
-    _notificationStyle = await _read('notificationStyle') ?? 'Minimal';
-    _notificationFrequency = await _read('notificationFrequency') ?? 'Medium';
-    _rememberMe = await _read('rememberMe') == 'true';
-    _highContrast = await _read('highContrast') == 'true';
-    _dyslexiaFont = await _read('dyslexiaFont') == 'true';
-    _bgBrightness = double.tryParse(await _read('bgBrightness')) ?? 0.5;
-    _aiEncouragement = await _read('aiEncouragement') != 'false';
-    _dailyAffirmations = await _read('dailyAffirmations') != 'false';
-    _skipToday = await _read('skipToday') == 'true';
-    _pauseGoals = await _read('pauseGoals') == 'true';
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      setState(() {});
-    });
-  }
-
-  Future<String> _read(String key) async {
-    try {
-      return await _storage.read(key: key) ?? '';
-    } catch (_) {
-      return '';
-    }
-  }
-
-  Future<void> _save(String key, String value) =>
-      _storage.write(key: key, value: value);
-
+class _SettingsScreenState extends BaseState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
-    final isDark = _theme == 'dark';
+    final isDark = userTheme == 'dark';
     final themeData = ThemeData(
       brightness: isDark ? Brightness.dark : Brightness.light,
-      primaryColor: _highContrast ? Colors.yellow : Colors.deepPurple,
-      fontFamily: _dyslexiaFont ? 'OpenDyslexic' : null,
+      primaryColor: highContrastMode ? Colors.yellow : Colors.deepPurple,
       scaffoldBackgroundColor: isDark
-          ? Colors.black.withOpacity(_bgBrightness)
-          : Colors.white.withOpacity(1 - _bgBrightness),
+          ? Colors.black.withOpacity(backgroundBrightness)
+          : Colors.white.withOpacity(1 - backgroundBrightness),
       textTheme: Theme.of(context).textTheme.apply(
-        fontSizeFactor: _fontSize / 14.0,
+        fontSizeFactor: userFontSize / 14.0,
+        fontFamily: useDyslexiaFont ? 'OpenDyslexic' : null,
+        bodyColor: isDark ? Colors.grey[300] : Colors.black,
+        displayColor: isDark ? Colors.grey[300] : Colors.black,
       ),
     );
 
@@ -88,173 +36,120 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Text(
               'Live Preview:',
               style: TextStyle(
-                fontSize: _fontSize,
+                fontSize: userFontSize,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.all(8),
-              color: _highContrast ? Colors.yellow : Colors.grey[200],
+              color: highContrastMode ? Colors.yellow : Colors.grey[200],
               child: Text(
                 'This is a live preview of your settings.',
-                style: TextStyle(fontSize: _fontSize),
+                style: TextStyle(fontSize: userFontSize),
               ),
             ),
             const Divider(),
-            Slider(
-              value: _fontSize,
-              min: 10,
-              max: 24,
-              label: 'Font Size $_fontSize',
-              onChanged: (v) => setState(() => _fontSize = v),
-              onChangeEnd: (v) => _save('fontSize', v.toString()),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Font Size:', style: TextStyle(fontWeight: FontWeight.bold)),
+                IconButton(
+                  icon: const Icon(Icons.remove),
+                  onPressed: () {
+                    if (userFontSize > 10) setUserFontSize(userFontSize - 2);
+                  },
+                ),
+                Text('${userFontSize.toInt()}'),
+                IconButton(
+                  icon: const Icon(Icons.add),
+                  onPressed: () {
+                    if (userFontSize < 24) setUserFontSize(userFontSize + 2);
+                  },
+                ),
+              ],
             ),
             DropdownButtonFormField<String>(
-              value: ['light', 'dark'].contains(_theme) ? _theme : 'light',
-              items:
-                  ['light', 'dark']
-                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                      .toList(),
-              onChanged:
-                  (val) => setState(() {
-                    _theme = val!;
-                    _save('theme', _theme);
-                  }),
+              value: userTheme,
+              items: ['light', 'dark']
+                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                  .toList(),
+              onChanged: (val) => setUserTheme(val ?? 'light'),
               decoration: const InputDecoration(labelText: 'Theme'),
             ),
             DropdownButtonFormField<String>(
-              value:
-                  ['Avatar', 'Mini-game', 'Leaderboard'].contains(_rewardType)
-                      ? _rewardType
-                      : 'Avatar',
-              items:
-                  ['Avatar', 'Mini-game', 'Leaderboard']
-                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                      .toList(),
-              onChanged:
-                  (val) => setState(() {
-                    _rewardType = val!;
-                    _save('rewardType', _rewardType);
-                  }),
+              value: rewardType,
+              items: ['Avatar', 'Mini-game', 'Leaderboard']
+                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                  .toList(),
+              onChanged: (val) => setRewardType(val ?? 'Avatar'),
               decoration: const InputDecoration(labelText: 'Reward Type'),
             ),
-            DropdownButtonFormField(
-              value:
-                  [
-                        'Minimal',
-                        'Vibrant',
-                        'Animated',
-                      ].contains(_notificationStyle)
-                      ? _notificationStyle
-                      : 'Minimal',
-              items:
-                  ['Minimal', 'Vibrant', 'Animated']
-                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                      .toList(),
-              onChanged: (val) => _save('notificationStyle', val!),
-              decoration: const InputDecoration(
-                labelText: 'Notification Style',
-              ),
+            DropdownButtonFormField<String>(
+              value: notificationStyle,
+              items: ['Minimal', 'Vibrant', 'Animated']
+                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                  .toList(),
+              onChanged: (val) => setNotificationStyle(val ?? 'Minimal'),
+              decoration: const InputDecoration(labelText: 'Notification Style'),
             ),
-            DropdownButtonFormField(
-              value:
-                  ['Low', 'Medium', 'High'].contains(_notificationFrequency)
-                      ? _notificationFrequency
-                      : 'Medium',
-              items:
-                  ['Low', 'Medium', 'High']
-                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                      .toList(),
-              onChanged: (val) => _save('notificationFrequency', val!),
-              decoration: const InputDecoration(
-                labelText: 'Notification Frequency',
-              ),
+            DropdownButtonFormField<String>(
+              value: notificationFrequency,
+              items: ['Low', 'Medium', 'High']
+                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                  .toList(),
+              onChanged: (val) => setNotificationFrequency(val ?? 'Medium'),
+              decoration: const InputDecoration(labelText: 'Notification Frequency'),
             ),
-            SwitchListTile(
-              title: const Text('Remember Me'),
-              value: _rememberMe,
-              onChanged:
-                  (v) => setState(() {
-                    _rememberMe = v;
-                    _save('rememberMe', v.toString());
-                    if (!v) _storage.write(key: 'loggedIn', value: 'false');
-                  }),
+            SwitchListTile(title: const Text('Remember Me'), value: rememberMe, onChanged: setRememberMe),
+            SwitchListTile(title: const Text('High Contrast Mode'), value: highContrastMode, onChanged: setHighContrastMode),
+            SwitchListTile(title: const Text('Dyslexia-friendly Font'), value: useDyslexiaFont, onChanged: setUseDyslexiaFont),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    'Light Mode Intensity:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                    softWrap: true,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.remove),
+                  onPressed: () {
+                    if (backgroundBrightness > 0.0) {
+                      setBackgroundBrightness((backgroundBrightness - 0.07).clamp(0.0, 0.7));
+                    }
+                  },
+                ),
+                Text('${((backgroundBrightness / 0.7) * 100).round() ~/ 10 * 10}%'),
+                IconButton(
+                  icon: const Icon(Icons.add),
+                  onPressed: () {
+                    if (backgroundBrightness < 0.7) {
+                      setBackgroundBrightness((backgroundBrightness + 0.07).clamp(0.0, 0.7));
+                    }
+                  },
+                ),
+              ],
             ),
-            SwitchListTile(
-              title: const Text('High Contrast Mode'),
-              value: _highContrast,
-              onChanged:
-                  (v) => setState(() {
-                    _highContrast = v;
-                    _save('highContrast', v.toString());
-                  }),
-            ),
-            SwitchListTile(
-              title: const Text('Dyslexia-friendly Font'),
-              value: _dyslexiaFont,
-              onChanged:
-                  (v) => setState(() {
-                    _dyslexiaFont = v;
-                    _save('dyslexiaFont', v.toString());
-                  }),
-            ),
-            SwitchListTile(
-              title: const Text('Daily Affirmations'),
-              value: _dailyAffirmations,
-              onChanged:
-                  (v) => setState(() {
-                    _dailyAffirmations = v;
-                    _save('dailyAffirmations', v.toString());
-                  }),
-            ),
-            SwitchListTile(
-              title: const Text('AI Encouragement'),
-              value: _aiEncouragement,
-              onChanged:
-                  (v) => setState(() {
-                    _aiEncouragement = v;
-                    _save('aiEncouragement', v.toString());
-                  }),
-            ),
-            SwitchListTile(
-              title: const Text('Skip Today (Tasks/Reminders)'),
-              value: _skipToday,
-              onChanged:
-                  (v) => setState(() {
-                    _skipToday = v;
-                    _save('skipToday', v.toString());
-                  }),
-            ),
-            SwitchListTile(
-              title: const Text('Pause All Goals'),
-              value: _pauseGoals,
-              onChanged:
-                  (v) => setState(() {
-                    _pauseGoals = v;
-                    _save('pauseGoals', v.toString());
-                  }),
-            ),
-            Slider(
-              value: _bgBrightness,
-              min: 0.0,
-              max: 1.0,
-              label: 'Dark Mode Brightness: ${(_bgBrightness * 100).round()}%',
-              onChanged: (v) => setState(() => _bgBrightness = v),
-              onChangeEnd: (v) => _save('bgBrightness', v.toString()),
-            ),
+            SwitchListTile(title: const Text('Daily Affirmations'), value: dailyAffirmations, onChanged: setDailyAffirmations),
+            SwitchListTile(title: const Text('AI Encouragement'), value: aiEncouragement, onChanged: setAiEncouragement),
+            SwitchListTile(title: const Text('Skip Today (Tasks/Reminders)'), value: skipToday, onChanged: setSkipToday),
+            SwitchListTile(title: const Text('Pause Goals'), value: pauseGoals, onChanged: setPauseGoals),
             const Divider(),
             ElevatedButton(
               onPressed: () async {
-                await _storage.deleteAll();
+                await clearPreferences();
                 setState(() {});
               },
               child: const Text('Clear Preferences and Reset Assistant'),
             ),
             ElevatedButton(
               onPressed: () async {
-                await _storage.write(key: 'loggedIn', value: 'false');
-                if (!_rememberMe) await _storage.deleteAll();
+                await setRememberMe(false);
+                await setLoggedIn(false);
                 if (!mounted) return;
                 Navigator.pushReplacementNamed(context, 'auth');
               },
