@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -19,11 +21,29 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
   bool _skipToday = false;
   bool _pauseGoals = false;
   bool _loggedIn = false;
+  late ThemeData _themeData;
+
 
   @override
   void initState() {
     super.initState();
     _loadUserPreferences();
+    _themeData = defaultThemeData;
+    loadStoredTheme();
+    setThemeData(); // Ensure theme is applied on startup
+  }
+
+  Future<void> loadStoredTheme() async {
+    final String? storedTheme = await _storage.read(key: 'themeData');
+
+    if (storedTheme != null) {
+      final ThemeData parsedTheme = parseThemeData(storedTheme);
+      if (mounted) { // Ensure widget is still active before updating state
+        setState(() {
+          _themeData = parsedTheme;
+        });
+      }
+    }
   }
 
   Future<void> _loadUserPreferences() async {
@@ -62,6 +82,7 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
   bool get skipToday => _skipToday;
   bool get pauseGoals => _pauseGoals;
   bool get loggedIn => _loggedIn;
+  ThemeData get themeData => _themeData;
 
   // Setters
   Future<void> setUserFontSize(double value) async {
@@ -135,6 +156,42 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
 
   }
 
+  Future<void> setThemeData({
+    ThemeData? themeData,
+    bool? isDark,
+    bool? highContrastMode,
+    Color? primaryColor,
+    Color? secondaryColor,
+    double? backgroundBrightness,
+    double? userFontSize,
+    bool? useDyslexiaFont,
+  }) async {
+    setState(() {
+      // Determine primary and secondary colors
+      final bool darkMode = isDark ?? false;
+      final bool contrastMode = highContrastMode ?? false;
+
+      primaryColor = contrastMode ? Colors.cyan : (darkMode ? Colors.white : Colors.black);
+      secondaryColor = contrastMode ? Colors.black : (darkMode ? Colors.black : Colors.white.withOpacity(1 - (backgroundBrightness ?? 1.0)));
+
+      _themeData = themeData ??
+          ThemeData(
+            brightness: darkMode ? Brightness.dark : Brightness.light,
+            primaryColor: primaryColor,
+            scaffoldBackgroundColor: secondaryColor,
+            textTheme: ThemeData.light().textTheme.apply(
+              fontSizeFactor: (userFontSize ?? 14.0) / 14.0,
+              fontFamily: useDyslexiaFont ?? false ? 'OpenDyslexic' : null,
+              bodyColor: primaryColor,
+              displayColor: primaryColor,
+            ),
+          );
+    });
+
+    await _storage.write(key: 'themeData', value: _themeData.toString());
+  }
+
+
   Future<void> clearPreferences() async {
     await _storage.deleteAll();
 
@@ -170,5 +227,57 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     await setPauseGoals(false);
     await setLoggedIn(false);
   }
+
+  final ThemeData defaultThemeData = ThemeData(
+    brightness: Brightness.light,
+    primaryColor: Colors.deepPurple,
+    scaffoldBackgroundColor: Colors.white,
+    textTheme: ThemeData.light().textTheme.apply(
+      fontSizeFactor: 1.0,
+      fontFamily: null,
+      bodyColor: Colors.black,
+      displayColor: Colors.black,
+    ),
+  );
+
+  ThemeData parseThemeData(String storedTheme) {
+    final Map<String, dynamic> themeMap = jsonDecode(storedTheme);
+
+    return ThemeData(
+      brightness: themeMap['isDark'] ? Brightness.dark : Brightness.light,
+      primaryColor: Color(themeMap['primaryColor']),
+      scaffoldBackgroundColor: Color(themeMap['secondaryColor']),
+      textTheme: ThemeData.light().textTheme.apply(
+        fontSizeFactor: themeMap['userFontSize'] / 14.0,
+        fontFamily: themeMap['useDyslexiaFont'] ? 'OpenDyslexic' : null,
+        bodyColor: Color(themeMap['primaryColor']),
+        displayColor: Color(themeMap['primaryColor']),
+      ),
+    );
+  }
+
+  Color getPrimaryColor(bool isDark, bool contrastMode) {
+    if (contrastMode) return Colors.cyan;
+    if (isDark) return Colors.white;
+    return Colors.black87; // Less stark than pure black, more readable than opacity tricks
+  }
+
+  Color getSecondaryColor(bool isDark, bool contrastMode) {
+    if (contrastMode) return Colors.black;
+    if (isDark) return Colors.black;
+    return const Color(0xFFF5F5F5); // A soft, neutral off-white for light mode
+  }
+
+
+  TextStyle getTextStyle(double fontSize, Color primaryColor, bool useDyslexiaFont) {
+    return TextStyle(
+      fontSize: fontSize,
+      fontWeight: FontWeight.bold,
+      color: primaryColor,
+      fontFamily: useDyslexiaFont ? 'OpenDyslexic' : null
+    );
+
+  }
+
 
 }

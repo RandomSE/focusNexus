@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert';
 
-import '../utils/common_utils.dart';
+import '../utils/BaseState.dart';
 
 class GoalsScreen extends StatefulWidget {
   const GoalsScreen({super.key});
@@ -12,7 +12,7 @@ class GoalsScreen extends StatefulWidget {
   State<GoalsScreen> createState() => _GoalsScreenState();
 }
 
-class _GoalsScreenState extends State<GoalsScreen> {
+class _GoalsScreenState extends BaseState<GoalsScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _timeController = TextEditingController();
@@ -25,8 +25,6 @@ class _GoalsScreenState extends State<GoalsScreen> {
   String _complexity = 'Low';
   String _effort = 'Low';
   String _motivation = 'Low';
-  double userFontSize = 14.0;
-  String userTheme = 'light';
   final _categories = ['Productivity', 'Health', 'Learning'];
   final _levels = ['Low', 'Medium', 'High'];
   final Map<String, Map<String, dynamic>> _templateDetails = {
@@ -50,13 +48,17 @@ class _GoalsScreenState extends State<GoalsScreen> {
   List<Map<String, dynamic>> _completedGoals = [];
   final _storage = const FlutterSecureStorage();
   Map<String, Map<String, dynamic>> _userTemplates = {};
+  late ThemeData _themeData;
+
 
   @override
   void initState() {
     super.initState();
     _loadGoals();
     _loadTemplates();
-    CommonUtils.getUserPreferences(this);
+    _themeData = defaultThemeData; // Start with default
+    loadStoredTheme(); // Try loading stored theme data
+    setThemeData();
   }
 
   Future<void> _loadTemplates() async {
@@ -209,36 +211,58 @@ class _GoalsScreenState extends State<GoalsScreen> {
   }
 
   void _viewGoalDetails(Map<String, dynamic> goal) {
+    final bool isDark = userTheme == 'dark';
+    final bool contrastMode = highContrastMode;
+    final Color primaryColor = getPrimaryColor(isDark, contrastMode);
+    final Color secondaryColor = getSecondaryColor(isDark, contrastMode);
+    final TextStyle textStyle = TextStyle(fontSize: userFontSize, fontWeight: FontWeight.bold, color: primaryColor);
+
     showDialog(
       context: context,
-      builder:
-          (_) => AlertDialog(
-            title: Text(goal['title']),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Category: ${goal['category']}'),
-                Text('Complexity: ${goal['complexity']}'),
-                Text('Effort: ${goal['effort']}'),
-                Text('Motivation: ${goal['motivation']}'),
-                Text('Time Needed in minutes: ${goal['time']}'),
-                Text('Steps: ${goal['steps']}'),
-                Text('Points: ${goal['points']}'),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Close'),
-              ),
+      barrierColor: secondaryColor, // ✅ Sets overlay color
+      builder: (_) => AlertDialog(
+        backgroundColor: secondaryColor, // ✅ Applies secondaryColor to dialog background
+        iconColor: primaryColor, // ✅ Ensures icons respect primaryColor
+        title: Text(goal['title'], style: textStyle), // ✅ Sets title text color
+        content: Container(
+          color: secondaryColor, // ✅ Wraps content in secondaryColor to ensure correct background
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Category: ${goal['category']}', style: textStyle),
+              Text('Complexity: ${goal['complexity']}', style: textStyle),
+              Text('Effort: ${goal['effort']}', style: textStyle),
+              Text('Motivation: ${goal['motivation']}', style: textStyle),
+              Text('Time Needed in minutes: ${goal['time']}', style: textStyle),
+              Text('Steps: ${goal['steps']}', style: textStyle),
+              Text('Points: ${goal['points']}', style: textStyle),
             ],
           ),
+        ),
+        actions: [
+          Container(
+            color: secondaryColor, // ✅ Ensures button area follows background color
+            child: TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Close', style: textStyle), // ✅ Applies primaryColor to button text
+            ),
+          ),
+        ],
+      ),
     );
   }
 
+
+
   // ✅ Enhanced Template Manager: full field editing support for base and custom templates
   void _openTemplateManager() {
+    final bool isDark = userTheme == 'dark';
+    final bool contrastMode = highContrastMode;
+    final Color primaryColor = getPrimaryColor(isDark, contrastMode);
+    final Color secondaryColor = getSecondaryColor(isDark, contrastMode);
+    final TextStyle textStyle = TextStyle(fontSize: userFontSize, fontWeight: FontWeight.bold, color: primaryColor);
+
     final TextEditingController _templateName = TextEditingController();
     final TextEditingController _templateTime = TextEditingController();
     final TextEditingController _templateSteps = TextEditingController();
@@ -251,46 +275,55 @@ class _GoalsScreenState extends State<GoalsScreen> {
       context: context,
       builder: (_) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Manage Templates'),
+          backgroundColor: secondaryColor,
+          title:  Text('Manage Templates', style: textStyle),
           content: SingleChildScrollView(
+            child: Container(
+              color: secondaryColor,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
                   controller: _templateName,
-                  decoration: const InputDecoration(labelText: 'Template Name'),
+                  decoration:  InputDecoration(labelText: 'Template Name', labelStyle: textStyle),
                 ),
                 DropdownButtonFormField(
+                  dropdownColor: secondaryColor,
                   value: _templateCategory,
-                  decoration: const InputDecoration(labelText: 'Category'),
-                  items: _categories.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                  decoration:  InputDecoration(labelText: 'Category', labelStyle: textStyle),
+                  items: _categories.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), style: textStyle,
                   onChanged: (v) => setState(() => _templateCategory = v!),
                 ),
                 DropdownButtonFormField(
+                  dropdownColor: secondaryColor,
                   value: _templateComplexity,
-                  decoration: const InputDecoration(labelText: 'Complexity'),
-                  items: _levels.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                  decoration:  InputDecoration(labelText: 'Complexity', labelStyle: textStyle),
+                  items: _levels.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), style: textStyle,
                   onChanged: (v) => setState(() => _templateComplexity = v!),
                 ),
                 DropdownButtonFormField(
+                  dropdownColor: secondaryColor,
                   value: _templateEffort,
-                  decoration: const InputDecoration(labelText: 'Effort'),
-                  items: _levels.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                  decoration:  InputDecoration(labelText: 'Effort', labelStyle: textStyle),
+                  items: _levels.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), style: textStyle,
                   onChanged: (v) => setState(() => _templateEffort = v!),
                 ),
                 DropdownButtonFormField(
+                  dropdownColor: secondaryColor,
                   value: _templateMotivation,
-                  decoration: const InputDecoration(labelText: 'Motivation'),
-                  items: _levels.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                  decoration:  InputDecoration(labelText: 'Motivation', labelStyle: textStyle),
+                  items: _levels.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), style: textStyle,
                   onChanged: (v) => setState(() => _templateMotivation = v!),
                 ),
                 TextField(
+                  style: textStyle,
                   controller: _templateTime,
-                  decoration: const InputDecoration(labelText: 'Time (minutes)'),
+                  decoration: InputDecoration(labelText: 'Time (minutes)', labelStyle: textStyle),
                 ),
                 TextField(
+                  style: textStyle,
                   controller: _templateSteps,
-                  decoration: const InputDecoration(labelText: 'Steps'),
+                  decoration: InputDecoration(labelText: 'Steps', labelStyle: textStyle),
                 ),
                 ElevatedButton(
                   onPressed: () {
@@ -315,12 +348,17 @@ class _GoalsScreenState extends State<GoalsScreen> {
                     _templateTime.clear();
                     _templateSteps.clear();
                   },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: secondaryColor,
+                    foregroundColor: primaryColor,
+                  ),
                   child: const Text('Save Template'),
                 ),
                 const Divider(),
-                const Text('Templates:'),
+                Text('Templates:', style: textStyle),
                 ...[..._templateDetails.keys, ..._userTemplates.keys].map((name) => ListTile(
                   title: Text(name),
+                  titleTextStyle: textStyle,
                   trailing: _userTemplates.containsKey(name)
                       ? IconButton(
                     icon: const Icon(Icons.delete),
@@ -348,8 +386,9 @@ class _GoalsScreenState extends State<GoalsScreen> {
               ],
             ),
           ),
+          ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+            TextButton(onPressed: () => Navigator.pop(context), child: Text('Close', style: textStyle)),
           ],
         ),
       ),
@@ -359,10 +398,25 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+
+    final bool isDark = userTheme == 'dark';
+    final bool contrastMode = highContrastMode;
+    final Color primaryColor = getPrimaryColor(isDark, contrastMode);
+    final Color secondaryColor = getSecondaryColor(isDark, contrastMode);
+    final TextStyle textStyle = getTextStyle(userFontSize, primaryColor, useDyslexiaFont);
+    final ButtonStyle buttonStyle = ElevatedButton.styleFrom(
+      backgroundColor: secondaryColor,
+      foregroundColor: primaryColor,
+    );
+
+    return Theme(
+      data: _themeData,
+      child:  Scaffold(
       resizeToAvoidBottomInset: true,
-      appBar: AppBar(title: const Text('Goals')),
-      body: SafeArea(
+        appBar: AppBar(title:  Text('Goals', style: TextStyle(backgroundColor: secondaryColor, color: primaryColor)), backgroundColor: secondaryColor, iconTheme: IconThemeData(color: primaryColor)),
+      backgroundColor: secondaryColor,
+      body: Container( // SafeArea - Container
+        color: secondaryColor,
         child: LayoutBuilder(
           builder:
               (context, constraints) => SingleChildScrollView(
@@ -378,11 +432,13 @@ class _GoalsScreenState extends State<GoalsScreen> {
                           child: Column(
                             children: [
                               DropdownButtonFormField<String>(
-                                hint: const Text('Template (optional)'),
+                                dropdownColor: secondaryColor,
+                                isExpanded: true,
+                                hint:  Text('Template (optional)', style: textStyle, overflow: TextOverflow.ellipsis),
                                 items: [
                                   ..._templateDetails.keys,
                                   ..._userTemplates.keys
-                                ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                                ].map((e) => DropdownMenuItem(value: e, child: Text(e,style: textStyle, overflow: TextOverflow.ellipsis))).toList(),
                                 onChanged: (val) {
                                   if (val == null) return;
                                   _titleController.text = val;
@@ -398,13 +454,14 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                 },
                               ),
                               DropdownButtonFormField(
+                                dropdownColor: secondaryColor,
                                 value: _complexity,
                                 items:
                                     _levels
                                         .map(
                                           (e) => DropdownMenuItem(
                                             value: e,
-                                            child: Text(e),
+                                            child: Text(e, style: textStyle),
                                           ),
                                         )
                                         .toList(),
@@ -412,36 +469,38 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                     (val) => setState(
                                       () => _complexity = val ?? 'Low',
                                     ),
-                                decoration: const InputDecoration(
-                                  labelText: 'Complexity',
+                                decoration:  InputDecoration(
+                                  labelText: 'Complexity', labelStyle: textStyle,
                                 ),
                               ),
                               DropdownButtonFormField(
+                                dropdownColor: secondaryColor,
                                 value: _effort,
                                 items:
                                     _levels
                                         .map(
                                           (e) => DropdownMenuItem(
                                             value: e,
-                                            child: Text(e),
+                                            child: Text(e, style:textStyle),
                                           ),
                                         )
                                         .toList(),
                                 onChanged:
                                     (val) =>
                                         setState(() => _effort = val ?? 'Low'),
-                                decoration: const InputDecoration(
-                                  labelText: 'Effort Required',
+                                decoration:  InputDecoration(
+                                  labelText: 'Effort Required', labelStyle: textStyle,
                                 ),
                               ),
                               DropdownButtonFormField(
+                                dropdownColor: secondaryColor,
                                 value: _motivation,
                                 items:
                                     _levels
                                         .map(
                                           (e) => DropdownMenuItem(
                                             value: e,
-                                            child: Text(e),
+                                            child: Text(e, style: textStyle),
                                           ),
                                         )
                                         .toList(),
@@ -449,14 +508,15 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                     (val) => setState(
                                       () => _motivation = val ?? 'Low',
                                     ),
-                                decoration: const InputDecoration(
-                                  labelText: 'Motivation Needed',
+                                decoration:  InputDecoration(
+                                  labelText: 'Motivation Needed', labelStyle: textStyle
                                 ),
                               ),
                               TextFormField(
+                                style: textStyle,
                                 controller: _titleController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Goal Title',
+                                decoration: InputDecoration(
+                                  labelText: 'Goal Title', labelStyle: textStyle
                                 ),
                                 validator:
                                     (v) =>
@@ -465,9 +525,10 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                             : null,
                               ),
                               TextFormField(
+                                style: textStyle,
                                 controller: _timeController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Time Required in minutes',
+                                decoration:  InputDecoration(
+                                  labelText: 'Time Required in minutes', labelStyle: textStyle
                                 ),
                                 validator:
                                     (v) =>
@@ -476,9 +537,10 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                             : null,
                               ),
                               TextFormField(
+                                style: textStyle,
                                 controller: _stepsController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Steps (if any)',
+                                decoration:  InputDecoration(
+                                  labelText: 'Steps (if any)', labelStyle: textStyle
                                 ),
                                 validator:
                                     (v) =>
@@ -488,12 +550,14 @@ class _GoalsScreenState extends State<GoalsScreen> {
                               ),
                               const SizedBox(height: 10),
                               ElevatedButton(
+                                style: buttonStyle,
                                 onPressed: _createGoal,
-                                child: const Text('Add Goal'),
+                                child:  Text('Add Goal', style: textStyle),
                               ),
                               ElevatedButton(
+                                style: buttonStyle,
                                 onPressed: _openTemplateManager,
-                                child: const Text('Manage Templates'),
+                                child:  Text('Manage Templates', style: textStyle),
                               ),
                             ],
                           ),
@@ -507,6 +571,8 @@ class _GoalsScreenState extends State<GoalsScreen> {
                           runSpacing: 8,
                           children: [
                             DropdownButton<String>(
+                              dropdownColor: secondaryColor,
+                              isExpanded: true,
                               value: _selectedCategoryFilter,
                               onChanged:
                                   (val) => setState(
@@ -518,12 +584,14 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                       .map(
                                         (e) => DropdownMenuItem(
                                           value: e,
-                                          child: Text('Category: $e'),
+                                          child: Text('Category: $e', style: textStyle, overflow: TextOverflow.ellipsis),
                                         ),
                                       )
                                       .toList(),
                             ),
                             DropdownButton<String>(
+                              dropdownColor: secondaryColor,
+                              isExpanded: true,
                               value: _selectedComplexityFilter,
                               onChanged:
                                   (val) => setState(
@@ -536,12 +604,13 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                       .map(
                                         (e) => DropdownMenuItem(
                                           value: e,
-                                          child: Text('Complexity: $e'),
+                                          child: Text('Complexity: $e', style: textStyle, overflow: TextOverflow.ellipsis),
                                         ),
                                       )
                                       .toList(),
                             ),
                             DropdownButton<String>(
+                              dropdownColor: secondaryColor,
                               value: _selectedStatusFilter,
                               onChanged:
                                   (val) => setState(
@@ -553,12 +622,13 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                       .map(
                                         (e) => DropdownMenuItem(
                                           value: e,
-                                          child: Text('Status: $e'),
+                                          child: Text('Status: $e', style: textStyle),
                                         ),
                                       )
                                       .toList(),
                             ),
                             DropdownButton<String>(
+                              dropdownColor: secondaryColor,
                               value: _sortBy,
                               onChanged:
                                   (val) =>
@@ -576,7 +646,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                       .map(
                                         (e) => DropdownMenuItem(
                                           value: e,
-                                          child: Text('Sort: $e'),
+                                          child: Text('Sort: $e', style: textStyle),
                                         ),
                                       )
                                       .toList(),
@@ -594,18 +664,20 @@ class _GoalsScreenState extends State<GoalsScreen> {
                             itemBuilder: (_, i) {
                               final g = _filteredSortedGoals[i];
                               return ListTile(
+                                titleTextStyle: textStyle,
+                                textColor: primaryColor,
                                 title: Text(g['title']),
                                 subtitle: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text('${g['points']} pts | ${g['category']}'),
+                                    Text('${g['points']} pts | ${g['category']}', style: textStyle),
                                     if (_selectedStatusFilter == 'Active' && int.tryParse(g['steps'])! > 1)
                                       Row(
                                         children: List.generate(
                                           int.tryParse(g['steps']?.toString() ?? '1')!,
                                               (i) => Icon(
                                             i < (g['stepProgress'] ?? 0) ? Icons.check_box : Icons.check_box_outline_blank,
-                                            size: 18,
+                                            size: userFontSize,
                                           ),
                                         ),
                                       )
@@ -616,11 +688,13 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                     ? Wrap(
                                   children: [
                                     IconButton(
+                                      color: primaryColor,
                                       icon: const Icon(Icons.add_task),
                                       onPressed: () => _incrementStepProgress(_activeGoals.indexOf(g)),
                                       tooltip: 'Add Step Progress',
                                     ),
                                     IconButton(
+                                      color: primaryColor,
                                       icon: const Icon(Icons.delete),
                                       onPressed: () => _removeGoal(_activeGoals.indexOf(g)),
                                       tooltip: 'Remove Goal',
@@ -639,6 +713,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
               ),
         ),
       ),
+    )
     );
   }
 }

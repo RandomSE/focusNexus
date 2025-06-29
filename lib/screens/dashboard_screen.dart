@@ -14,11 +14,15 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends BaseState<DashboardScreen> {
   final _storage = const FlutterSecureStorage();
   int _points = 0;
+  late ThemeData _themeData;
 
   @override
   void initState() {
     super.initState();
     _loadPoints();
+    _themeData = defaultThemeData; // Start with default
+    loadStoredTheme(); // Try loading stored theme data
+    setThemeData();
   }
 
   Future<void> _loadPoints() async {
@@ -54,31 +58,24 @@ class _DashboardScreenState extends BaseState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = userTheme == 'dark';
-    final themeData = ThemeData(
-      brightness: isDark ? Brightness.dark : Brightness.light,
-      primaryColor: highContrastMode ? Colors.yellow : Colors.deepPurple,
-      scaffoldBackgroundColor: highContrastMode
-          ? Colors.yellow.withOpacity(0.3)
-          : isDark
-          ? Colors.black.withOpacity(backgroundBrightness)
-          : Colors.white.withOpacity(1 - backgroundBrightness),
-      textTheme: Theme.of(context).textTheme.apply(
-        fontSizeFactor: userFontSize / 14.0,
-        fontFamily: useDyslexiaFont ? 'OpenDyslexic' : null,
-        bodyColor: isDark ? Colors.grey[300] : Colors.black,
-        displayColor: isDark ? Colors.grey[300] : Colors.black,
-      ),
-    );
+    final bool isDark = userTheme == 'dark';
+    final bool contrastMode = highContrastMode;
+    final Color primaryColor = getPrimaryColor(isDark, contrastMode);
+    final Color secondaryColor = getSecondaryColor(isDark, contrastMode);
+    final TextStyle textStyle = getTextStyle(userFontSize, primaryColor, useDyslexiaFont);
+
 
     return Theme(
-      data: themeData,
+      data: _themeData,
       child: Scaffold(
-        appBar: AppBar(title: const Text('FocusNexus Dashboard')),
-        body: ListView(
-          padding: const EdgeInsets.all(16.0),
+        appBar: AppBar(title:  Text('FocusNexus Dashboard', style: TextStyle(backgroundColor: secondaryColor, color: primaryColor)), backgroundColor: secondaryColor),
+        backgroundColor: secondaryColor,
+        body: Container(
+          color: secondaryColor,
+          child: ListView(
+              padding: const EdgeInsets.all(16.0),
           children: [
-            Text('Points: $_points', style: TextStyle(fontSize: userFontSize)),
+            Text('Points: $_points', style: textStyle),
             const SizedBox(height: 10),
             ElevatedButton(
               onPressed: () => Navigator.pushNamed(context, 'settings')
@@ -87,37 +84,60 @@ class _DashboardScreenState extends BaseState<DashboardScreen> {
                   _loadPoints();  // Reload points
                 });
               }),
-              child: const Text('Settings'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: secondaryColor, // 🔹 Applies secondaryColor as background
+              ),
+              child:  Text('Settings', style: textStyle),
             ),
 
             ElevatedButton(
               onPressed: () => Navigator.pushNamed(context, 'reward'),
-              child: Text('Reward: $rewardType'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: secondaryColor, // 🔹 Applies secondaryColor as background
+              ),
+              child: Text('Reward: $rewardType', style: textStyle),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pushNamed(context, 'chat'),
-              child: const Text('AI Chat / Therapist Space'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: secondaryColor, // 🔹 Applies secondaryColor as background
+              ),
+              child:  Text('AI Chat / Therapist Space' , style: textStyle),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pushNamed(context, 'reminders'),
-              child: const Text('Reminders'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: secondaryColor, // 🔹 Applies secondaryColor as background
+              ),
+              child:  Text('Reminders', style: textStyle),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pushNamed(context, 'achievements'),
-              child: const Text('Achievements'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: secondaryColor, // 🔹 Applies secondaryColor as background
+              ),
+              child:  Text('Achievements', style: textStyle),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pushNamed(context, 'tasks'),
-              child: const Text('Tasks'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: secondaryColor, // 🔹 Applies secondaryColor as background
+              ),
+              child:  Text('Tasks', style: textStyle),
             ),
             ElevatedButton(
               onPressed: () =>
                   Navigator.pushNamed(context, 'goals').then((_) => _loadPoints()),
-              child: const Text('Goal Setting'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: secondaryColor, // 🔹 Applies secondaryColor as background
+              ),
+              child:  Text('Goal Setting', style: textStyle),
             ),
+
           ],
         ),
       ),
+      )
     );
   }
 }
