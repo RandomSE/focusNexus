@@ -27,7 +27,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
   String _complexity = 'Low';
   String _effort = 'Low';
   String _motivation = 'Low';
-  final _categories = ['Productivity', 'Health', 'Learning'];
+  final _categories = ['Productivity', 'Health', 'Learning', 'Social', 'Self-care', 'Work', 'Relationships', 'Other'];
   final _levels = ['Low', 'Medium', 'High'];
   final Map<String, Map<String, dynamic>> _templateDetails = {
     'Clean your room': {
@@ -87,15 +87,53 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
   final DateFormat formatter = DateFormat('dd MMMM yyyy');
   Map<String, Map<String, dynamic>> _userTemplates = {};
   late ThemeData _themeData;
+  Map<String, List<String>> _templateGroups = {};
+  late Color _primaryColor;
+  late Color _secondaryColor;
+  late TextStyle _textStyle;
+  late ButtonStyle _buttonStyle;
+  bool _themeLoaded = false;
 
   @override
   void initState() {
     super.initState();
     _loadGoals();
     _loadTemplates();
-    _themeData = defaultThemeData; // Start with default
-    loadStoredTheme(); // Try loading stored theme data
-    setThemeData();
+    _loadTemplateGroups();
+
+    _themeData = ThemeData.light();
+    _initializeTheme(); // async theme setup from storage
+  }
+
+  Future<void> _initializeTheme() async {
+    ThemeData loadedTheme;
+
+    final String? storedTheme = await _storage.read(key: 'themeData');
+    await Future.delayed(const Duration(seconds: 1));
+    if (storedTheme != null) {
+      loadedTheme = parseThemeData(storedTheme);
+    } else {
+      loadedTheme = await setAndGetThemeData(
+        isDark: userTheme == 'dark',
+        highContrastMode: highContrastMode,
+        userFontSize: userFontSize,
+        useDyslexiaFont: useDyslexiaFont,
+      );
+    }
+
+    if (mounted) {
+      setState(() {
+        _themeData      = loadedTheme;
+        _primaryColor   = loadedTheme.primaryColor;
+        _secondaryColor = loadedTheme.scaffoldBackgroundColor;
+        _textStyle      = loadedTheme.textTheme.bodyMedium!;
+        _buttonStyle    = ElevatedButton.styleFrom(
+          backgroundColor: _secondaryColor,
+          foregroundColor: _primaryColor,
+        );
+        _themeLoaded = true;
+      });
+    }
   }
 
   Future<void> _loadTemplates() async {
@@ -324,15 +362,9 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
   }
 
   void _viewGoalDetails(Map<String, dynamic> goal) {
-    final bool isDark = userTheme == 'dark';
-    final bool contrastMode = highContrastMode;
-    final Color primaryColor = getPrimaryColor(isDark, contrastMode);
-    final Color secondaryColor = getSecondaryColor(isDark, contrastMode);
-    final TextStyle textStyle = TextStyle(
-      fontSize: userFontSize,
-      fontWeight: FontWeight.bold,
-      color: primaryColor,
-    );
+    final Color primaryColor = _primaryColor;
+    final Color secondaryColor = _secondaryColor;
+    final TextStyle textStyle = _textStyle;
 
     showDialog(
       context: context,
@@ -386,11 +418,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
     final bool contrastMode = highContrastMode;
     final Color primaryColor = getPrimaryColor(isDark, contrastMode);
     final Color secondaryColor = getSecondaryColor(isDark, contrastMode);
-    final TextStyle textStyle = TextStyle(
-      fontSize: userFontSize,
-      fontWeight: FontWeight.bold,
-      color: primaryColor,
-    );
+    final TextStyle textStyle = getTextStyle(userFontSize, primaryColor, useDyslexiaFont);
 
     final TextEditingController _templateName = TextEditingController();
     final TextEditingController _templateTime = TextEditingController();
@@ -614,21 +642,184 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
+  Future<void> _saveTemplateGroups() async {
+    await _storage.write(
+      key: 'templateGroups',
+      value: json.encode(_templateGroups),
+    );
+  }
+
+  Future<void> _loadTemplateGroups() async {
+    final saved = await _storage.read(key: 'templateGroups');
+    if (saved != null && saved.isNotEmpty) {
+      setState(() {
+        _templateGroups = Map<String, List<String>>.from(
+          (json.decode(saved) as Map<String, dynamic>).map(
+                (k, v) => MapEntry(k, List<String>.from(v)),
+          ),
+        );
+      });
+    }
+  }
+
+  void _openMultiTemplateManager() {
     final bool isDark = userTheme == 'dark';
     final bool contrastMode = highContrastMode;
     final Color primaryColor = getPrimaryColor(isDark, contrastMode);
     final Color secondaryColor = getSecondaryColor(isDark, contrastMode);
-    final TextStyle textStyle = getTextStyle(
-      userFontSize,
-      primaryColor,
-      useDyslexiaFont,
+    final TextStyle textStyle = getTextStyle(userFontSize, primaryColor, useDyslexiaFont);
+
+    final TextEditingController _groupNameController = TextEditingController();
+    List<String> _selectedTemplates = [];
+    String? _selectedGroup;
+
+    showDialog(
+      context: context,
+      builder: (_) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            backgroundColor: secondaryColor,
+            title: Text('Select Multiple Templates', style: textStyle),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButton<String>(
+                    value: _selectedGroup,
+                    hint: Text('Load Saved Group', style: textStyle),
+                    dropdownColor: secondaryColor,
+                    items: _templateGroups.keys.map((groupName) {
+                      return DropdownMenuItem(
+                        value: groupName,
+                        child: Text(groupName, style: textStyle),
+                      );
+                    }).toList(),
+                    onChanged: (groupName) {
+                      setState(() {
+                        _selectedGroup = groupName;
+                        _selectedTemplates = List.from(_templateGroups[groupName!] ?? []);
+                        _groupNameController.text = groupName; // auto-fill name when loading group
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _groupNameController,
+                    style: textStyle,
+                    decoration: InputDecoration(
+                      labelText: 'Group Name (required to save/update)',
+                      labelStyle: textStyle,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text('Select Templates to Create Goals:', style: textStyle),
+                  ...[..._templateDetails.keys, ..._userTemplates.keys].map((templateName) {
+                    final selected = _selectedTemplates.contains(templateName);
+                    return CheckboxListTile(
+                      title: Text(templateName, style: textStyle),
+                      value: selected,
+                      activeColor: primaryColor,
+                      checkColor: secondaryColor,
+                      onChanged: (bool? value) {
+                        setState(() {
+                          if (value == true) {
+                            _selectedTemplates.add(templateName);
+                          } else {
+                            _selectedTemplates.remove(templateName);
+                          }
+                        });
+                      },
+                    );
+                  }).toList(),
+                  const Divider(),
+                  Text('Existing Groups:', style: textStyle),
+                  ..._templateGroups.keys.map((name) {
+                    return ListTile(
+                      title: Text(name, style: textStyle),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete),
+                        color: primaryColor,
+                        onPressed: () {
+                          setState(() {
+                            _templateGroups.remove(name);
+                          });
+                          _saveTemplateGroups();
+                        },
+                      ),
+                      onTap: () {
+                        setState(() {
+                          _selectedGroup = name;
+                          _selectedTemplates = List.from(_templateGroups[name]!);
+                          _groupNameController.text = name; // auto-fill name when selecting existing group
+                        });
+                      },
+                    );
+                  }),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Cancel', style: textStyle),
+              ),
+              TextButton(
+                onPressed: () {
+                  final groupName = _groupNameController.text.trim();
+                  if (groupName.isEmpty || _selectedTemplates.isEmpty) return;
+                  setState(() {
+                    _templateGroups[groupName] = List.from(_selectedTemplates);
+                  });
+                  _saveTemplateGroups();
+                },
+                child: Text('Save/Update Group', style: textStyle),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: secondaryColor,
+                  foregroundColor: primaryColor,
+                ),
+                onPressed: () {
+                  if (_selectedTemplates.isEmpty) return;
+                  for (final templateName in _selectedTemplates) {
+                    final data = _templateDetails[templateName] ?? _userTemplates[templateName]!;
+                    _titleController.text = templateName;
+                    _category = data['category'];
+                    _complexity = data['complexity'];
+                    _effort = data['effort'];
+                    _motivation = data['motivation'];
+                    _timeController.text = data['time'];
+                    _deadlineController.text = data['Days to complete'];
+                    _stepsController.text = data['steps'];
+                    _createGoal();
+                  }
+                  Navigator.pop(context);
+                },
+                child: const Text('Create Goals'),
+              ),
+            ],
+          );
+        },
+      ),
     );
-    final ButtonStyle buttonStyle = ElevatedButton.styleFrom(
-      backgroundColor: secondaryColor,
-      foregroundColor: primaryColor,
-    );
+  }
+
+
+
+  @override
+  Widget build(BuildContext context) {
+
+    if (!_themeLoaded) {
+      // show placeholder while theme loads
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final bool isDark = userTheme == 'dark';
+    final bool contrastMode = highContrastMode;
+    final Color primaryColor = getPrimaryColor(isDark, contrastMode);
+    final Color secondaryColor = getSecondaryColor(isDark, contrastMode);
+    final TextStyle textStyle = getTextStyle(userFontSize, primaryColor, useDyslexiaFont);
+    final ButtonStyle buttonStyle = _buttonStyle;
 
     return Theme(
       data: _themeData,
@@ -705,6 +896,27 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                                     _deadlineController.text = data['Days to complete'];
                                     _stepsController.text = data['steps'];
                                   },
+                                ),
+                                DropdownButtonFormField(
+                                  dropdownColor: secondaryColor,
+                                  value: _category,
+                                  items:
+                                  _categories
+                                      .map(
+                                        (e) => DropdownMenuItem(
+                                      value: e,
+                                      child: Text(e, style: textStyle),
+                                    ),
+                                  )
+                                      .toList(),
+                                  onChanged:
+                                      (val) => setState(
+                                        () => _category= val ?? 'Productivity',
+                                  ),
+                                  decoration: InputDecoration(
+                                    labelText: 'Category',
+                                    labelStyle: textStyle,
+                                  ),
                                 ),
                                 DropdownButtonFormField(
                                   dropdownColor: secondaryColor,
@@ -831,10 +1043,13 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                                 ),
                                 ElevatedButton(
                                   style: buttonStyle,
+                                  onPressed: _openMultiTemplateManager,
+                                  child: Text('Manage Multi-templates', style: textStyle),
+                                ),
+                                ElevatedButton(
+                                  style: buttonStyle,
                                   onPressed: _openTemplateManager,
-                                  child: Text(
-                                    'Manage Templates',
-                                    style: textStyle,
+                                  child: Text('Manage Templates', style: textStyle,
                                   ),
                                 ),
                               ],

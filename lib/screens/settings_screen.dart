@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:focusNexus/utils/BaseState.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -9,14 +10,51 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends BaseState<SettingsScreen> {
+  bool _themeLoaded = false;
   late ThemeData _themeData;
+  late Color _primaryColor;
+  late Color _secondaryColor;
+  late TextStyle _textStyle;
+  late ButtonStyle _buttonStyle;
+  final _storage = const FlutterSecureStorage();
 
   @override
   void initState() {
     super.initState();
     _themeData = defaultThemeData; // Start with default
-    loadStoredTheme(); // Try loading stored theme data
-    setThemeData();
+    _themeData = ThemeData.light();
+    _initializeTheme(); // async theme setup from storage
+  }
+
+  Future<void> _initializeTheme() async {
+    ThemeData loadedTheme;
+
+    final String? storedTheme = await _storage.read(key: 'themeData');
+    await Future.delayed(const Duration(seconds: 1));
+    if (storedTheme != null) {
+      loadedTheme = parseThemeData(storedTheme);
+    } else {
+      loadedTheme = await setAndGetThemeData(
+        isDark: userTheme == 'dark',
+        highContrastMode: highContrastMode,
+        userFontSize: userFontSize,
+        useDyslexiaFont: useDyslexiaFont,
+      );
+    }
+
+    if (mounted) {
+      setState(() {
+        _themeData      = loadedTheme;
+        _primaryColor   = loadedTheme.primaryColor;
+        _secondaryColor = loadedTheme.scaffoldBackgroundColor;
+        _textStyle      = loadedTheme.textTheme.bodyMedium!;
+        _buttonStyle    = ElevatedButton.styleFrom(
+          backgroundColor: _secondaryColor,
+          foregroundColor: _primaryColor,
+        );
+        _themeLoaded = true;
+      });
+    }
   }
 
   @override
@@ -26,6 +64,11 @@ class _SettingsScreenState extends BaseState<SettingsScreen> {
     final Color primaryColor = getPrimaryColor(isDark, contrastMode);
     final Color secondaryColor = getSecondaryColor(isDark, contrastMode);
     final TextStyle textStyle = getTextStyle(userFontSize, primaryColor, useDyslexiaFont);
+
+    if (!_themeLoaded) {
+      // show placeholder while theme loads
+      return const Center(child: CircularProgressIndicator());
+    }
 
     return Theme(
         data: _themeData,

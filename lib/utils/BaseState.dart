@@ -28,10 +28,27 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
   void initState() {
     super.initState();
     _loadUserPreferences();
-    _themeData = defaultThemeData;
-    loadStoredTheme();
-    setThemeData(); // Ensure theme is applied on startup
+    initializeTheme(); // <- unified async theme init
   }
+
+  Future<void> initializeTheme() async {
+    final String? storedTheme = await _storage.read(key: 'themeData');
+    if (storedTheme != null) {
+      final ThemeData parsedTheme = parseThemeData(storedTheme);
+      if (mounted) {
+        setState(() => _themeData = parsedTheme);
+      }
+    } else {
+      // fallback to default but still uses proper user settings if available
+      await setThemeData(
+        isDark: userTheme == 'dark',
+        highContrastMode: highContrastMode,
+        userFontSize: userFontSize,
+        useDyslexiaFont: useDyslexiaFont,
+      );
+    }
+  }
+
 
   Future<void> loadStoredTheme() async {
     final String? storedTheme = await _storage.read(key: 'themeData');
@@ -88,71 +105,85 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
   Future<void> setUserFontSize(double value) async {
     setState(() => _userFontSize = value);
     await _storage.write(key: 'fontSize', value: value.toString());
+    onThemeUpdated();
   }
 
   Future<void> setUserTheme(String value) async {
     setState(() => _userTheme = value);
     await _storage.write(key: 'theme', value: value);
+    onThemeUpdated();
   }
 
   Future<void> setRewardType(String value) async {
     setState(() => _rewardType = value);
     await _storage.write(key: 'rewardType', value: value);
+    onThemeUpdated();
   }
 
   Future<void> setNotificationStyle(String value) async {
     setState(() => _notificationStyle = value);
     await _storage.write(key: 'notificationStyle', value: value);
+    onThemeUpdated();
   }
 
   Future<void> setNotificationFrequency(String value) async {
     setState(() => _notificationFrequency = value);
     await _storage.write(key: 'notificationFrequency', value: value);
+    onThemeUpdated();
   }
 
   Future<void> setRememberMe(bool value) async {
     setState(() => _rememberMe = value);
     await _storage.write(key: 'rememberMe', value: value.toString());
+    onThemeUpdated();
   }
 
   Future<void> setHighContrastMode(bool value) async {
     setState(() => _highContrastMode = value);
     await _storage.write(key: 'highContrast', value: value.toString());
+    onThemeUpdated();
   }
 
   Future<void> setUseDyslexiaFont(bool value) async {
     setState(() => _useDyslexiaFont = value);
     await _storage.write(key: 'dyslexiaFont', value: value.toString());
+    onThemeUpdated();
   }
 
   Future<void> setBackgroundBrightness(double value) async {
     setState(() => _backgroundBrightness = value);
     await _storage.write(key: 'bgBrightness', value: value.toString());
+    onThemeUpdated();
   }
 
   Future<void> setAiEncouragement(bool value) async {
     setState(() => _aiEncouragement = value);
     await _storage.write(key: 'aiEncouragement', value: value.toString());
+    onThemeUpdated();
   }
 
   Future<void> setDailyAffirmations(bool value) async {
     setState(() => _dailyAffirmations = value);
     await _storage.write(key: 'dailyAffirmations', value: value.toString());
+    onThemeUpdated();
   }
 
   Future<void> setSkipToday(bool value) async {
     setState(() => _skipToday = value);
     await _storage.write(key: 'skipToday', value: value.toString());
+    onThemeUpdated();
   }
 
   Future<void> setPauseGoals(bool value) async {
     setState(() => _pauseGoals = value);
     await _storage.write(key: 'pauseGoals', value: value.toString());
+    onThemeUpdated();
   }
 
   Future<void>setLoggedIn(bool value) async {
     setState(() => _loggedIn = value);
     await _storage.write(key: 'pauseGoals', value: value.toString());
+    onThemeUpdated();
 
   }
 
@@ -188,7 +219,77 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
           );
     });
 
-    await _storage.write(key: 'themeData', value: _themeData.toString());
+    await _storage.write(key: 'themeData', value: jsonEncode({
+      'isDark': isDark,
+      'primaryColor': primaryColor!.value,
+      'secondaryColor': secondaryColor!.value,
+      'userFontSize': userFontSize ?? 14.0,
+      'useDyslexiaFont': useDyslexiaFont ?? false,
+    }));
+    onThemeUpdated();
+
+  }
+
+  Future<ThemeData> setAndGetThemeData({
+    ThemeData? themeData,
+    bool? isDark,
+    bool? highContrastMode,
+    Color? primaryColor,
+    Color? secondaryColor,
+    double? backgroundBrightness,
+    double? userFontSize,
+    bool? useDyslexiaFont,
+  }) async {
+    late ThemeData newTheme;
+
+    // Compute fallback theme values
+    final bool darkMode = isDark ?? false;
+    final bool contrastMode = highContrastMode ?? false;
+    final double brightnessFactor = backgroundBrightness ?? 1.0;
+    final double fontSize = userFontSize ?? 14.0;
+    final bool dyslexiaFont = useDyslexiaFont ?? false;
+
+    final Color resolvedPrimaryColor =
+        primaryColor ?? (contrastMode ? Colors.cyan : (darkMode ? Colors.white : Colors.black));
+
+    final Color resolvedSecondaryColor = secondaryColor ??
+        (contrastMode
+            ? Colors.black
+            : (darkMode
+            ? Colors.black
+            : Colors.white.withOpacity(1 - brightnessFactor)));
+
+    // Build theme either from parameter or calculated values
+    newTheme = themeData ??
+        ThemeData(
+          brightness: darkMode ? Brightness.dark : Brightness.light,
+          primaryColor: resolvedPrimaryColor,
+          scaffoldBackgroundColor: resolvedSecondaryColor,
+          textTheme: ThemeData.light().textTheme.apply(
+            fontSizeFactor: fontSize / 14.0,
+            fontFamily: dyslexiaFont ? 'OpenDyslexic' : null,
+            bodyColor: resolvedPrimaryColor,
+            displayColor: resolvedPrimaryColor,
+          ),
+        );
+
+    // Apply theme to state
+    if (mounted) {
+      setState(() {
+        _themeData = newTheme;
+      });
+    }
+
+    // Persist theme settings
+    await _storage.write(key: 'themeData', value: jsonEncode({
+      'isDark': darkMode,
+      'primaryColor': resolvedPrimaryColor.value,
+      'secondaryColor': resolvedSecondaryColor.value,
+      'userFontSize': fontSize,
+      'useDyslexiaFont': dyslexiaFont,
+    }));
+
+    return newTheme;
   }
 
 
@@ -243,15 +344,21 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
   ThemeData parseThemeData(String storedTheme) {
     final Map<String, dynamic> themeMap = jsonDecode(storedTheme);
 
+    final bool isDark = themeMap['isDark'] ?? false;
+    final int primaryColorValue = themeMap['primaryColor'] ?? 0xFF000000;
+    final int secondaryColorValue = themeMap['secondaryColor'] ?? 0xFFFFFFFF;
+    final double fontSize = (themeMap['userFontSize'] ?? 14).toDouble();
+    final bool useDyslexiaFont = themeMap['useDyslexiaFont'] ?? false;
+
     return ThemeData(
-      brightness: themeMap['isDark'] ? Brightness.dark : Brightness.light,
-      primaryColor: Color(themeMap['primaryColor']),
-      scaffoldBackgroundColor: Color(themeMap['secondaryColor']),
+      brightness: isDark ? Brightness.dark : Brightness.light,
+      primaryColor: Color(primaryColorValue),
+      scaffoldBackgroundColor: Color(secondaryColorValue),
       textTheme: ThemeData.light().textTheme.apply(
-        fontSizeFactor: themeMap['userFontSize'] / 14.0,
-        fontFamily: themeMap['useDyslexiaFont'] ? 'OpenDyslexic' : null,
-        bodyColor: Color(themeMap['primaryColor']),
-        displayColor: Color(themeMap['primaryColor']),
+        fontSizeFactor: fontSize / 14.0,
+        fontFamily: useDyslexiaFont ? 'OpenDyslexic' : null,
+        bodyColor: Color(primaryColorValue),
+        displayColor: Color(primaryColorValue),
       ),
     );
   }
@@ -276,6 +383,10 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
       color: primaryColor,
       fontFamily: useDyslexiaFont ? 'OpenDyslexic' : null
     );
+
+  }
+
+  void onThemeUpdated() {
 
   }
 
