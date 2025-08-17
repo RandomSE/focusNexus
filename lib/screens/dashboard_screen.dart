@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:focusNexus/utils/BaseState.dart';
 
+import '../utils/notifier.dart';
+
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 

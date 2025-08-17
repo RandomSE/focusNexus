@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'dart:convert';
 
 import '../utils/BaseState.dart';
+import '../utils/notifier.dart';
 
 class GoalsScreen extends StatefulWidget {
   const GoalsScreen({super.key});
@@ -83,8 +84,9 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
     DateTime.now().year,
     DateTime.now().month,
     DateTime.now().day,
+    DateTime.now().hour
   );
-  final DateFormat formatter = DateFormat('dd MMMM yyyy');
+  final DateFormat formatter = DateFormat('dd HH:mm MMMM yyyy');
   Map<String, Map<String, dynamic>> _userTemplates = {};
   late ThemeData _themeData;
   Map<String, List<String>> _templateGroups = {};
@@ -214,7 +216,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
         break;
 
       case 'Closest deadline':
-        final DateFormat deadlineFormat = DateFormat('d MMMM yyyy');
+        final DateFormat deadlineFormat = formatter;
 
         // Separate goals into two groups: valid and invalid deadlines
         final List<Map<String, dynamic>> withDeadline = [];
@@ -289,6 +291,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
         final int days = int.tryParse(deadlineDays) ?? 0;
         final DateTime deadlineDate = _currentDate.add(Duration(days: days));
         deadline = formatter.format(deadlineDate);
+        GoalNotifier.startGoalCheck(_titleController.text, 2);
       }
       final goal = {
         'title': _titleController.text,
@@ -341,7 +344,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
   }
 
   void _checkForExpiredGoals() {
-    final DateFormat format = DateFormat('d MMMM yyyy');
+    final DateFormat format = formatter;
     final DateTime today = DateTime.now();
 
     // Reverse index scan to safely remove while iterating

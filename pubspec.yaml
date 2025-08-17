@@ -32,6 +32,8 @@ dependencies:
     sdk: flutter
   flutter_secure_storage: ^9.0.0
   intl: ^0.18.1
+  flutter_local_notifications: ^17.2.1
+  timezone: ^0.9.0
 
 
 
