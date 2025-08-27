@@ -27,6 +27,8 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
   String _category = 'Productivity';
   String _complexity = 'Low';
   String _effort = 'Low';
+  String _time = '1';
+  String _steps = '1';
   String _motivation = 'Low';
   final _categories = ['Productivity', 'Health', 'Learning', 'Social', 'Self-care', 'Work', 'Relationships', 'Other'];
   final _levels = ['Low', 'Medium', 'High'];
@@ -37,7 +39,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
       'effort': 'Low',
       'motivation': 'Medium',
       'time': '10',
-      'Days to complete': '1',
+      'Hours to complete': '24',
       'steps': '1',
     },
     '5-minute walk': {
@@ -46,7 +48,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
       'effort': 'Low',
       'motivation': 'Low',
       'time': '5',
-      'Days to complete': '1',
+      'Hours to complete': '24',
       'steps': '1',
     },
     'Make a meal': {
@@ -55,7 +57,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
       'effort': 'Medium',
       'motivation': 'Medium',
       'time': '30',
-      'Days to complete': '1',
+      'Hours to complete': '24',
       'steps': '2',
     },
     'Take a shower': {
@@ -64,7 +66,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
       'effort': 'Low',
       'motivation': 'Low',
       'time': '10',
-      'Days to complete': '1',
+      'Hours to complete': '24',
       'steps': '1',
     },
     'Compliment someone': {
@@ -73,7 +75,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
       'effort': 'Low',
       'motivation': 'Low',
       'time': '1',
-      'Days to complete': '1',
+      'Hours to complete': '24',
       'steps': '1',
     },
   };
@@ -105,6 +107,35 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
 
     _themeData = ThemeData.light();
     _initializeTheme(); // async theme setup from storage
+  }
+
+  Future<int> getTotalAmount(int amount) async {
+    final String today = DateFormat('dd MM yyyy').format(DateTime.now());
+
+    // Read stored value
+    final String? stored = await _storage.read(key: 'completedToday');
+
+    int count = 1;
+
+    if (stored != null) {
+      final parts = stored.split('|');
+      final storedDate = parts[0];
+      final storedCount = int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0;
+
+      if (storedDate == today) {
+        count = storedCount + 1;
+      }
+    }
+
+    // Save updated value
+    await _storage.write(key: 'completedToday', value: '$today|$count');
+    debugPrint('today: $today, count: $count');
+
+    // Apply reward logic
+    if (count == 1) return amount * 2 + 100;
+    if (count >= 2 && count <= 5) return (amount * 1.5).round() + 20;
+    if (count >= 6 && count <= 10) return (amount * 1.25).round() + 5;
+    return amount;
   }
 
   Future<void> _initializeTheme() async {
@@ -254,17 +285,38 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
     return goals;
   }
 
-  int _calculatePoints() {
-    int base = 5;
-    int mult = 1;
-    if (_complexity == 'Medium') mult++;
-    if (_complexity == 'High') mult += 2;
-    if (_effort == 'Medium') mult++;
-    if (_effort == 'High') mult += 2;
-    if (_motivation == 'Medium') mult++;
-    if (_motivation == 'High') mult += 2;
-    return base * mult;
+  void _clearGoals() {
+    while (_activeGoals.isNotEmpty) {
+      _removeGoal(0);
+    }
   }
+
+  void _clearCompleteGoals () {
+    while (_completedGoals.isNotEmpty) {
+      _removeCompletedGoal(0);
+    }
+  }
+
+  int _calculatePoints() {
+    const int base = 5;
+
+    int complexityWeight = (_complexity == 'Medium') ? 1 : (_complexity == 'High') ? 2 : 0;
+    int effortWeight     = (_effort == 'Medium')     ? 1 : (_effort == 'High')     ? 2 : 0;
+    int motivationWeight = (_motivation == 'Medium') ? 1 : (_motivation == 'High') ? 2 : 0;
+
+    int time = int.tryParse(_time) ?? 0;
+    int timeBonus = (time > 15) ? ((time - 15) ~/ 5) : 0;
+    timeBonus = timeBonus.clamp(0, 4);
+
+    int steps = int.tryParse(_steps) ?? 1;
+    int stepMultiplier = (steps > 1) ? (steps - 1) : 1;
+    stepMultiplier = stepMultiplier.clamp(1, 4);
+
+    int totalMultiplier = 1 + complexityWeight + effortWeight + motivationWeight + timeBonus + stepMultiplier;
+
+    return base * totalMultiplier;
+  }
+
 
   Future<void> _saveGoals() async {
     await _storage.write(key: 'activeGoals', value: json.encode(_activeGoals));
@@ -277,23 +329,27 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
   Future<void> _addPoints(int amount, String source) async {
     final points = await _storage.read(key: 'points');
     final value = int.tryParse(points ?? '50') ?? 50;
-    await _storage.write(key: 'points', value: (value + amount).toString());
+    final totalAmount = await getTotalAmount(amount);
+
+
+    await _storage.write(key: 'points', value: (value + totalAmount).toString());
   }
 
   void _createGoal() {
     if (_formKey.currentState!.validate()) {
-      String deadlineDays = _deadlineController.text;
-      String deadline = formatter.format(_currentDate); // default. should be updated below.
-      if(deadlineDays == '' || deadlineDays == null){
+      final String deadlineHours = _deadlineController.text.trim();
+      String deadline;
+
+      if (deadlineHours.isEmpty) {
         deadline = 'no deadline';
-      }
-      else {
-        final int days = int.tryParse(deadlineDays) ?? 0;
-        final DateTime deadlineDate = _currentDate.add(Duration(days: days));
+      } else {
+        final int hours = int.tryParse(deadlineHours) ?? 0;
+        final DateTime deadlineDate = _currentDate.add(Duration(hours: hours));
         deadline = formatter.format(deadlineDate);
-        GoalNotifier.startGoalCheck(_titleController.text, 2);
+        GoalNotifier.startGoalCheck(_titleController.text, hours);
       }
-      final goal = {
+
+    final goal = {
         'title': _titleController.text,
         'category': _category,
         'complexity': _complexity,
@@ -330,6 +386,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
 
   void _completeGoal(int index) {
     final goal = _activeGoals.removeAt(index);
+    GoalNotifier.cancelGoalNotification(goal['title']); // Cancel notifications
     _completedGoals.add(goal);
     _addPoints(goal['points'], 'goal:${goal['title']}');
     _saveGoals();
@@ -337,8 +394,18 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
   }
 
   void _removeGoal(int index) {
+    final goal = _activeGoals[index];
+    GoalNotifier.cancelGoalNotification(goal['title']); // Cancel notifications
     setState(() {
       _activeGoals.removeAt(index);
+    });
+    _saveGoals();
+  }
+
+  void _removeCompletedGoal(int index) {
+    final goal = _completedGoals[index];
+    setState(() {
+      _completedGoals.removeAt(index);
     });
     _saveGoals();
   }
@@ -365,9 +432,11 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
   }
 
   void _viewGoalDetails(Map<String, dynamic> goal) {
-    final Color primaryColor = _primaryColor;
-    final Color secondaryColor = _secondaryColor;
-    final TextStyle textStyle = _textStyle;
+    final bool isDark = userTheme == 'dark';
+    final bool contrastMode = highContrastMode;
+    final Color primaryColor = getPrimaryColor(isDark, contrastMode);
+    final Color secondaryColor = getSecondaryColor(isDark, contrastMode);
+    final TextStyle textStyle = getTextStyle(userFontSize, primaryColor, useDyslexiaFont);
 
     showDialog(
       context: context,
@@ -427,221 +496,226 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
     final TextEditingController _templateTime = TextEditingController();
     final TextEditingController _templateSteps = TextEditingController();
     final TextEditingController _templateDeadline = TextEditingController();
+
     String _templateCategory = _categories.first;
     String _templateComplexity = _levels.first;
     String _templateEffort = _levels.first;
     String _templateMotivation = _levels.first;
 
+    final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
     showDialog(
       context: context,
-      builder:
-          (_) => StatefulBuilder(
-            builder:
-                (context, setState) => AlertDialog(
-                  backgroundColor: secondaryColor,
-                  title: Text('Manage Templates', style: textStyle),
-                  content: SingleChildScrollView(
-                    child: Container(
-                      color: secondaryColor,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          TextField(
-                            controller: _templateName,
-                            style: textStyle,
-                            decoration: InputDecoration(
-                              labelText: 'Template Name',
-                              labelStyle: textStyle,
-                              filled: true,
-                              fillColor: secondaryColor,
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                          DropdownButtonFormField(
-                            dropdownColor: secondaryColor,
-                            value: _templateCategory,
-                            decoration: InputDecoration(
-                              labelText: 'Category',
-                              labelStyle: textStyle,
-                            ),
-                            items:
-                                _categories
-                                    .map(
-                                      (e) => DropdownMenuItem(
-                                        value: e,
-                                        child: Text(e),
-                                      ),
-                                    )
-                                    .toList(),
-                            style: textStyle,
-                            onChanged:
-                                (v) => setState(() => _templateCategory = v!),
-                          ),
-                          DropdownButtonFormField(
-                            dropdownColor: secondaryColor,
-                            value: _templateComplexity,
-                            decoration: InputDecoration(
-                              labelText: 'Complexity',
-                              labelStyle: textStyle,
-                            ),
-                            items:
-                                _levels
-                                    .map(
-                                      (e) => DropdownMenuItem(
-                                        value: e,
-                                        child: Text(e),
-                                      ),
-                                    )
-                                    .toList(),
-                            style: textStyle,
-                            onChanged:
-                                (v) => setState(() => _templateComplexity = v!),
-                          ),
-                          DropdownButtonFormField(
-                            dropdownColor: secondaryColor,
-                            value: _templateEffort,
-                            decoration: InputDecoration(
-                              labelText: 'Effort',
-                              labelStyle: textStyle,
-                            ),
-                            items:
-                                _levels
-                                    .map(
-                                      (e) => DropdownMenuItem(
-                                        value: e,
-                                        child: Text(e),
-                                      ),
-                                    )
-                                    .toList(),
-                            style: textStyle,
-                            onChanged:
-                                (v) => setState(() => _templateEffort = v!),
-                          ),
-                          DropdownButtonFormField(
-                            dropdownColor: secondaryColor,
-                            value: _templateMotivation,
-                            decoration: InputDecoration(
-                              labelText: 'Motivation',
-                              labelStyle: textStyle,
-                            ),
-                            items:
-                                _levels
-                                    .map(
-                                      (e) => DropdownMenuItem(
-                                        value: e,
-                                        child: Text(e),
-                                      ),
-                                    )
-                                    .toList(),
-                            style: textStyle,
-                            onChanged:
-                                (v) => setState(() => _templateMotivation = v!),
-                          ),
-                          TextField(
-                            style: textStyle,
-                            controller: _templateTime,
-                            decoration: InputDecoration(
-                              labelText: 'Time (minutes)',
-                              labelStyle: textStyle,
-                            ),
-                          ),
-                          TextField(
-                            style: textStyle,
-                            controller: _templateDeadline,
-                            decoration: InputDecoration(
-                              labelText: 'Days to complete',
-                              labelStyle: textStyle,
-                            ),
-                          ),
-                          TextField(
-                            style: textStyle,
-                            controller: _templateSteps,
-                            decoration: InputDecoration(
-                              labelText: 'Steps',
-                              labelStyle: textStyle,
-                            ),
-                          ),
-                          ElevatedButton(
-                            onPressed: () {
-                              final name = _templateName.text.trim();
-                              if (name.isEmpty) return;
-                              final data = {
-                                'category': _templateCategory,
-                                'complexity': _templateComplexity,
-                                'effort': _templateEffort,
-                                'motivation': _templateMotivation,
-                                'time': _templateTime.text.trim(),
-                                'steps': _templateSteps.text.trim(),
-                                'Days to complete': _templateDeadline.text.trim()
-                              };
-
-                              if (_templateDetails.containsKey(name)) {
-                                setState(() => _templateDetails[name] = data);
-                              } else {
-                                setState(() => _userTemplates[name] = data);
-                              }
-                              _saveTemplates();
-                              _templateName.clear();
-                              _templateTime.clear();
-                              _templateSteps.clear();
-                              _templateDeadline.clear();
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: secondaryColor,
-                              foregroundColor: primaryColor,
-                            ),
-                            child: const Text('Save Template'),
-                          ),
-                          const Divider(),
-                          Text('Templates:', style: textStyle),
-                          ...[
-                            ..._templateDetails.keys,
-                            ..._userTemplates.keys,
-                          ].map(
-                            (name) => ListTile(
-                              title: Text(name),
-                              titleTextStyle: textStyle,
-                              trailing:
-                                  _userTemplates.containsKey(name)
-                                      ? IconButton(
-                                        icon: const Icon(Icons.delete),
-                                        onPressed: () {
-                                          setState(() {
-                                            _userTemplates.remove(name);
-                                            _saveTemplates();
-                                          });
-                                        },
-                                      )
-                                      : null,
-                              onTap: () {
-                                final t =
-                                    _templateDetails[name] ??
-                                    _userTemplates[name]!;
-                                setState(() {
-                                  _templateName.text = name;
-                                  _templateCategory = t['category'];
-                                  _templateComplexity = t['complexity'];
-                                  _templateEffort = t['effort'];
-                                  _templateMotivation = t['motivation'];
-                                  _templateTime.text = t['time'];
-                                  _templateDeadline.text = t['Days to complete'];
-                                  _templateSteps.text = t['steps'];
-                                });
-                              },
-                            ),
-                          ),
-                        ],
+      builder: (_) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          backgroundColor: secondaryColor,
+          title: Text('Manage Templates', style: textStyle),
+          content: SingleChildScrollView(
+            child: Container(
+              color: secondaryColor,
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: _templateName,
+                      style: textStyle,
+                      decoration: InputDecoration(
+                        labelText: 'Template Name (required)',
+                        labelStyle: textStyle,
+                        filled: true,
+                        fillColor: secondaryColor,
+                        border: OutlineInputBorder(),
                       ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Template name is required';
+                        }
+                        return null;
+                      },
                     ),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text('Close', style: textStyle),
+                    DropdownButtonFormField(
+                      dropdownColor: secondaryColor,
+                      value: _templateCategory,
+                      decoration: InputDecoration(
+                        labelText: 'Category',
+                        labelStyle: textStyle,
+                      ),
+                      items: _categories
+                          .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                          .toList(),
+                      style: textStyle,
+                      onChanged: (v) => setState(() => _templateCategory = v!),
+                    ),
+                    DropdownButtonFormField(
+                      dropdownColor: secondaryColor,
+                      value: _templateComplexity,
+                      decoration: InputDecoration(
+                        labelText: 'Complexity',
+                        labelStyle: textStyle,
+                      ),
+                      items: _levels
+                          .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                          .toList(),
+                      style: textStyle,
+                      onChanged: (v) => setState(() => _templateComplexity = v!),
+                    ),
+                    DropdownButtonFormField(
+                      dropdownColor: secondaryColor,
+                      value: _templateEffort,
+                      decoration: InputDecoration(
+                        labelText: 'Effort',
+                        labelStyle: textStyle,
+                      ),
+                      items: _levels
+                          .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                          .toList(),
+                      style: textStyle,
+                      onChanged: (v) => setState(() => _templateEffort = v!),
+                    ),
+                    DropdownButtonFormField(
+                      dropdownColor: secondaryColor,
+                      value: _templateMotivation,
+                      decoration: InputDecoration(
+                        labelText: 'Motivation',
+                        labelStyle: textStyle,
+                      ),
+                      items: _levels
+                          .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                          .toList(),
+                      style: textStyle,
+                      onChanged: (v) => setState(() => _templateMotivation = v!),
+                    ),
+                    TextFormField(
+                      style: textStyle,
+                      controller: _templateTime,
+                      decoration: InputDecoration(
+                        labelText: 'Time (minutes, required)',
+                        labelStyle: textStyle,
+                      ),
+                      validator: (v) {
+                        final parsed = int.tryParse(v?.trim() ?? '');
+                        if (parsed == null || parsed < 1) {
+                          return 'Please enter a valid number greater than 0';
+                        }
+                        return null;
+                      },
+                    ),
+                    TextFormField(
+                      style: textStyle,
+                      controller: _templateDeadline,
+                      decoration: InputDecoration(
+                        labelText: 'Hours to complete (optional)',
+                        labelStyle: textStyle,
+                      ),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return null; // optional
+                        final parsed = int.tryParse(v.trim());
+                        if (parsed == null || parsed <= 0) {
+                          return 'Must be a whole number greater than 0';
+                        }
+                        return null;
+                      },
+                    ),
+                    TextFormField(
+                      style: textStyle,
+                      controller: _templateSteps,
+                      decoration: InputDecoration(
+                        labelText: 'Steps (required)',
+                        labelStyle: textStyle,
+                      ),
+                      validator: (v) {
+                        final parsed = int.tryParse(v?.trim() ?? '');
+                        if (parsed == null || parsed < 1) {
+                          return 'Please enter a valid number greater than 0';
+                        }
+                        return null;
+                      },
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        if (!_formKey.currentState!.validate()) {
+                          return; // stop if validation fails
+                        }
+
+                        final name = _templateName.text.trim();
+                        final data = {
+                          'category': _templateCategory,
+                          'complexity': _templateComplexity,
+                          'effort': _templateEffort,
+                          'motivation': _templateMotivation,
+                          'time': _templateTime.text.trim(),
+                          'steps': _templateSteps.text.trim(),
+                          'Hours to complete': _templateDeadline.text.trim(),
+                        };
+
+                        if (_templateDetails.containsKey(name)) {
+                          setState(() => _templateDetails[name] = data);
+                        } else {
+                          setState(() => _userTemplates[name] = data);
+                        }
+                        _saveTemplates();
+
+                        _templateName.clear();
+                        _templateTime.clear();
+                        _templateSteps.clear();
+                        _templateDeadline.clear();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: secondaryColor,
+                        foregroundColor: primaryColor,
+                      ),
+                      child: const Text('Save Template'),
+                    ),
+                    const Divider(),
+                    Text('Templates:', style: textStyle),
+                    ...[
+                      ..._templateDetails.keys,
+                      ..._userTemplates.keys,
+                    ].map(
+                          (name) => ListTile(
+                        title: Text(name),
+                        titleTextStyle: textStyle,
+                        trailing: _userTemplates.containsKey(name)
+                            ? IconButton(
+                          icon: const Icon(Icons.delete),
+                          onPressed: () {
+                            setState(() {
+                              _userTemplates.remove(name);
+                              _saveTemplates();
+                            });
+                          },
+                        )
+                            : null,
+                        onTap: () {
+                          final t = _templateDetails[name] ?? _userTemplates[name]!;
+                          setState(() {
+                            _templateName.text = name;
+                            _templateCategory = t['category'];
+                            _templateComplexity = t['complexity'];
+                            _templateEffort = t['effort'];
+                            _templateMotivation = t['motivation'];
+                            _templateTime.text = t['time'];
+                            _templateDeadline.text = t['Hours to complete'];
+                            _templateSteps.text = t['steps'];
+                          });
+                        },
+                      ),
                     ),
                   ],
                 ),
+              ),
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Close', style: textStyle),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -790,9 +864,11 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                     _category = data['category'];
                     _complexity = data['complexity'];
                     _effort = data['effort'];
+                    _time = data['time'];
+                    _steps = data['steps'];
                     _motivation = data['motivation'];
                     _timeController.text = data['time'];
-                    _deadlineController.text = data['Days to complete'];
+                    _deadlineController.text = data['Hours to complete'];
                     _stepsController.text = data['steps'];
                     _createGoal();
                   }
@@ -893,10 +969,12 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                                       _category = data['category'];
                                       _complexity = data['complexity'];
                                       _effort = data['effort'];
+                                      _time = data['time'];
+                                      _steps = data['steps'];
                                       _motivation = data['motivation'];
                                     });
                                     _timeController.text = data['time'];
-                                    _deadlineController.text = data['Days to complete'];
+                                    _deadlineController.text = data['Hours to complete'];
                                     _stepsController.text = data['steps'];
                                   },
                                 ),
@@ -1005,17 +1083,18 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                                     labelStyle: textStyle,
                                   ),
                                   validator: (v) {
-                                    if (v == null || v.trim().isEmpty) return null;
-                                    final intValue = int.tryParse(v);
-                                    if (intValue == null) return 'Please enter a valid number';
-                                    return null;
+                                    final parsed = int.tryParse(v?.trim() ?? '');
+                                    if (parsed == null || parsed < 1) {
+                                      return 'Please enter a valid whole number';
+                                    }
+                                    return null; // ✅ Valid input
                                   },
                                 ),
                                 TextFormField(
                                   style: textStyle,
                                   controller: _deadlineController,
                                   decoration: InputDecoration(
-                                    labelText: 'Days to complete',
+                                    labelText: 'Hours to complete',
                                     labelStyle: textStyle,
                                   ),
                                   validator: (v) {
@@ -1029,20 +1108,32 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                                   style: textStyle,
                                   controller: _stepsController,
                                   decoration: InputDecoration(
-                                    labelText: 'Steps (if any)',
+                                    labelText: 'Steps',
                                     labelStyle: textStyle,
                                   ),
-                                  validator:
-                                      (v) =>
-                                          v == null || v.isEmpty
-                                              ? 'Describe steps or type "None"'
-                                              : null,
+                                  validator: (v) {
+                                    final parsed = int.tryParse(v?.trim() ?? '');
+                                    if (parsed == null || parsed < 1) {
+                                      return 'Please enter a valid whole number';
+                                    }
+                                    return null; // ✅ Valid input
+                                  },
                                 ),
                                 const SizedBox(height: 10),
                                 ElevatedButton(
                                   style: buttonStyle,
                                   onPressed: _createGoal,
                                   child: Text('Add Goal', style: textStyle),
+                                ),
+                                ElevatedButton(
+                                  style: buttonStyle,
+                                  onPressed: _clearGoals,
+                                  child: Text('Clear Active Goals', style: textStyle),
+                                ),
+                                ElevatedButton(
+                                  style: buttonStyle,
+                                  onPressed: _clearCompleteGoals,
+                                  child: Text('Clear Completed Goals', style: textStyle),
                                 ),
                                 ElevatedButton(
                                   style: buttonStyle,
@@ -1190,20 +1281,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                                       ),
                                       if (_selectedStatusFilter == 'Active' &&
                                           int.tryParse(g['steps'])! > 1)
-                                        Row(
-                                          children: List.generate(
-                                            int.tryParse(
-                                              g['steps']?.toString() ?? '1',
-                                            )!,
-                                            (i) => Icon(
-                                              i < (g['stepProgress'] ?? 0)
-                                                  ? Icons.check_box
-                                                  : Icons
-                                                      .check_box_outline_blank,
-                                              size: userFontSize,
-                                            ),
-                                          ),
-                                        ),
+                                        buildStepDisplay(g, userFontSize)
                                     ],
                                   ),
                                   onTap: () => _viewGoalDetails(g),
@@ -1252,3 +1330,28 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
     );
   }
 }
+
+Widget buildStepDisplay(Map<String, dynamic> g, double userFontSize) {
+  final int totalSteps = int.tryParse(g['steps']?.toString() ?? '1') ?? 1;
+  final int currentProgress = (g['stepProgress'] ?? 0).clamp(0, totalSteps);
+
+  if (totalSteps > 10) {
+    return Text(
+      'Step $currentProgress/$totalSteps',
+      style: TextStyle(fontSize: userFontSize),
+    );
+  }
+
+  return Wrap(
+    spacing: 4.0,
+    runSpacing: 4.0,
+    children: List.generate(
+      totalSteps,
+          (i) => Icon(
+        i < currentProgress ? Icons.check_box : Icons.check_box_outline_blank,
+        size: userFontSize,
+      ),
+    ),
+  );
+}
+

@@ -1,96 +1,140 @@
 // lib/utils/notifier.dart
 
 import 'dart:async';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:intl/intl.dart';
-import 'package:timezone/data/latest_all.dart' as tz;
-import 'package:timezone/timezone.dart' as tz;
+import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/foundation.dart';
 
 class GoalNotifier {
-  static const MethodChannel _tzChannel =
-  MethodChannel('flutter_native_timezone');
-
   static final FlutterLocalNotificationsPlugin _plugin =
   FlutterLocalNotificationsPlugin();
   static bool _initialized = false;
 
-  /// Initialize notifications plugin & timezone data.
+  // Track active timers per goal
+  static final Map<String, List<Timer>> _activeTimers = {};
+
+  /// Initialize notifications plugin
   static Future<void> initialize() async {
     if (_initialized) return;
 
-    // 1) Flutter Local Notifications init
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    await _plugin.initialize(
-      InitializationSettings(android: androidSettings),
-    );
-
-    // 2) Timezone init via your MainActivity channel
-    tz.initializeTimeZones();
-    final String localZone =
-        await _tzChannel.invokeMethod<String>('getLocalTimezone')
-            ?? tz.local.name;
-    tz.setLocalLocation(tz.getLocation(localZone));
+    await _plugin.initialize(InitializationSettings(android: androidSettings));
 
     _initialized = true;
+    debugPrint('Notifications initialized.');
   }
 
-  /// Schedule two one-shot notifications:
-  ///   1) Heads-up shortly after setup
+  /// Schedule two notifications using delayed `show()`:
+  ///   1) Heads-up after 30 seconds
   ///   2) Reminder 4 hours before deadline
-  static Future<void> startGoalCheck(
-      String goalName,
-      int daysToExpire,
-      ) async {
+  static Future<void> startGoalCheck(String goalName, int hoursToExpire) async {
     await initialize();
 
+    debugPrint('$goalName is the name of the goal');
+
     final now = DateTime.now();
-    final deadline = now.add(Duration(days: daysToExpire));
-    final reminderDateTime = deadline.subtract(Duration(hours: 4));
-    final initialDateTime = now.add(Duration(seconds: 5));
+    final deadline = now.add(Duration(hours: hoursToExpire));
+    final reminderTime = deadline.subtract(Duration(hours: 4));
+    final initialDelay = Duration(seconds: 10);
+    //final reminderDelay = reminderTime.difference(now);
+    final reminderDelay = Duration(seconds: 45); // For testing TODO remove
 
-    final formattedDeadline =
-    DateFormat('dd MMMM yyyy HH:mm').format(deadline);
-
-    const androidDetails = AndroidNotificationDetails(
+    // Individual notification details
+    final androidDetails = AndroidNotificationDetails(
       'goal_channel',
       'Goal Reminders',
       channelDescription: 'Notifications for upcoming goals',
       importance: Importance.max,
       priority: Priority.high,
+      groupKey: 'goal_group',
+      setAsGroupSummary: false,
     );
-    const platformDetails = NotificationDetails(android: androidDetails);
+    final platformDetails = NotificationDetails(android: androidDetails);
 
-    tz.TZDateTime _toTZ(DateTime dt) => tz.TZDateTime.from(dt, tz.local);
+    final timers = <Timer>[];
 
     // 1) Initial heads-up
-    try {
-      await _plugin.zonedSchedule(
+    timers.add(Timer(initialDelay, () {
+      _plugin.show(
         goalName.hashCode,
         'Goal Scheduled',
-        'Your goal "$goalName" expires on $formattedDeadline.',
-        _toTZ(initialDateTime),
+        'Your goal "$goalName" expires on ${_format(deadline)}.',
         platformDetails,
-        androidAllowWhileIdle: true,
-        uiLocalNotificationDateInterpretation:
-        UILocalNotificationDateInterpretation.wallClockTime,
       );
-    } catch (e) {
-      debugPrint('Notification scheduling failed: $e');
+      debugPrint('Initial notification shown.');
+    }));
+
+    // 2) Reminder — only if deadline is >4h away
+    if (hoursToExpire > 4 && reminderDelay > Duration.zero) {
+      timers.add(Timer(reminderDelay, () {
+        _plugin.show(
+          goalName.hashCode + 1,
+          'Goal Reminder',
+          'Reminder: "$goalName" is due in 4 hours!',
+          platformDetails,
+        );
+        debugPrint('Reminder notification shown.');
+      }));
+    } else {
+      debugPrint('Reminder skipped (deadline too close or past).');
     }
 
-
-    // 2) Four-hour reminder
-    await _plugin.zonedSchedule(
-      goalName.hashCode + 1,
-      'Goal Reminder',
-      'Reminder: "$goalName" is due in 4 hours!',
-      _toTZ(reminderDateTime),
-      platformDetails,
-      androidAllowWhileIdle: true,
-      uiLocalNotificationDateInterpretation:
-      UILocalNotificationDateInterpretation.wallClockTime,
+    // 3) Group summary notification (not cancellable per goal)
+    final summaryDetails = AndroidNotificationDetails(
+      'goal_channel',
+      'Goal Reminders',
+      channelDescription: 'Notifications for upcoming goals',
+      importance: Importance.max,
+      priority: Priority.high,
+      groupKey: 'goal_group',
+      setAsGroupSummary: true,
     );
+    final summaryPlatformDetails = NotificationDetails(android: summaryDetails);
+
+    await _plugin.show(
+      0,
+      'Goal Updates',
+      'You have active goal reminders.',
+      summaryPlatformDetails,
+    );
+
+
+    _activeTimers[goalName] = timers;
   }
+
+  /// Cancel notifications for a specific goal
+  static Future<void> cancelGoalNotification(String goalName) async {
+    debugPrint('$goalName is the name of the goal');
+
+    await _plugin.cancel(goalName.hashCode);       // Initial
+    await _plugin.cancel(goalName.hashCode + 1);   // Reminder
+
+    if (_activeTimers.containsKey(goalName)) {
+      for (final timer in _activeTimers[goalName]!) {
+        timer.cancel();
+      }
+      _activeTimers.remove(goalName);
+    }
+
+    debugPrint('Notifications cancelled for goal: $goalName');
+  }
+
+  /// Request notification permission
+  static Future<void> requestNotificationPermission() async {
+    final status = await Permission.notification.request();
+    if (!status.isGranted) {
+      debugPrint('Notification permission not granted');
+    }
+
+    final isAllowed = await _plugin
+        .resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>()
+        ?.areNotificationsEnabled();
+
+    debugPrint('Notifications enabled: $isAllowed');
+  }
+
+  static String _format(DateTime dt) =>
+      DateFormat('dd MMMM yyyy HH:mm').format(dt);
 }
