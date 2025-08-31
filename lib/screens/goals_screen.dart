@@ -97,17 +97,29 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
   late TextStyle _textStyle;
   late ButtonStyle _buttonStyle;
   bool _themeLoaded = false;
+  bool _notificationsEnabled = false;
+  String _notificationStyle = 'Minimal';
 
   @override
   void initState() {
     super.initState();
-    _loadGoals();
-    _loadTemplates();
-    _loadTemplateGroups();
-
-    _themeData = ThemeData.light();
-    _initializeTheme(); // async theme setup from storage
+    loadSettings();
   }
+
+  Future<void> loadNotificationStyle() async {
+    _notificationStyle = await getNotificationStyle();
+    debugPrint('AT THIS TIME: $_notificationStyle');
+  }
+
+  Future<void> loadSettings() async {
+    await _loadGoals();
+    await _loadTemplates();
+    await _loadTemplateGroups();
+    _themeData = ThemeData.light();
+    await _initializeTheme(); // async theme setup from storage
+    await loadNotificationStyle();
+  }
+
 
   Future<int> getTotalAmount(int amount) async {
     final String today = DateFormat('dd MM yyyy').format(DateTime.now());
@@ -335,18 +347,24 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
     await _storage.write(key: 'points', value: (value + totalAmount).toString());
   }
 
-  void _createGoal() {
+  Future<void> _createGoal() async {
     if (_formKey.currentState!.validate()) {
       final String deadlineHours = _deadlineController.text.trim();
       String deadline;
-
       if (deadlineHours.isEmpty) {
         deadline = 'no deadline';
       } else {
+        _notificationsEnabled = getNotificationsEnabled(); // Put here to check every time a goal is made that it checks.
+        loadNotificationStyle();
         final int hours = int.tryParse(deadlineHours) ?? 0;
         final DateTime deadlineDate = _currentDate.add(Duration(hours: hours));
         deadline = formatter.format(deadlineDate);
-        GoalNotifier.startGoalCheck(_titleController.text, hours);
+        if (_notificationsEnabled) {
+          GoalNotifier.startGoalCheck(_titleController.text, hours, _notificationStyle);
+        }
+        else {
+          debugPrint('Notifications not enabled — skipping goal check scheduling');
+        }
       }
 
     final goal = {

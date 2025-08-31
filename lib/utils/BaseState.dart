@@ -22,12 +22,14 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
   bool _pauseGoals = false;
   bool _loggedIn = false;
   late ThemeData _themeData;
+  bool _notificationsEnabled = false;
 
 
   @override
   void initState() {
     super.initState();
     _loadUserPreferences();
+    _checkNotificationsEnabled();
     initializeTheme(); // <- unified async theme init
   }
 
@@ -389,6 +391,41 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
   void onThemeUpdated() {
 
   }
+  Future<void> _checkNotificationsEnabled()  async {
+    final String? notificationFrequency = await _storage.read(key: 'notificationFrequency');
+    if (notificationFrequency == null || notificationFrequency == '' || notificationFrequency == 'No notifications') {
+      _notificationsEnabled = false;
+    }
+    else if (notificationFrequency == 'Low' || notificationFrequency == 'Medium' || notificationFrequency == 'High') {
+      _notificationsEnabled =  true;
+    }
+    else {
+      debugPrint('Unexpected scenario caught - invalid notification frequency: $notificationFrequency');
+      _notificationsEnabled =  false; /// This case should never happen
+    }
+  }
+
+  bool getNotificationsEnabled () {
+    _checkNotificationsEnabled();
+    return _notificationsEnabled;
+  }
+
+  Future<void> _checkNotificationStyle() async {
+    final String? notificationStyle = await _storage.read(key: 'notificationStyle');
+    if (notificationStyle == null || notificationStyle == '' || notificationStyle == 'Minimal') {
+      _notificationStyle = 'Minimal';
+    }
+    else {
+      _notificationStyle = notificationStyle;
+    }
+    debugPrint('NotificationStyle: $notificationStyle');
+  }
+
+  Future<String> getNotificationStyle() async {
+    await _checkNotificationStyle();
+    return _notificationStyle;
+  }
+
 
 
 }

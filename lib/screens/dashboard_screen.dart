@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:focusNexus/utils/BaseState.dart';
 
-import '../utils/notifier.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -22,6 +21,7 @@ class _DashboardScreenState extends BaseState<DashboardScreen> {
   late Color _secondaryColor;
   late TextStyle _textStyle;
   late ButtonStyle _buttonStyle;
+  late String _rewardType;
 
   @override
   void initState() {
@@ -29,7 +29,15 @@ class _DashboardScreenState extends BaseState<DashboardScreen> {
     _loadPoints();
     _themeData = ThemeData.light();
     _initializeTheme(); // async theme setup from storage
-  }
+    _loadSettings();}
+  Future<void> _loadSettings() async{
+    final storedType = await _storage.read(key: 'rewardType');
+    if (mounted) {
+      setState(() {
+        _rewardType = storedType ?? 'Avatar';
+      });
+    }
+}
 
   Future<void> _initializeTheme() async {
     ThemeData loadedTheme;
@@ -117,7 +125,6 @@ class _DashboardScreenState extends BaseState<DashboardScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-
     return Theme(
       data: _themeData,
       child: Scaffold(
@@ -138,51 +145,37 @@ class _DashboardScreenState extends BaseState<DashboardScreen> {
                 });
               }),
               style: ElevatedButton.styleFrom(
-                backgroundColor: secondaryColor, // 🔹 Applies secondaryColor as background
+                backgroundColor: secondaryColor,
               ),
               child:  Text('Settings', style: textStyle),
             ),
 
             ElevatedButton(
-              onPressed: () => Navigator.pushNamed(context, 'reward'),
+              onPressed: () => Navigator.pushNamed(context, 'reward'), //TODO: Direct to reward specific page (each reward has it's own)
               style: ElevatedButton.styleFrom(
-                backgroundColor: secondaryColor, // 🔹 Applies secondaryColor as background
+                backgroundColor: secondaryColor,
               ),
-              child: Text('Reward: $rewardType', style: textStyle),
+              child: Text('Reward: $_rewardType', style: textStyle),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pushNamed(context, 'chat'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: secondaryColor, // 🔹 Applies secondaryColor as background
+                backgroundColor: secondaryColor,
               ),
               child:  Text('AI Chat / Therapist Space' , style: textStyle),
             ),
             ElevatedButton(
-              onPressed: () => Navigator.pushNamed(context, 'reminders'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: secondaryColor, // 🔹 Applies secondaryColor as background
-              ),
-              child:  Text('Reminders', style: textStyle),
-            ),
-            ElevatedButton(
               onPressed: () => Navigator.pushNamed(context, 'achievements'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: secondaryColor, // 🔹 Applies secondaryColor as background
+                backgroundColor: secondaryColor,
               ),
               child:  Text('Achievements', style: textStyle),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pushNamed(context, 'tasks'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: secondaryColor, // 🔹 Applies secondaryColor as background
-              ),
-              child:  Text('Tasks', style: textStyle),
             ),
             ElevatedButton(
               onPressed: () =>
                   Navigator.pushNamed(context, 'goals').then((_) => _loadPoints()),
               style: ElevatedButton.styleFrom(
-                backgroundColor: secondaryColor, // 🔹 Applies secondaryColor as background
+                backgroundColor: secondaryColor,
               ),
               child:  Text('Goal Setting', style: textStyle),
             ),

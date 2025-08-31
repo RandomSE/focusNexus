@@ -17,6 +17,9 @@ class _SettingsScreenState extends BaseState<SettingsScreen> {
   late TextStyle _textStyle;
   late ButtonStyle _buttonStyle;
   final _storage = const FlutterSecureStorage();
+  late String _rewardType;
+  late String _notificationStyle;
+  late String _notificationFrequency;
 
   @override
   void initState() {
@@ -24,6 +27,7 @@ class _SettingsScreenState extends BaseState<SettingsScreen> {
     _themeData = defaultThemeData; // Start with default
     _themeData = ThemeData.light();
     _initializeTheme(); // async theme setup from storage
+    _loadSettings();
   }
 
   Future<void> _initializeTheme() async {
@@ -53,6 +57,19 @@ class _SettingsScreenState extends BaseState<SettingsScreen> {
           foregroundColor: _primaryColor,
         );
         _themeLoaded = true;
+      });
+    }
+  }
+
+  Future<void> _loadSettings() async {
+    final storedFrequency = await _storage.read(key: 'notificationFrequency');
+    final storedStyle = await _storage.read(key: 'notificationStyle');
+    final storedType = await _storage.read(key: 'rewardType');
+    if (mounted) {
+      setState(() {
+        _rewardType = storedType ?? 'Avatar';
+        _notificationStyle = storedStyle ?? 'Minimal';
+        _notificationFrequency = storedFrequency ?? 'Medium';
       });
     }
   }
@@ -132,37 +149,37 @@ class _SettingsScreenState extends BaseState<SettingsScreen> {
                   )))
                       .toList(),
                   onChanged: (val) => setUserTheme(val ?? 'light'),
-                  decoration: const InputDecoration(labelText: 'Theme'),
+                  decoration: InputDecoration(labelText: 'Theme', labelStyle: textStyle),
                   dropdownColor: secondaryColor,
                 ),
                 DropdownButtonFormField<String>(
                   style: textStyle,
-                  value: rewardType,
+                  value: _rewardType,
                   items: ['Avatar', 'Mini-game', 'Leaderboard']
                       .map((e) => DropdownMenuItem(value: e, child: Text(e, style: textStyle)))
                       .toList(),
                   onChanged: (val) => setRewardType(val ?? 'Avatar'),
-                  decoration: const InputDecoration(labelText: 'Reward Type'),
+                  decoration: InputDecoration(labelText: 'Reward Type', labelStyle: textStyle),
                   dropdownColor: secondaryColor,
                 ),
                 DropdownButtonFormField<String>(
                   style: textStyle,
-                  value: notificationStyle,
+                  value: _notificationStyle,
                   items: ['Minimal', 'Vibrant', 'Animated']
                       .map((e) => DropdownMenuItem(value: e, child: Text(e, style: textStyle)))
                       .toList(),
                   onChanged: (val) => setNotificationStyle(val ?? 'Minimal'),
-                  decoration: const InputDecoration(labelText: 'Notification Style'),
+                  decoration: InputDecoration(labelText: 'Notification Style', labelStyle: textStyle),
                   dropdownColor: secondaryColor,
                 ),
                 DropdownButtonFormField<String>(
                   style: textStyle,
-                  value: notificationFrequency,
-                  items: ['Low', 'Medium', 'High']
+                  value: _notificationFrequency,
+                  items: ['Low', 'Medium', 'High', 'No notifications']
                       .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                       .toList(),
                   onChanged: (val) => setNotificationFrequency(val ?? 'Medium'),
-                  decoration: const InputDecoration(labelText: 'Notification Frequency'),
+                  decoration: InputDecoration(labelText: 'Notification Frequency', labelStyle: textStyle),
                   dropdownColor: secondaryColor,
                 ),
                 SwitchListTile(title:  Text('Remember Me', style: textStyle), value: rememberMe, onChanged: setRememberMe,  tileColor: primaryColor),
@@ -200,7 +217,6 @@ class _SettingsScreenState extends BaseState<SettingsScreen> {
                 ),
                 SwitchListTile(title: Text('Daily Affirmations', style: textStyle), value: dailyAffirmations, onChanged: setDailyAffirmations, tileColor: primaryColor),
                 SwitchListTile(title: Text('AI Encouragement', style: textStyle), value: aiEncouragement, onChanged: setAiEncouragement, tileColor: primaryColor),
-                SwitchListTile(title: Text('Skip Today (Tasks/Reminders)', style: textStyle), value: skipToday, onChanged: setSkipToday, tileColor: primaryColor),
                 SwitchListTile(title: Text('Pause Goals', style: textStyle), value: pauseGoals, onChanged: setPauseGoals, tileColor: primaryColor),
                 const Divider(),
                 ElevatedButton(

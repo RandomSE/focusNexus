@@ -101,7 +101,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               DropdownButtonFormField<String>(
                 decoration: const InputDecoration(labelText: 'Frequency'),
                 items:
-                    ['Low', 'Medium', 'High']
+                    ['Low', 'Medium', 'High', 'No notifications']
                         .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                         .toList(),
                 onChanged: (value) => setState(() => _frequency = value),
