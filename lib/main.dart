@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:focusNexus/screens/goals_screen.dart';
+import 'package:focusNexus/screens/onboarding_screen.dart';
 import 'package:focusNexus/screens/settings_screen.dart';
 import 'screens/auth_start_screen.dart';
 import 'screens/dashboard_screen.dart';
@@ -39,6 +40,7 @@ class FocusNexusApp extends StatelessWidget {
       initialRoute: initialRoute,
       routes: {
         'auth': (_) => const AuthStartScreen(),
+        'onboard': (_) => const OnboardingScreen(),
         'dashboard': (_) => const DashboardScreen(),
         'settings': (_) => const SettingsScreen(),
         'reward':
@@ -54,9 +56,7 @@ class FocusNexusApp extends StatelessWidget {
               },
             ),
         'chat': (_) => PlaceholderScreen('AI Chat / Therapist Space'),
-        'reminders': (_) => PlaceholderScreen('Reminders'),
         'achievements': (_) => PlaceholderScreen('Achievements'),
-        'tasks': (_) => PlaceholderScreen('Tasks'),
         'goals': (_) => const GoalsScreen(),
       },
     );

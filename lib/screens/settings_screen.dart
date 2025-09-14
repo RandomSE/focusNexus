@@ -155,7 +155,7 @@ class _SettingsScreenState extends BaseState<SettingsScreen> {
                 DropdownButtonFormField<String>(
                   style: textStyle,
                   value: _rewardType,
-                  items: ['Avatar', 'Mini-game', 'Leaderboard']
+                  items: ['Avatar', 'Mini-games', 'Leaderboard']
                       .map((e) => DropdownMenuItem(value: e, child: Text(e, style: textStyle)))
                       .toList(),
                   onChanged: (val) => setRewardType(val ?? 'Avatar'),
@@ -182,39 +182,9 @@ class _SettingsScreenState extends BaseState<SettingsScreen> {
                   decoration: InputDecoration(labelText: 'Notification Frequency', labelStyle: textStyle),
                   dropdownColor: secondaryColor,
                 ),
-                SwitchListTile(title:  Text('Remember Me', style: textStyle), value: rememberMe, onChanged: setRememberMe,  tileColor: primaryColor),
-                SwitchListTile(title:  Text('High Contrast Mode', style: textStyle), value: highContrastMode, onChanged: setHighContrastMode, tileColor: primaryColor),
-                SwitchListTile(title:  Text('Dyslexia-friendly Font', style: textStyle), value: useDyslexiaFont, onChanged: setUseDyslexiaFont, tileColor: primaryColor),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Light Mode Intensity:',
-                        style: textStyle,
-                        overflow: TextOverflow.ellipsis,
-                        softWrap: true,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.remove),
-                      onPressed: () {
-                        if (backgroundBrightness > 0.0) {
-                          setBackgroundBrightness((backgroundBrightness - 0.07).clamp(0.0, 0.7));
-                        }
-                      },
-                    ),
-                    Text('${((backgroundBrightness / 0.7) * 100).round() ~/ 10 * 10}%', style: textStyle),
-                    IconButton(
-                      icon: const Icon(Icons.add),
-                      onPressed: () {
-                        if (backgroundBrightness < 0.7) {
-                          setBackgroundBrightness((backgroundBrightness + 0.07).clamp(0.0, 0.7));
-                        }
-                      },
-                    ),
-                  ],
-                ),
+                SwitchListTile(title: Text('Remember Me', style: textStyle), value: rememberMe, onChanged: setRememberMe,  tileColor: primaryColor),
+                SwitchListTile(title: Text('High Contrast Mode', style: textStyle), value: highContrastMode, onChanged: setHighContrastMode, tileColor: primaryColor),
+                SwitchListTile(title: Text('Dyslexia-friendly Font', style: textStyle), value: useDyslexiaFont, onChanged: setUseDyslexiaFont, tileColor: primaryColor),
                 SwitchListTile(title: Text('Daily Affirmations', style: textStyle), value: dailyAffirmations, onChanged: setDailyAffirmations, tileColor: primaryColor),
                 SwitchListTile(title: Text('AI Encouragement', style: textStyle), value: aiEncouragement, onChanged: setAiEncouragement, tileColor: primaryColor),
                 SwitchListTile(title: Text('Pause Goals', style: textStyle), value: pauseGoals, onChanged: setPauseGoals, tileColor: primaryColor),

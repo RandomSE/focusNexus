@@ -34,22 +34,17 @@ class GoalNotifier {
   ///   1) Heads-up after 30 seconds
   ///   2) Reminder 4 hours before deadline
   static Future<void> startGoalCheck(
-    String goalName,
-    int hoursToExpire,
-    String notificationStyle,
-  ) async {
+      String goalName,
+      int hoursToExpire,
+      String notificationStyle,
+      String notificationFrequency, // 'Low', 'Medium', 'High' - ignoring no notifications as this wouldn't be called with that.
+      ) async {
     await initialize();
-
-    debugPrint('$goalName is the name of the goal');
 
     final now = DateTime.now();
     final deadline = now.add(Duration(hours: hoursToExpire));
-    final reminderTime = deadline.subtract(Duration(hours: 4));
-    final initialDelay = Duration(seconds: 10);
-    //final reminderDelay = reminderTime.difference(now);
-    final reminderDelay = Duration(seconds: 45); // For testing TODO remove
+    final timers = <Timer>[];
 
-    // Individual notification details
     final androidDetails = AndroidNotificationDetails(
       'goal_channel',
       'Goal Reminders',
@@ -61,11 +56,9 @@ class GoalNotifier {
     );
     final platformDetails = NotificationDetails(android: androidDetails);
 
-    final timers = <Timer>[];
-
     // 1) Initial heads-up
     timers.add(
-      Timer(initialDelay, () {
+      Timer(const Duration(seconds: 10), () {
         _plugin.show(
           goalName.hashCode,
           'Goal Scheduled',
@@ -76,29 +69,130 @@ class GoalNotifier {
       }),
     );
 
-    // 2) Reminder — only if deadline is >4h away // TODO: Change this with notification frequency settings
-    if (hoursToExpire > 4 && reminderDelay > Duration.zero) {
-      timers.add(
-        Timer(reminderDelay, () {
-          _plugin.show(
-            goalName.hashCode + 1,
-            'Goal Reminder',
-            buildFollowUpReminderMessage(
-              goalName,
-              1,
-              notificationStyle,
-              deadline,
-            ),
-            platformDetails,
-          );
-          debugPrint('Reminder notification shown.');
-        }),
-      );
-    } else {
-      debugPrint('Reminder skipped (deadline too close or past).');
+    // 2) Frequency-based reminders
+    if (notificationFrequency == 'Low') {
+      // 4h before
+      final reminderTime = deadline.subtract(const Duration(hours: 4));
+      final delay = reminderTime.difference(now);
+      if (delay > Duration.zero) {
+        timers.add(
+          Timer(delay, () {
+            _plugin.show(
+              goalName.hashCode + 1,
+              'Goal Reminder',
+              buildFollowUpReminderMessage(goalName, 1, notificationStyle, deadline),
+              platformDetails,
+            );
+            debugPrint('Low frequency reminder shown.');
+          }),
+        );
+      }
     }
 
-    // 3) Group summary notification (not cancellable per goal)
+    if (notificationFrequency == 'Medium') {
+      // 24h before + 4h before
+      final dayBefore = deadline.subtract(const Duration(hours: 24));
+      final fourBefore = deadline.subtract(const Duration(hours: 4));
+
+      final dayDelay = dayBefore.difference(now);
+      final fourDelay = fourBefore.difference(now);
+
+      if (dayDelay > Duration.zero) {
+        timers.add(
+          Timer(dayDelay, () {
+            _plugin.show(
+              goalName.hashCode + 2,
+              'Goal Reminder',
+              buildFollowUpReminderMessage(goalName, 1, notificationStyle, deadline),
+              platformDetails,
+            );
+            debugPrint('Medium frequency (24h) reminder shown.');
+          }),
+        );
+      }
+
+      if (fourDelay > Duration.zero) {
+        timers.add(
+          Timer(fourDelay, () {
+            _plugin.show(
+              goalName.hashCode + 3,
+              'Goal Reminder',
+              buildFollowUpReminderMessage(goalName, 2, notificationStyle, deadline),
+              platformDetails,
+            );
+            debugPrint('Medium frequency (4h) reminder shown.');
+          }),
+        );
+      }
+    }
+
+    if (notificationFrequency == 'High') {
+      // Daily reminders at same hour as deadline + 4h + 2h before
+      final deadlineHour = deadline.hour;
+      final nowHour = now.hour;
+
+      // Daily reminders until deadline
+      for (int i = 1; i <= hoursToExpire ~/ 24; i++) {
+        final dailyTime = now.add(Duration(days: i));
+        final dailyReminder = DateTime(
+          dailyTime.year,
+          dailyTime.month,
+          dailyTime.day,
+          deadlineHour,
+        );
+        final delay = dailyReminder.difference(now);
+        if (delay > Duration.zero) {
+          timers.add(
+            Timer(delay, () {
+              _plugin.show(
+                goalName.hashCode + 10 + i,
+                'Goal Reminder',
+                buildFollowUpReminderMessage(goalName, i, notificationStyle, deadline),
+                platformDetails,
+              );
+              debugPrint('High frequency daily reminder #$i shown.');
+            }),
+          );
+        }
+      }
+
+      // 4h and 2h before deadline
+      final fourBefore = deadline.subtract(const Duration(hours: 4));
+      final twoBefore = deadline.subtract(const Duration(hours: 2));
+
+      final fourDelay = fourBefore.difference(now);
+      final twoDelay = twoBefore.difference(now);
+
+      if (fourDelay > Duration.zero) {
+        timers.add(
+          Timer(fourDelay, () {
+            _plugin.show(
+              goalName.hashCode + 100,
+              'Goal Reminder',
+              buildFollowUpReminderMessage(goalName, 99, notificationStyle, deadline),
+              platformDetails,
+            );
+            debugPrint('High frequency (4h) reminder shown.');
+          }),
+        );
+      }
+
+      if (twoDelay > Duration.zero) {
+        timers.add(
+          Timer(twoDelay, () {
+            _plugin.show(
+              goalName.hashCode + 101,
+              'Goal Reminder',
+              buildFollowUpReminderMessage(goalName, 100, notificationStyle, deadline),
+              platformDetails,
+            );
+            debugPrint('High frequency (2h) reminder shown.');
+          }),
+        );
+      }
+    }
+
+    // 3) Group summary
     final summaryDetails = AndroidNotificationDetails(
       'goal_channel',
       'Goal Reminders',
@@ -119,6 +213,7 @@ class GoalNotifier {
 
     _activeTimers[goalName] = timers;
   }
+
 
   /// Cancel notifications for a specific goal
   static Future<void> cancelGoalNotification(String goalName) async {

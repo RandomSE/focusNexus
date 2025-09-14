@@ -354,13 +354,14 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
       if (deadlineHours.isEmpty) {
         deadline = 'no deadline';
       } else {
-        _notificationsEnabled = getNotificationsEnabled(); // Put here to check every time a goal is made that it checks.
+        _notificationsEnabled = getNotificationsEnabled(); // Put here to check every time a goal is made that it checks. // TODO: add something to show if notifications are enabled app side but not device side.
         loadNotificationStyle();
+        String notificationFrequency = await getNotificationStyle();
         final int hours = int.tryParse(deadlineHours) ?? 0;
         final DateTime deadlineDate = _currentDate.add(Duration(hours: hours));
         deadline = formatter.format(deadlineDate);
         if (_notificationsEnabled) {
-          GoalNotifier.startGoalCheck(_titleController.text, hours, _notificationStyle);
+          GoalNotifier.startGoalCheck(_titleController.text, hours, _notificationStyle, notificationFrequency);
         }
         else {
           debugPrint('Notifications not enabled — skipping goal check scheduling');
