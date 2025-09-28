@@ -398,6 +398,7 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     }
     else if (notificationFrequency == 'Low' || notificationFrequency == 'Medium' || notificationFrequency == 'High') {
       _notificationsEnabled =  true;
+      _notificationFrequency = notificationFrequency;
     }
     else {
       debugPrint('Unexpected scenario caught - invalid notification frequency: $notificationFrequency');
@@ -424,6 +425,11 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
   Future<String> getNotificationStyle() async {
     await _checkNotificationStyle();
     return _notificationStyle;
+  }
+
+  Future<String> getNotificationFrequency() async {
+    await _checkNotificationsEnabled();
+    return _notificationFrequency;
   }
 
 }

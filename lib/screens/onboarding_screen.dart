@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:focusNexus/screens/dashboard_screen.dart';
 import 'package:focusNexus/utils/BaseState.dart';
+import 'package:focusNexus/utils/notifier.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -49,8 +50,10 @@ class _OnboardingScreenState extends BaseState<OnboardingScreen> {
   }
 
   Future<void> _finishOnboarding() async {
+    final notificationsGranted = await GoalNotifier.checkNotificationsPermissionsGranted();
+    debugPrint('Notifications enabled: notificationsGranted');
     _notificationsEnabled = getNotificationsEnabled();
-     if(_notificationsEnabled) {
+     if(_notificationsEnabled &! notificationsGranted) {
        final shouldEnable = await showDialog<bool>(
          context: context,
          builder: (context) => AlertDialog(
@@ -72,7 +75,7 @@ class _OnboardingScreenState extends BaseState<OnboardingScreen> {
        );
 
        if (shouldEnable == true) {
-         await openNotificationSettings();
+         await GoalNotifier.requestNotificationPermission();
        }
 
        Navigator.pushReplacement(
@@ -80,17 +83,13 @@ class _OnboardingScreenState extends BaseState<OnboardingScreen> {
          MaterialPageRoute(builder: (_) => const DashboardScreen()),
        );
      }
+     else {
+       Navigator.pushReplacement( // In case notifications are already enabled system-side (such as user logging back in.)
+         context,
+         MaterialPageRoute(builder: (_) => const DashboardScreen()),
+       );
+     }
 
-  }
-
-
-
-  Future<void> openNotificationSettings() async {
-    try {
-      await platform.invokeMethod('openNotificationSettings');
-    } catch (e) {
-      debugPrint('Error opening notification settings: $e');
-    }
   }
 
   @override

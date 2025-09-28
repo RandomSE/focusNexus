@@ -1,4 +1,6 @@
 // lib/screens/goals_screen.dart
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:intl/intl.dart';
@@ -88,7 +90,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
     DateTime.now().day,
     DateTime.now().hour
   );
-  final DateFormat formatter = DateFormat('dd HH:mm MMMM yyyy');
+  final DateFormat formatter = DateFormat('dd MMMM yyyy HH:mm');
   Map<String, Map<String, dynamic>> _userTemplates = {};
   late ThemeData _themeData;
   Map<String, List<String>> _templateGroups = {};
@@ -99,6 +101,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
   bool _themeLoaded = false;
   bool _notificationsEnabled = false;
   String _notificationStyle = 'Minimal';
+  String _notificationFrequency = 'Low';
 
   @override
   void initState() {
@@ -106,10 +109,12 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
     loadSettings();
   }
 
-  Future<void> loadNotificationStyle() async {
+  Future<void> loadNotificationStyleAndFrequency() async {
     _notificationStyle = await getNotificationStyle();
+    _notificationFrequency = await getNotificationFrequency();
     debugPrint('AT THIS TIME: $_notificationStyle');
   }
+
 
   Future<void> loadSettings() async {
     await _loadGoals();
@@ -117,7 +122,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
     await _loadTemplateGroups();
     _themeData = ThemeData.light();
     await _initializeTheme(); // async theme setup from storage
-    await loadNotificationStyle();
+    await loadNotificationStyleAndFrequency();
   }
 
 
@@ -299,8 +304,9 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
 
   void _clearGoals() {
     while (_activeGoals.isNotEmpty) {
-      _removeGoal(0);
+      _removeGoalWithoutRemovingNotifications(0);
     }
+    GoalNotifier.cancelAllGoalNotifications(); // Handled here separately.
   }
 
   void _clearCompleteGoals () {
@@ -315,6 +321,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
     int complexityWeight = (_complexity == 'Medium') ? 1 : (_complexity == 'High') ? 2 : 0;
     int effortWeight     = (_effort == 'Medium')     ? 1 : (_effort == 'High')     ? 2 : 0;
     int motivationWeight = (_motivation == 'Medium') ? 1 : (_motivation == 'High') ? 2 : 0;
+    int deadlineBonus = (_deadlineController.text != '') ? 2 : 0;
 
     int time = int.tryParse(_time) ?? 0;
     int timeBonus = (time > 15) ? ((time - 15) ~/ 5) : 0;
@@ -324,10 +331,39 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
     int stepMultiplier = (steps > 1) ? (steps - 1) : 1;
     stepMultiplier = stepMultiplier.clamp(1, 4);
 
-    int totalMultiplier = 1 + complexityWeight + effortWeight + motivationWeight + timeBonus + stepMultiplier;
+    int totalMultiplier = 1 + complexityWeight + effortWeight + motivationWeight + timeBonus + stepMultiplier + deadlineBonus;
 
     return base * totalMultiplier;
   }
+
+  int _calculatePointsFromTemplate({
+    required String complexity,
+    required String effort,
+    required String motivation,
+    required String time,
+    required String steps,
+    required String deadline,
+  }) {
+    const int base = 5;
+
+    int complexityWeight = (complexity == 'Medium') ? 1 : (complexity == 'High') ? 2 : 0;
+    int effortWeight     = (effort == 'Medium')     ? 1 : (effort == 'High')     ? 2 : 0;
+    int motivationWeight = (motivation == 'Medium') ? 1 : (motivation == 'High') ? 2 : 0;
+    int deadlineBonus = (deadline != '') ? 2 : 0;
+
+    int timeVal = int.tryParse(time) ?? 0;
+    int timeBonus = (timeVal > 15) ? ((timeVal - 15) ~/ 5) : 0;
+    timeBonus = timeBonus.clamp(0, 4);
+
+    int stepsVal = int.tryParse(steps) ?? 1;
+    int stepMultiplier = (stepsVal > 1) ? (stepsVal - 1) : 1;
+    stepMultiplier = stepMultiplier.clamp(1, 4);
+
+    int totalMultiplier = 1 + complexityWeight + effortWeight + motivationWeight + timeBonus + stepMultiplier + deadlineBonus;
+
+    return base * totalMultiplier;
+  }
+
 
 
   Future<void> _saveGoals() async {
@@ -351,17 +387,18 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
     if (_formKey.currentState!.validate()) {
       final String deadlineHours = _deadlineController.text.trim();
       String deadline;
+      final goalId = generateGoalId(_titleController.text);
       if (deadlineHours.isEmpty) {
         deadline = 'no deadline';
       } else {
-        _notificationsEnabled = getNotificationsEnabled(); // Put here to check every time a goal is made that it checks. // TODO: add something to show if notifications are enabled app side but not device side.
-        loadNotificationStyle();
-        String notificationFrequency = await getNotificationStyle();
+        _notificationsEnabled = getNotificationsEnabled(); // Put here to check every time a goal is made that it checks.
+        loadNotificationStyleAndFrequency();
+        String notificationFrequency = await getNotificationFrequency();
         final int hours = int.tryParse(deadlineHours) ?? 0;
         final DateTime deadlineDate = _currentDate.add(Duration(hours: hours));
         deadline = formatter.format(deadlineDate);
-        if (_notificationsEnabled) {
-          GoalNotifier.startGoalCheck(_titleController.text, hours, _notificationStyle, notificationFrequency);
+        if (_notificationsEnabled && hours > 0) { // No deadline, no notifications.
+          GoalNotifier.startGoalCheck(_titleController.text, hours, goalId, _notificationStyle, notificationFrequency);
         }
         else {
           debugPrint('Notifications not enabled — skipping goal check scheduling');
@@ -379,6 +416,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
         'steps': _stepsController.text,
         'points': _calculatePoints(),
         'stepProgress': 0,
+        'Id': goalId,
       };
       setState(() {
         _activeGoals.add(goal);
@@ -403,9 +441,65 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
     }
   }
 
+  Future<void> _createGoalFromTemplates({
+    required String title,
+    required String category,
+    required String complexity,
+    required String effort,
+    required String motivation,
+    required String time,
+    required String steps,
+    required String deadlineHours,
+  }) async {
+    String deadline;
+    final goalId = generateGoalId(title);
+    if (deadlineHours.isEmpty) {
+      deadline = 'no deadline';
+    } else {
+      _notificationsEnabled = getNotificationsEnabled();
+      loadNotificationStyleAndFrequency();
+      String notificationFrequency = await getNotificationStyle();
+      final int hours = int.tryParse(deadlineHours) ?? 0;
+      final DateTime deadlineDate = _currentDate.add(Duration(hours: hours));
+      deadline = formatter.format(deadlineDate);
+      if (_notificationsEnabled && hours > 0) { // No deadline, no notification.
+        GoalNotifier.startGoalCheck(title, hours, goalId, _notificationStyle, notificationFrequency);
+      } else {
+        debugPrint('Notifications not enabled — skipping goal check scheduling');
+      }
+    }
+
+    final goal = {
+      'title': title,
+      'category': category,
+      'complexity': complexity,
+      'effort': effort,
+      'motivation': motivation,
+      'time': time,
+      'Deadline': deadline,
+      'steps': steps,
+      'points': _calculatePointsFromTemplate(
+        complexity: complexity,
+        effort: effort,
+        motivation: motivation,
+        time: time,
+        steps: steps,
+        deadline: deadline,
+      ),
+      'stepProgress': 0,
+      'Id': goalId,
+    };
+
+    setState(() {
+      _activeGoals.add(goal);
+    });
+    _saveGoals();
+  }
+
+
   void _completeGoal(int index) {
     final goal = _activeGoals.removeAt(index);
-    GoalNotifier.cancelGoalNotification(goal['title']); // Cancel notifications
+    GoalNotifier.cancelGoalNotification(goal['Id'], goal['title'], goal['Deadline'] ); // Cancel notifications
     _completedGoals.add(goal);
     _addPoints(goal['points'], 'goal:${goal['title']}');
     _saveGoals();
@@ -414,7 +508,15 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
 
   void _removeGoal(int index) {
     final goal = _activeGoals[index];
-    GoalNotifier.cancelGoalNotification(goal['title']); // Cancel notifications
+    GoalNotifier.cancelGoalNotification(goal['Id'], goal['title'], goal['Deadline'] ); // Cancel notifications
+    setState(() {
+      _activeGoals.removeAt(index);
+    });
+    _saveGoals();
+  }
+
+  void _removeGoalWithoutRemovingNotifications(int index) {
+    final goal = _activeGoals[index];
     setState(() {
       _activeGoals.removeAt(index);
     });
@@ -430,8 +532,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
   }
 
   void _checkForExpiredGoals() {
-    final DateFormat format = formatter;
-    final DateTime today = DateTime.now();
+    final DateTime now = DateTime.now();
 
     // Reverse index scan to safely remove while iterating
     for (int i = _activeGoals.length - 1; i >= 0; i--) {
@@ -440,8 +541,8 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
       if (deadlineStr == null || deadlineStr.toString().trim().isEmpty) continue;
 
       try {
-        final parsed = format.parseStrict(deadlineStr);
-        if (!parsed.isAfter(today)) {
+        final parsed = formatter.parseStrict(deadlineStr);
+        if (!parsed.isAfter(now)) {
           _removeGoal(i); // ✅ Remove expired goal
         }
       } catch (_) {
@@ -483,6 +584,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                   Text('Deadline: ${goal['Deadline']}', style: textStyle),
                   Text('Steps: ${goal['steps']}', style: textStyle),
                   Text('Points: ${goal['points']}', style: textStyle),
+                  Text('Id: ${goal['Id']}', style: textStyle),
                 ],
               ),
             ),
@@ -520,6 +622,9 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
     String _templateComplexity = _levels.first;
     String _templateEffort = _levels.first;
     String _templateMotivation = _levels.first;
+
+    int minutesRequired = 0;
+    int minutesToDeadline = 0;
 
     final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
@@ -618,6 +723,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                         if (parsed == null || parsed < 1) {
                           return 'Please enter a valid number greater than 0';
                         }
+                        minutesRequired = parsed;
                         return null;
                       },
                     ),
@@ -631,8 +737,12 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                       validator: (v) {
                         if (v == null || v.trim().isEmpty) return null; // optional
                         final parsed = int.tryParse(v.trim());
-                        if (parsed == null || parsed <= 0) {
-                          return 'Must be a whole number greater than 0';
+                        if (parsed == null || parsed <= 0 || parsed > 10000) {
+                          return 'Must be a whole number > 0 and < 10000';
+                        }
+                        minutesToDeadline = parsed;
+                        if (minutesRequired > minutesToDeadline) {
+                          return 'Deadline must be greater than time required.';
                         }
                         return null;
                       },
@@ -736,6 +846,16 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
         ),
       ),
     );
+  }
+
+  static int generateGoalId(String goalName) {
+    final random = Random();
+    final randomPart = random.nextInt(100000);
+    final hashPart = goalName.hashCode.abs();
+
+    // Combine safely within 32-bit int range
+    final combined = (hashPart % 1000000) * 100000 + randomPart;
+    return combined & 0x7FFFFFFF;
   }
 
   Future<void> _saveTemplateGroups() async {
@@ -875,25 +995,24 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                   backgroundColor: secondaryColor,
                   foregroundColor: primaryColor,
                 ),
-                onPressed: () {
+                onPressed: () async {
                   if (_selectedTemplates.isEmpty) return;
                   for (final templateName in _selectedTemplates) {
                     final data = _templateDetails[templateName] ?? _userTemplates[templateName]!;
-                    _titleController.text = templateName;
-                    _category = data['category'];
-                    _complexity = data['complexity'];
-                    _effort = data['effort'];
-                    _time = data['time'];
-                    _steps = data['steps'];
-                    _motivation = data['motivation'];
-                    _timeController.text = data['time'];
-                    _deadlineController.text = data['Hours to complete'];
-                    _stepsController.text = data['steps'];
-                    _createGoal();
+                    await _createGoalFromTemplates(
+                    title: templateName,
+                    category: data['category'],
+                    complexity: data['complexity'],
+                    effort: data['effort'],
+                    motivation: data['motivation'],
+                    time: data['time'],
+                    steps: data['steps'],
+                    deadlineHours: data['Hours to complete'],
+                    );
                   }
                   Navigator.pop(context);
                 },
-                child: const Text('Create Goals'),
+                child: Text('Create Goals', style: textStyle),
               ),
             ],
           );
@@ -918,6 +1037,9 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
     final Color secondaryColor = getSecondaryColor(isDark, contrastMode);
     final TextStyle textStyle = getTextStyle(userFontSize, primaryColor, useDyslexiaFont);
     final ButtonStyle buttonStyle = _buttonStyle;
+
+    int minutesRequired = 0;
+    int minutesToDeadline = 0;
 
     return Theme(
       data: _themeData,
@@ -1106,6 +1228,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                                     if (parsed == null || parsed < 1) {
                                       return 'Please enter a valid whole number';
                                     }
+                                    minutesRequired = parsed;
                                     return null; // ✅ Valid input
                                   },
                                 ),
@@ -1119,7 +1242,13 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                                   validator: (v) {
                                     if (v == null || v.trim().isEmpty) return null; // ✅ Accepts no deadline
                                     final parsed = int.tryParse(v);
-                                    if (parsed == null || parsed <= 0) return 'Please enter a whole number larger than 0';
+                                    if (parsed == null || parsed <= 0 || parsed > 9999) {
+                                      return 'Must be a whole number > 0 and < 10000';
+                                    }
+                                    minutesToDeadline = (parsed * 60);
+                                    if (minutesRequired > minutesToDeadline) {
+                                      return 'Deadline must be greater than time required.';
+                                    }
                                     return null; // ✅ Input is a valid number
                                   },
                                 ),
@@ -1286,6 +1415,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                               itemCount: _filteredSortedGoals.length,
                               itemBuilder: (_, i) {
                                 final g = _filteredSortedGoals[i];
+                                final steps = int.tryParse(g['steps']?.toString() ?? '') ?? 1;
                                 return ListTile(
                                   titleTextStyle: textStyle,
                                   textColor: primaryColor,
@@ -1299,7 +1429,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                                         style: textStyle,
                                       ),
                                       if (_selectedStatusFilter == 'Active' &&
-                                          int.tryParse(g['steps'])! > 1)
+                                          steps > 1)
                                         buildStepDisplay(g, userFontSize)
                                     ],
                                   ),
