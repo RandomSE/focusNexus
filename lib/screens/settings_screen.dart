@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:focusNexus/utils/BaseState.dart';
 
+import '../utils/notifier.dart';
+import 'dashboard_screen.dart';
+
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -9,7 +12,7 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends BaseState<SettingsScreen> {
+class _SettingsScreenState extends BaseState<SettingsScreen> with WidgetsBindingObserver {
   bool _themeLoaded = false;
   late ThemeData _themeData;
   late Color _primaryColor;
@@ -20,6 +23,7 @@ class _SettingsScreenState extends BaseState<SettingsScreen> {
   late String _rewardType;
   late String _notificationStyle;
   late String _notificationFrequency;
+  late bool _notificationsAllowed;
 
   @override
   void initState() {
@@ -27,7 +31,25 @@ class _SettingsScreenState extends BaseState<SettingsScreen> {
     _themeData = defaultThemeData; // Start with default
     _themeData = ThemeData.light();
     _initializeTheme(); // async theme setup from storage
+    WidgetsBinding.instance.addObserver(this);
     _loadSettings();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
+    if (state == AppLifecycleState.resumed) {
+      // App has returned from background — recheck permissions
+      final allowed = await GoalNotifier.checkNotificationsPermissionsGranted();
+      setState(() {
+        _notificationsAllowed = allowed;
+      });
+    }
   }
 
   Future<void> _initializeTheme() async {
@@ -65,17 +87,39 @@ class _SettingsScreenState extends BaseState<SettingsScreen> {
     final storedFrequency = await _storage.read(key: 'notificationFrequency');
     final storedStyle = await _storage.read(key: 'notificationStyle');
     final storedType = await _storage.read(key: 'rewardType');
+    final notificationsAllowed = await GoalNotifier.checkNotificationsPermissionsGranted();
+
     if (mounted) {
       setState(() {
         _rewardType = storedType ?? 'Avatar';
         _notificationStyle = storedStyle ?? 'Minimal';
         _notificationFrequency = storedFrequency ?? 'Medium';
+        _notificationsAllowed = notificationsAllowed;
+      });
+    }
+
+
+  }
+
+  Future<void> updateNotificationFrequency(String oldFrequency, String newFrequency) async {
+    await setNotificationFrequency(newFrequency);
+    if (oldFrequency == 'No notifications' && newFrequency != 'No notifications') {
+      await GoalNotifier.requestNotificationPermission();
+    }
+    if (oldFrequency != 'No notifications' && newFrequency == 'No notifications') {
+      await GoalNotifier.cancelAllGoalNotifications();
+    }
+    if (mounted) {
+      setState(() {
+        _notificationFrequency = newFrequency;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    //final dashboardContext = ModalRoute.of(context)?.settings.arguments as BuildContext?;
+    debugPrint('BuildContext - $context');
     final bool isDark = userTheme == 'dark';
     final bool contrastMode = highContrastMode;
     final Color primaryColor = getPrimaryColor(isDark, contrastMode);
@@ -87,7 +131,19 @@ class _SettingsScreenState extends BaseState<SettingsScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return Theme(
+    return PopScope<Object?>(
+      canPop: true,
+      onPopInvokedWithResult: (bool didPop, Object? result) async {
+        if (didPop) {
+          Future.microtask(() async {
+            //await Future.delayed(Duration(seconds: 1));
+            Navigator.of(context).pushReplacementNamed('dashboard');
+            debugPrint("Dashboard re-opened and updated after exiting settings.");
+          });
+        }
+      },
+
+    child: Theme(
         data: _themeData,
         child: Scaffold(
           appBar: AppBar(title:  Text('Settings', style: TextStyle(backgroundColor: secondaryColor, color: primaryColor)), backgroundColor: secondaryColor, iconTheme: IconThemeData(color: primaryColor)),
@@ -97,10 +153,6 @@ class _SettingsScreenState extends BaseState<SettingsScreen> {
             child: ListView(
               padding: const EdgeInsets.all(16.0),
               children: [
-                Text(
-                    'Live Preview: please note, any visual changes will require re-launching application to apply to the dashboard.',
-                    style: textStyle
-                ),
                 const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.all(8),
@@ -164,6 +216,17 @@ class _SettingsScreenState extends BaseState<SettingsScreen> {
                 ),
                 DropdownButtonFormField<String>(
                   style: textStyle,
+                  value: _notificationFrequency,
+                  items: ['Low', 'Medium', 'High', 'No notifications']
+                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                      .toList(),
+                  onChanged: (val) => updateNotificationFrequency(_notificationFrequency, val ?? 'Medium'),
+                  decoration: InputDecoration(labelText: 'Notification Frequency', labelStyle: textStyle),
+                  dropdownColor: secondaryColor,
+                ),
+                if (_notificationFrequency != 'No notifications') ...[
+                DropdownButtonFormField<String>(
+                  style: textStyle,
                   value: _notificationStyle,
                   items: ['Minimal', 'Vibrant', 'Animated']
                       .map((e) => DropdownMenuItem(value: e, child: Text(e, style: textStyle)))
@@ -172,21 +235,26 @@ class _SettingsScreenState extends BaseState<SettingsScreen> {
                   decoration: InputDecoration(labelText: 'Notification Style', labelStyle: textStyle),
                   dropdownColor: secondaryColor,
                 ),
-                DropdownButtonFormField<String>(
-                  style: textStyle,
-                  value: _notificationFrequency,
-                  items: ['Low', 'Medium', 'High', 'No notifications']
-                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                      .toList(),
-                  onChanged: (val) => setNotificationFrequency(val ?? 'Medium'),
-                  decoration: InputDecoration(labelText: 'Notification Frequency', labelStyle: textStyle),
-                  dropdownColor: secondaryColor,
-                ),
+
+                SwitchListTile(title: Text('Daily Affirmations', style: textStyle), value: dailyAffirmations, onChanged: setDailyAffirmations, tileColor: primaryColor),
+                SwitchListTile(title: Text('AI Encouragement', style: textStyle), value: aiEncouragement, onChanged: setAiEncouragement, tileColor: primaryColor),
+
+                  if (!_notificationsAllowed) ... [
+                    SwitchListTile(title: Text('You have notifications enabled in the app, but not on your phone. Would you like to enable them?', style: textStyle), value: false, onChanged: (val) {
+                      (() async {
+                        await GoalNotifier.requestNotificationPermission();
+                      })();
+                    }, tileColor: primaryColor),
+                  ],
+                ]
+
+                else ...[
+                  Text('Notifications are disabled. Settings related to them will not be shown until re-enabled.', style: textStyle),
+                ], // End of additional settings added if notifications are enabled.
+
                 SwitchListTile(title: Text('Remember Me', style: textStyle), value: rememberMe, onChanged: setRememberMe,  tileColor: primaryColor),
                 SwitchListTile(title: Text('High Contrast Mode', style: textStyle), value: highContrastMode, onChanged: setHighContrastMode, tileColor: primaryColor),
                 SwitchListTile(title: Text('Dyslexia-friendly Font', style: textStyle), value: useDyslexiaFont, onChanged: setUseDyslexiaFont, tileColor: primaryColor),
-                SwitchListTile(title: Text('Daily Affirmations', style: textStyle), value: dailyAffirmations, onChanged: setDailyAffirmations, tileColor: primaryColor),
-                SwitchListTile(title: Text('AI Encouragement', style: textStyle), value: aiEncouragement, onChanged: setAiEncouragement, tileColor: primaryColor),
                 SwitchListTile(title: Text('Pause Goals', style: textStyle), value: pauseGoals, onChanged: setPauseGoals, tileColor: primaryColor),
                 const Divider(),
                 ElevatedButton(
@@ -194,9 +262,54 @@ class _SettingsScreenState extends BaseState<SettingsScreen> {
                     backgroundColor: secondaryColor,
                   ),
                   onPressed: () async {
+                    final firstConfirmation = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Delete Account?'),
+                        content: const Text(
+                          'Would you like to delete your account and reset all settings?',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('No'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text('Yes, I am sure.'),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (firstConfirmation == true) {
+                      final secondConfirmation = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Delete Account?'),
+                          content: const Text(
+                            'Are you sure you would like to delete your account and reset all settings? This is permanent and cannot be reversed once done.',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('No'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              child: const Text('Yes, delete my account.'),
+                            ),
+                          ],
+                        ),
+                      );
+
+                    if(secondConfirmation == true){
                     await clearPreferences();
-                    setState(() {});
-                  },
+                    if (!mounted) return;
+                    Navigator.pushReplacementNamed(context, 'auth');
+                    }
+                  }},
+
                   child:  Text('Clear Preferences and Reset Assistant', style: textStyle),
                 ),
                 ElevatedButton(
@@ -205,7 +318,6 @@ class _SettingsScreenState extends BaseState<SettingsScreen> {
                   ),
                   onPressed: () async {
                     await setRememberMe(false);
-                    await setLoggedIn(false);
                     if (!mounted) return;
                     Navigator.pushReplacementNamed(context, 'auth');
                   },
@@ -215,6 +327,7 @@ class _SettingsScreenState extends BaseState<SettingsScreen> {
             ),
           ),
         )
+    ),
     );
   }
 }

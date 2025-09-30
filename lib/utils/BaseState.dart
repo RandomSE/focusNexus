@@ -11,18 +11,18 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
   String _userTheme = 'light';
   String _rewardType = 'Avatar';
   String _notificationStyle = 'Minimal';
-  String _notificationFrequency = 'Medium';
+  String _notificationFrequency = 'Low';
   bool _rememberMe = false;
   bool _highContrastMode = false;
   bool _useDyslexiaFont = false;
-  double _backgroundBrightness = 0.0;
-  bool _aiEncouragement = true;
-  bool _dailyAffirmations = true;
+  bool _aiEncouragement = false;
+  bool _dailyAffirmations = false;
   bool _skipToday = false;
   bool _pauseGoals = false;
   bool _loggedIn = false;
   late ThemeData _themeData;
   bool _notificationsEnabled = false;
+  bool _onboardingCompleted = false;
 
 
   @override
@@ -72,7 +72,10 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     final highContrastMode = (await _storage.read(key: 'highContrast')) == 'true';
     final dailyAffirmations = (await _storage.read(key: 'dailyAffirmations')) == 'true';
     final aiEncouragement = (await _storage.read(key: 'aiEncouragement')) == 'true';
+    final rememberMe = (await _storage.read(key: 'rememberMe')) == 'true';
     final bgBrightness = double.tryParse(await _storage.read(key: 'bgBrightness') ?? '') ?? 0.0;
+    final notificationFrequency = (await _storage.read(key: 'notificationFrequency')) ?? 'Low';
+    final notificationStyle = (await _storage.read(key: 'notificationStyle')) ?? 'Minimal';
 
     if (!mounted) return;
     setState(() {
@@ -82,7 +85,9 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
       _useDyslexiaFont = useDyslexiaFont;
       _dailyAffirmations = dailyAffirmations;
       _aiEncouragement = aiEncouragement;
-      _backgroundBrightness = bgBrightness;
+      _rememberMe = rememberMe;
+      _notificationFrequency = notificationFrequency;
+      _notificationStyle = notificationStyle;
     });
   }
 
@@ -95,12 +100,12 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
   bool get rememberMe => _rememberMe;
   bool get highContrastMode => _highContrastMode;
   bool get useDyslexiaFont => _useDyslexiaFont;
-  double get backgroundBrightness => _backgroundBrightness;
   bool get aiEncouragement => _aiEncouragement;
   bool get dailyAffirmations => _dailyAffirmations;
   bool get skipToday => _skipToday;
   bool get pauseGoals => _pauseGoals;
   bool get loggedIn => _loggedIn;
+  bool get onboardingCompleted => _onboardingCompleted;
   ThemeData get themeData => _themeData;
 
   // Setters
@@ -135,8 +140,15 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
   }
 
   Future<void> setRememberMe(bool value) async {
+    debugPrint('Remember me changed. Set to: $value');
     setState(() => _rememberMe = value);
     await _storage.write(key: 'rememberMe', value: value.toString());
+    onThemeUpdated();
+  }
+
+  Future<void> setLoggedIn(bool value) async {
+    setState(() => _loggedIn = value);
+    await _storage.write(key: 'loggedIn', value: value.toString());
     onThemeUpdated();
   }
 
@@ -149,12 +161,6 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
   Future<void> setUseDyslexiaFont(bool value) async {
     setState(() => _useDyslexiaFont = value);
     await _storage.write(key: 'dyslexiaFont', value: value.toString());
-    onThemeUpdated();
-  }
-
-  Future<void> setBackgroundBrightness(double value) async {
-    setState(() => _backgroundBrightness = value);
-    await _storage.write(key: 'bgBrightness', value: value.toString());
     onThemeUpdated();
   }
 
@@ -182,11 +188,10 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     onThemeUpdated();
   }
 
-  Future<void>setLoggedIn(bool value) async {
-    setState(() => _loggedIn = value);
-    await _storage.write(key: 'pauseGoals', value: value.toString());
+  Future<void> setOnboardingComplete(bool value) async {
+    setState(() => _onboardingCompleted = value);
+    await _storage.write(key: 'onboardingCompleted', value: value.toString());
     onThemeUpdated();
-
   }
 
   Future<void> setThemeData({
@@ -195,7 +200,6 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     bool? highContrastMode,
     Color? primaryColor,
     Color? secondaryColor,
-    double? backgroundBrightness,
     double? userFontSize,
     bool? useDyslexiaFont,
   }) async {
@@ -205,7 +209,7 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
       final bool contrastMode = highContrastMode ?? false;
 
       primaryColor = contrastMode ? Colors.cyan : (darkMode ? Colors.white : Colors.black);
-      secondaryColor = contrastMode ? Colors.black : (darkMode ? Colors.black : Colors.white.withOpacity(1 - (backgroundBrightness ?? 1.0)));
+      secondaryColor = contrastMode ? Colors.black : (darkMode ? Colors.black : Colors.white);
 
       _themeData = themeData ??
           ThemeData(
@@ -238,7 +242,6 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     bool? highContrastMode,
     Color? primaryColor,
     Color? secondaryColor,
-    double? backgroundBrightness,
     double? userFontSize,
     bool? useDyslexiaFont,
   }) async {
@@ -247,7 +250,6 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     // Compute fallback theme values
     final bool darkMode = isDark ?? false;
     final bool contrastMode = highContrastMode ?? false;
-    final double brightnessFactor = backgroundBrightness ?? 1.0;
     final double fontSize = userFontSize ?? 14.0;
     final bool dyslexiaFont = useDyslexiaFont ?? false;
 
@@ -259,7 +261,7 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
             ? Colors.black
             : (darkMode
             ? Colors.black
-            : Colors.white.withOpacity(1 - brightnessFactor)));
+            : Colors.white));
 
     // Build theme either from parameter or calculated values
     newTheme = themeData ??
@@ -307,12 +309,12 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
       _rememberMe = false;
       _highContrastMode = false;
       _useDyslexiaFont = false;
-      _backgroundBrightness = 0.0;
-      _aiEncouragement = true;
-      _dailyAffirmations = true;
+      _aiEncouragement = false;
+      _dailyAffirmations = false;
       _skipToday = false;
       _pauseGoals = false;
       _loggedIn = false;
+      _onboardingCompleted = false;
     });
 
     await setUserFontSize(14.0);
@@ -323,12 +325,12 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     await setRememberMe(false);
     await setHighContrastMode(false);
     await setUseDyslexiaFont(false);
-    await setBackgroundBrightness(0.0);
-    await setAiEncouragement(true);
-    await setDailyAffirmations(true);
+    await setAiEncouragement(false);
+    await setDailyAffirmations(false);
     await setSkipToday(false);
     await setPauseGoals(false);
     await setLoggedIn(false);
+    await setOnboardingComplete(false);
   }
 
   final ThemeData defaultThemeData = ThemeData(
@@ -393,6 +395,7 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
   }
   Future<void> _checkNotificationsEnabled()  async {
     final String? notificationFrequency = await _storage.read(key: 'notificationFrequency');
+    debugPrint('NotificationFrequency: $notificationFrequency');
     if (notificationFrequency == null || notificationFrequency == '' || notificationFrequency == 'No notifications') {
       _notificationsEnabled = false;
     }
@@ -432,4 +435,10 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     return _notificationFrequency;
   }
 
+  Future<bool> checkOnboardingCompleted() async {
+    final String? value = await _storage.read(key: 'onboardingCompleted');
+    debugPrint('Onboarding completed: $value');
+    _onboardingCompleted = (value == 'true');
+    return _onboardingCompleted;
+  }
 }

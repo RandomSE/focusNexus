@@ -11,9 +11,15 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final storage = FlutterSecureStorage();
   final loggedIn = await storage.read(key: 'loggedIn');
+  final rememberMe = await storage.read(key: 'rememberMe');
+  bool currentlyLoggedIn = false;
+
+  if (rememberMe == 'true' && loggedIn == 'true') { // If someone has both remember me and valid credentials, they can stay logged in. No remember me - not automatically logged back in.
+    currentlyLoggedIn = true;
+  }
 
   runApp(
-    FocusNexusApp(initialRoute: loggedIn == 'true' ? 'dashboard' : 'auth'),
+    FocusNexusApp(initialRoute: currentlyLoggedIn ? 'dashboard' : 'auth'),
   );
 }
 

@@ -22,6 +22,10 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
   final TextEditingController _timeController = TextEditingController();
   final TextEditingController _deadlineController = TextEditingController();
   final TextEditingController _stepsController = TextEditingController();
+  final TextEditingController _templateName = TextEditingController();
+  final TextEditingController _templateTime = TextEditingController();
+  final TextEditingController _templateSteps = TextEditingController();
+  final TextEditingController _templateDeadline = TextEditingController();
   String _selectedCategoryFilter = 'All';
   String _selectedComplexityFilter = 'All';
   String _selectedStatusFilter = 'Active';
@@ -107,6 +111,8 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
   void initState() {
     super.initState();
     loadSettings();
+    _stepsController.text = '1';
+    _templateSteps.text = '1';
   }
 
   Future<void> loadNotificationStyleAndFrequency() async {
@@ -384,6 +390,9 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
   }
 
   Future<void> _createGoal() async {
+    if (_stepsController.text == '') {
+      _stepsController.text = '1'; // default.
+    }
     if (_formKey.currentState!.validate()) {
       final String deadlineHours = _deadlineController.text.trim();
       String deadline;
@@ -425,7 +434,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
       _titleController.clear();
       _timeController.clear();
       _deadlineController.clear();
-      _stepsController.clear();
+      _stepsController.text = '1';
     }
   }
 
@@ -458,7 +467,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
     } else {
       _notificationsEnabled = getNotificationsEnabled();
       loadNotificationStyleAndFrequency();
-      String notificationFrequency = await getNotificationStyle();
+      String notificationFrequency = await getNotificationFrequency();
       final int hours = int.tryParse(deadlineHours) ?? 0;
       final DateTime deadlineDate = _currentDate.add(Duration(hours: hours));
       deadline = formatter.format(deadlineDate);
@@ -613,11 +622,6 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
     final Color secondaryColor = getSecondaryColor(isDark, contrastMode);
     final TextStyle textStyle = getTextStyle(userFontSize, primaryColor, useDyslexiaFont);
 
-    final TextEditingController _templateName = TextEditingController();
-    final TextEditingController _templateTime = TextEditingController();
-    final TextEditingController _templateSteps = TextEditingController();
-    final TextEditingController _templateDeadline = TextEditingController();
-
     String _templateCategory = _categories.first;
     String _templateComplexity = _levels.first;
     String _templateEffort = _levels.first;
@@ -751,13 +755,14 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                       style: textStyle,
                       controller: _templateSteps,
                       decoration: InputDecoration(
-                        labelText: 'Steps (required)',
+                        labelText: 'Steps',
                         labelStyle: textStyle,
                       ),
                       validator: (v) {
-                        final parsed = int.tryParse(v?.trim() ?? '');
+                        final trimmed = v?.trim();
+                        final parsed = int.tryParse(trimmed?.isEmpty ?? true ? '1' : trimmed!);
                         if (parsed == null || parsed < 1) {
-                          return 'Please enter a valid number greater than 0';
+                          return 'Please enter a valid whole number above 0';
                         }
                         return null;
                       },
@@ -767,7 +772,9 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                         if (!_formKey.currentState!.validate()) {
                           return; // stop if validation fails
                         }
-
+                        if(_templateSteps.text.trim() == '') {
+                          _templateSteps.text = '1';
+                        }
                         final name = _templateName.text.trim();
                         final data = {
                           'category': _templateCategory,
@@ -788,7 +795,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
 
                         _templateName.clear();
                         _templateTime.clear();
-                        _templateSteps.clear();
+                        _templateSteps.text = '1';
                         _templateDeadline.clear();
                       },
                       style: ElevatedButton.styleFrom(
@@ -1236,7 +1243,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                                   style: textStyle,
                                   controller: _deadlineController,
                                   decoration: InputDecoration(
-                                    labelText: 'Hours to complete',
+                                    labelText: 'Hours to complete (optional)',
                                     labelStyle: textStyle,
                                   ),
                                   validator: (v) {
@@ -1260,11 +1267,12 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                                     labelStyle: textStyle,
                                   ),
                                   validator: (v) {
-                                    final parsed = int.tryParse(v?.trim() ?? '');
+                                    final trimmed = v?.trim();
+                                    final parsed = int.tryParse(trimmed?.isEmpty ?? true ? '1' : trimmed!);
                                     if (parsed == null || parsed < 1) {
-                                      return 'Please enter a valid whole number';
+                                      return 'Please enter a valid whole number above 0';
                                     }
-                                    return null; // ✅ Valid input
+                                    return null;
                                   },
                                 ),
                                 const SizedBox(height: 10),

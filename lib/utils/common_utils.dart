@@ -10,7 +10,6 @@ class CommonUtils {
     final fontSize = double.tryParse(await _storage.read(key: 'fontSize') ?? '') ?? 14.0;
     final highContrast = (await _storage.read(key: 'highContrast')) == 'true';
     final dyslexiaFont = (await _storage.read(key: 'dyslexiaFont')) == 'true';
-    final bgBrightness = await _storage.read(key: 'bgBrightness') ?? '0.0';
 
     if (state.mounted) {
       state.setState(() {
@@ -18,7 +17,6 @@ class CommonUtils {
         (state as dynamic).userFontSize = fontSize;
         (state as dynamic).highContrastMode = highContrast;
         (state as dynamic).useDyslexiaFont = dyslexiaFont;
-        (state as dynamic).backgroundBrightness = double.tryParse(bgBrightness) ?? 0.5;
       });
     }
   }

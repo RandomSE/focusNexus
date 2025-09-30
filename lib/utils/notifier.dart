@@ -75,6 +75,12 @@ class GoalNotifier {
 
     debugPrint('Notification frequency: $notificationFrequency');
 
+    if(notificationFrequency == 'Low') { // to test notification function
+      // await scheduleReminder(goalId, 'Goal Reminder', buildFollowUpReminderMessage(goalName, goalId, notificationStyle, deadline), now.add(Duration(seconds: 10)), scheduleMode, goalGroupId, 'Goal Reminders', 'Reminders for goals', 'goal_group', 'Goal Reminder', 'Goal Reminders', 'Reminders for goals');
+      // await scheduleReminder(goalId + 1, 'Goal Reminder', buildFollowUpReminderMessage(goalName, goalId, notificationStyle, deadline), now.add(Duration(seconds: 15)), scheduleMode, goalGroupId, 'Goal Reminders', 'Reminders for goals', 'goal_group', 'Goal Reminder', 'Goal Reminders', 'Reminders for goals');
+      // await scheduleReminder(goalId + 3, 'Goal Reminder', buildFollowUpReminderMessage(goalName, goalId, notificationStyle, deadline), now.add(Duration(seconds: 30)), scheduleMode, goalGroupId, 'Goal Reminders', 'Reminders for goals', 'goal_group', 'Goal Reminder', 'Goal Reminders', 'Reminders for goals');
+    }
+
     // Shared reminder for Low, Medium & High frequency.
     if (fourHourBeforeDeadline.isAfter(now)) {
       await scheduleReminder(goalId + 2, 'Goal Reminder', buildFollowUpReminderMessage(goalName, goalId, notificationStyle, deadline), fourHourBeforeDeadline, scheduleMode, goalGroupId, 'Goal Reminders', 'Reminders for goals', 'goal_group', 'Goal Reminder', 'Goal Reminders', 'Reminders for goals');
@@ -169,8 +175,17 @@ class GoalNotifier {
 
     // Check if any critical permission is denied
     if (!statusNotification.isGranted || !statusExactAlarm.isGranted) {
+      final status = await Permission.notification.status;
+      final shouldShow = await Permission.notification.shouldShowRequestRationale;
+      debugPrint('Status: $status. Should show: $shouldShow');
       debugPrint('Critical notification permissions not granted.');
-      return;
+      if (shouldShow) {
+        return; // User denied notification - don't send request
+      }
+      else {
+        await openNotificationSettings(); // User previously blocked notification popup, triggered again - Send to settings for request.
+        return;
+      }
     }
 
     // Check if notifications are enabled in system settings

@@ -9,7 +9,6 @@ import '../utils/notifier.dart';
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
-
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
@@ -30,9 +29,11 @@ class _DashboardScreenState extends BaseState<DashboardScreen> {
     super.initState();
     _loadPoints();
     _themeData = ThemeData.light();
-    _initializeTheme(); // async theme setup from storage
-    _loadSettings();}
-  Future<void> _loadSettings() async{
+    initializeTheme(); // async theme setup from storage
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
     final storedType = await _storage.read(key: 'rewardType');
     if (mounted) {
       setState(() {
@@ -40,9 +41,9 @@ class _DashboardScreenState extends BaseState<DashboardScreen> {
       });
     }
     GoalNotifier.initialize();
-}
+  }
 
-  Future<void> _initializeTheme() async {
+  Future<void> initializeTheme() async {
     ThemeData loadedTheme;
 
     final String? storedTheme = await _storage.read(key: 'themeData');
@@ -60,11 +61,11 @@ class _DashboardScreenState extends BaseState<DashboardScreen> {
 
     if (mounted) {
       setState(() {
-        _themeData      = loadedTheme;
-        _primaryColor   = loadedTheme.primaryColor;
+        _themeData = loadedTheme;
+        _primaryColor = loadedTheme.primaryColor;
         _secondaryColor = loadedTheme.scaffoldBackgroundColor;
-        _textStyle      = loadedTheme.textTheme.bodyMedium!;
-        _buttonStyle    = ElevatedButton.styleFrom(
+        _textStyle = loadedTheme.textTheme.bodyMedium!;
+        _buttonStyle = ElevatedButton.styleFrom(
           backgroundColor: _secondaryColor,
           foregroundColor: _primaryColor,
         );
@@ -80,7 +81,13 @@ class _DashboardScreenState extends BaseState<DashboardScreen> {
   }
 
   Future<void> refreshDashboardTheme() async {
-    await _initializeTheme();
+    await initializeTheme();
+  }
+
+  void triggerThemeRefresh() {
+    setState(() {
+      _themeLoaded = false;
+    });
   }
 
   Future<void> _loadPoints() async {
@@ -94,11 +101,10 @@ class _DashboardScreenState extends BaseState<DashboardScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     setState(() {
-      _loadPoints();  // Refresh points
+      _loadPoints(); // Refresh points
       refreshDashboardTheme();
     });
   }
-
 
   static Future<void> addPoints(int amount, String source) async {
     final storage = FlutterSecureStorage();
@@ -108,12 +114,32 @@ class _DashboardScreenState extends BaseState<DashboardScreen> {
     await storage.write(key: 'points', value: newTotal.toString());
   }
 
-  static Future<void> refreshDashboardPoints(BuildContext context) async {
-    final state = context.findAncestorStateOfType<_DashboardScreenState>();
-    if (state != null) {
-      await state._loadPoints();
-    }
+  Widget _buildCenteredButton(
+      BuildContext context, {
+        required String label,
+        required VoidCallback onPressed,
+        required TextStyle style,
+        required Color backgroundColor,
+      }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Center(
+        child: SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: onPressed,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: backgroundColor,
+              padding: const EdgeInsets.symmetric(vertical: 16.0),
+              alignment: Alignment.center,
+            ),
+            child: Text(label, style: style, textAlign: TextAlign.center),
+          ),
+        ),
+      ),
+    );
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -121,72 +147,84 @@ class _DashboardScreenState extends BaseState<DashboardScreen> {
     final bool contrastMode = highContrastMode;
     final Color primaryColor = getPrimaryColor(isDark, contrastMode);
     final Color secondaryColor = getSecondaryColor(isDark, contrastMode);
-    final TextStyle textStyle = getTextStyle(userFontSize, primaryColor, useDyslexiaFont);
+    final TextStyle textStyle = getTextStyle(
+        userFontSize, primaryColor, useDyslexiaFont);
 
     if (!_themeLoaded) {
-      // show placeholder while theme loads
       return const Center(child: CircularProgressIndicator());
     }
 
     return Theme(
       data: _themeData,
       child: Scaffold(
-        appBar: AppBar(title:  Text('FocusNexus Dashboard', style: TextStyle(backgroundColor: secondaryColor, color: primaryColor)), backgroundColor: secondaryColor),
+        appBar: AppBar(
+          title: Text(
+            'FocusNexus Dashboard',
+            style: TextStyle(
+                backgroundColor: secondaryColor, color: primaryColor),
+            textAlign: TextAlign.center,
+          ),
+          backgroundColor: secondaryColor,
+        ),
         backgroundColor: secondaryColor,
         body: Container(
           color: secondaryColor,
           child: ListView(
-              padding: const EdgeInsets.all(16.0),
-          children: [
-            Text('Points: $_points', style: textStyle),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: () => Navigator.pushNamed(context, 'settings')
-                  .then((_) {
-                setState(() {
-                  _loadPoints();  // Reload points
-                });
-              }),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: secondaryColor,
+            padding: const EdgeInsets.all(16.0),
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Points: $_points', style: textStyle, textAlign: TextAlign.left),
               ),
-              child:  Text('Settings', style: textStyle),
-            ),
+              const SizedBox(height: 60),
 
-            ElevatedButton(
-              onPressed: () => Navigator.pushNamed(context, 'reward'), //TODO: Direct to reward specific page (each reward has it's own)
-              style: ElevatedButton.styleFrom(
+              _buildCenteredButton(
+                context,
+                label: 'Settings',
+                onPressed: () =>
+                    Navigator.pushNamed(context, 'settings', arguments: context)
+                        .then((_) => _themeLoaded = false),
+                style: textStyle,
                 backgroundColor: secondaryColor,
               ),
-              child: Text('Reward: $_rewardType', style: textStyle),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pushNamed(context, 'chat'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: secondaryColor,
-              ),
-              child:  Text('AI Chat / Therapist Space' , style: textStyle),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pushNamed(context, 'achievements'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: secondaryColor,
-              ),
-              child:  Text('Achievements', style: textStyle),
-            ),
-            ElevatedButton(
-              onPressed: () =>
-                  Navigator.pushNamed(context, 'goals').then((_) => _loadPoints()),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: secondaryColor,
-              ),
-              child:  Text('Goal Setting', style: textStyle),
-            ),
 
-          ],
+              _buildCenteredButton(
+                context,
+                label: 'Reward: $_rewardType',
+                onPressed: () => Navigator.pushNamed(context, 'reward'),
+                style: textStyle,
+                backgroundColor: secondaryColor,
+              ),
+
+              _buildCenteredButton(
+                context,
+                label: 'AI Chat / Therapist Space',
+                onPressed: () => Navigator.pushNamed(context, 'chat'),
+                style: textStyle,
+                backgroundColor: secondaryColor,
+              ),
+
+              _buildCenteredButton(
+                context,
+                label: 'Achievements',
+                onPressed: () => Navigator.pushNamed(context, 'achievements'),
+                style: textStyle,
+                backgroundColor: secondaryColor,
+              ),
+
+              _buildCenteredButton(
+                context,
+                label: 'Goal Setting',
+                onPressed: () =>
+                    Navigator.pushNamed(context, 'goals').then((_) =>
+                        _loadPoints()),
+                style: textStyle,
+                backgroundColor: secondaryColor,
+              ),
+            ],
+          ),
         ),
       ),
-      )
     );
   }
 }

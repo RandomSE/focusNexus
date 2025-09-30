@@ -1,6 +1,8 @@
 // lib/screens/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:focusNexus/screens/registration_screen.dart';
+import '../utils/BaseState.dart';
 import 'dashboard_screen.dart';
 import 'onboarding_screen.dart';
 
@@ -11,24 +13,44 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends BaseState<LoginScreen> {
   final TextEditingController _userController = TextEditingController();
   final TextEditingController _passController = TextEditingController();
   bool _rememberMe = false;
   final _storage = const FlutterSecureStorage();
+  String showPasswordText = 'Show Password';
+  bool hidePassword = true;
 
   Future<void> _login() async {
     final storedUser = await _storage.read(key: 'username');
     final storedPass = await _storage.read(key: 'password');
+    debugPrint('storedUser: $storedUser, storedPass: $storedPass');
 
     if (_userController.text == storedUser &&
         _passController.text == storedPass) {
+      await setLoggedIn(true);
       if (_rememberMe) {
-        await _storage.write(key: 'loggedIn', value: 'true');
+        await setRememberMe(true);
       }
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+      final isOnboardingComplete = (await checkOnboardingCompleted());
+      if (!isOnboardingComplete) {
+        debugPrint('Pushing to onboarding.');
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+        );
+      } else {
+        debugPrint('Taking to dashboard instead.');
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const DashboardScreen()),
+        );
+      }
+    } else if (storedUser == null || storedPass == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You have not registered yet. Register an account.'),
+        ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -52,7 +74,7 @@ class _LoginScreenState extends State<LoginScreen> {
             TextField(
               controller: _passController,
               decoration: const InputDecoration(labelText: 'Password'),
-              obscureText: true,
+              obscureText: hidePassword,
             ),
             Row(
               children: [
@@ -64,8 +86,26 @@ class _LoginScreenState extends State<LoginScreen> {
                 const Text('Remember me'),
               ],
             ),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  hidePassword = !hidePassword;
+                  showPasswordText = hidePassword ? 'Show Password' : 'Hide Password';
+                });
+              },
+              child: Text(showPasswordText),
+            ),
             const SizedBox(height: 20),
             ElevatedButton(onPressed: _login, child: const Text('Login')),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const RegistrationScreen()),
+                );
+              },
+              child: const Text('Register'),
+            ),
           ],
         ),
       ),

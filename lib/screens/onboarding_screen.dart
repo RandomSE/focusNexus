@@ -1,9 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:focusNexus/screens/dashboard_screen.dart';
 import 'package:focusNexus/utils/BaseState.dart';
 import 'package:focusNexus/utils/notifier.dart';
+import 'package:flutter/services.dart' show rootBundle;
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -15,24 +15,36 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends BaseState<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
-  final String baseImagePath = 'assets/images/onboarding_images/';
+  final String baseImagePath = 'assets/images/onboarding_images';
   bool _notificationsEnabled = false;
-  static const platform = MethodChannel('flutter_native_timezone');
+  int totalImages = 0;
+  List<String> onboardingImages = [];
 
-  List<String> get imagePaths => [
-    baseImagePath + 'dashboard.jpg',
-    baseImagePath + 'goals_overview.jpg',
-    baseImagePath + 'active_goal.jpg',
-    baseImagePath + 'single_goal.jpg',
-    baseImagePath + 'template_manager.jpg',
-    baseImagePath + 'multi_template_manager.jpg',
-    baseImagePath + 'settings_screen_onboarding.jpg',
-    // TODO: Add the rest of the paths once all screens are done.
-  ];
+  @override
+  void initState(){
+    super.initState();
+    _loadImageData();
+  }
+
+
+  Future<List<String>> get imagePaths async =>
+      (json.decode(await rootBundle.loadString('AssetManifest.json')) as Map<
+          String,
+          dynamic>)
+          .keys
+          .where((path) =>
+      path.startsWith('assets/images/onboarding_images/') &&
+          path.endsWith('.jpg'))
+          .toList();
+
+  void _loadImageData() async {
+    onboardingImages = await imagePaths;
+    totalImages = onboardingImages.length;
+  }
 
 
   void _goToNextPage() {
-    if (_currentPage < imagePaths.length - 1) {
+    if (_currentPage < totalImages - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -51,46 +63,42 @@ class _OnboardingScreenState extends BaseState<OnboardingScreen> {
 
   Future<void> _finishOnboarding() async {
     final notificationsGranted = await GoalNotifier.checkNotificationsPermissionsGranted();
-    debugPrint('Notifications enabled: notificationsGranted');
+    debugPrint('Notifications enabled: $notificationsGranted');
     _notificationsEnabled = getNotificationsEnabled();
-     if(_notificationsEnabled &! notificationsGranted) {
-       final shouldEnable = await showDialog<bool>(
-         context: context,
-         builder: (context) => AlertDialog(
-           title: const Text('Enable Notifications'),
-           content: const Text(
-             'To stay on track with your goals, FocusNexus can send reminders and updates. Would you like to enable notifications?',
-           ),
-           actions: [
-             TextButton(
-               onPressed: () => Navigator.pop(context, false),
-               child: const Text('Not Now'),
-             ),
-             TextButton(
-               onPressed: () => Navigator.pop(context, true),
-               child: const Text('Enable'),
-             ),
-           ],
-         ),
-       );
 
-       if (shouldEnable == true) {
-         await GoalNotifier.requestNotificationPermission();
-       }
+    if (_notificationsEnabled && !notificationsGranted) {
+      final shouldEnable = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Enable Notifications'),
+          content: const Text(
+            'To stay on track with your goals, FocusNexus can send reminders and updates. Would you like to enable notifications?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Not Now'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Enable'),
+            ),
+          ],
+        ),
+      );
 
-       Navigator.pushReplacement(
-         context,
-         MaterialPageRoute(builder: (_) => const DashboardScreen()),
-       );
-     }
-     else {
-       Navigator.pushReplacement( // In case notifications are already enabled system-side (such as user logging back in.)
-         context,
-         MaterialPageRoute(builder: (_) => const DashboardScreen()),
-       );
-     }
+      if (shouldEnable == true) {
+        await GoalNotifier.requestNotificationPermission();
+      }
+    }
 
+    setOnboardingComplete(true); // To ensure user only has to endure onboarding once per account made.
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const DashboardScreen()),
+    );
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -100,7 +108,7 @@ class _OnboardingScreenState extends BaseState<OnboardingScreen> {
           Expanded(
             child: PageView.builder(
               controller: _pageController,
-              itemCount: imagePaths.length,
+              itemCount: totalImages,
               onPageChanged: (index) {
                 setState(() {
                   _currentPage = index;
@@ -108,7 +116,7 @@ class _OnboardingScreenState extends BaseState<OnboardingScreen> {
               },
               itemBuilder: (context, index) {
                 return Center(
-                  child: Image.asset(imagePaths[index]),
+                  child: Image.asset(onboardingImages[index]),
                 );
               },
             ),
@@ -126,7 +134,7 @@ class _OnboardingScreenState extends BaseState<OnboardingScreen> {
                 else
                   const SizedBox(width: 100), // Placeholder to balance layout
 
-                if (_currentPage < imagePaths.length - 1)
+                if (_currentPage < totalImages - 1)
                   ElevatedButton(
                     onPressed: _goToNextPage,
                     child: const Text('Next'),
@@ -136,6 +144,11 @@ class _OnboardingScreenState extends BaseState<OnboardingScreen> {
                     onPressed: _finishOnboarding,
                     child: const Text('Finish'),
                   ),
+
+                ElevatedButton(
+                  onPressed: _finishOnboarding,
+                  child: const Text('Skip'),
+                ),
               ],
             ),
           ),
