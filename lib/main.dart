@@ -14,6 +14,7 @@ void main() async {
   final rememberMe = await storage.read(key: 'rememberMe');
   bool currentlyLoggedIn = false;
 
+  // TODO: Privacy policy, terms & conditions.
   if (rememberMe == 'true' && loggedIn == 'true') { // If someone has both remember me and valid credentials, they can stay logged in. No remember me - not automatically logged back in.
     currentlyLoggedIn = true;
   }

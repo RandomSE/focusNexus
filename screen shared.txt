@@ -2,20 +2,45 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:focusNexus/utils/BaseState.dart';
 
-class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({super.key});
+class NewScreen extends StatefulWidget {
+  const NewScreen({super.key});
 
 
   @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
+  State<NewScreen> createState() => _NewScreenState();
 }
 
-class _OnboardingScreenState extends BaseState<OnboardingScreen> {
+class _NewScreenState extends BaseState<NewScreen> {
+  late ThemeData themeData;
+  late Color _primaryColor;
+  late Color _secondaryColor;
+  late TextStyle _textStyle;
+  late ButtonStyle _buttonStyle;
+  bool _themeLoaded = false;
+  final _storage = const FlutterSecureStorage();
+
+
 
   @override
   Widget build(BuildContext context) {
     // TODO: implement build
     throw UnimplementedError();
+  }
+
+  Future<void> _loadScreen() async {
+    final themeBundle = await initializeScreenTheme();
+    await setThemeDataScreen(themeBundle);
+  }
+
+  Future<void> setThemeDataScreen (ThemeBundle themeBundle)  async {
+      setState(() {
+        _themeData = themeBundle.themeData;
+        _primaryColor = themeBundle.primaryColor;
+        _secondaryColor = themeBundle.secondaryColor;
+        _textStyle = themeBundle.textStyle;
+        _buttonStyle = themeBundle.buttonStyle;
+        _themeLoaded = true;
+      });
   }
 
 }

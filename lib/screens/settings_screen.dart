@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:focusNexus/utils/BaseState.dart';
-
 import '../utils/notifier.dart';
-import 'dashboard_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -13,13 +10,8 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends BaseState<SettingsScreen> with WidgetsBindingObserver {
-  bool _themeLoaded = false;
   late ThemeData _themeData;
-  late Color _primaryColor;
-  late Color _secondaryColor;
-  late TextStyle _textStyle;
-  late ButtonStyle _buttonStyle;
-  final _storage = const FlutterSecureStorage();
+  bool _themeLoaded = false;
   late String _rewardType;
   late String _notificationStyle;
   late String _notificationFrequency;
@@ -28,9 +20,6 @@ class _SettingsScreenState extends BaseState<SettingsScreen> with WidgetsBinding
   @override
   void initState() {
     super.initState();
-    _themeData = defaultThemeData; // Start with default
-    _themeData = ThemeData.light();
-    _initializeTheme(); // async theme setup from storage
     WidgetsBinding.instance.addObserver(this);
     _loadSettings();
   }
@@ -52,53 +41,23 @@ class _SettingsScreenState extends BaseState<SettingsScreen> with WidgetsBinding
     }
   }
 
-  Future<void> _initializeTheme() async {
-    ThemeData loadedTheme;
-
-    final String? storedTheme = await _storage.read(key: 'themeData');
-    await Future.delayed(const Duration(seconds: 1));
-    if (storedTheme != null) {
-      loadedTheme = parseThemeData(storedTheme);
-    } else {
-      loadedTheme = await setAndGetThemeData(
-        isDark: userTheme == 'dark',
-        highContrastMode: highContrastMode,
-        userFontSize: userFontSize,
-        useDyslexiaFont: useDyslexiaFont,
-      );
-    }
+  Future<void> _loadSettings() async {
+    final storedFrequency = await notificationFrequency;
+    final storedStyle = await notificationStyle;
+    final storedType = await rewardType;
+    final notificationsAllowed = await GoalNotifier.checkNotificationsPermissionsGranted();
+    final themeBundle = await initializeScreenTheme();
 
     if (mounted) {
       setState(() {
-        _themeData      = loadedTheme;
-        _primaryColor   = loadedTheme.primaryColor;
-        _secondaryColor = loadedTheme.scaffoldBackgroundColor;
-        _textStyle      = loadedTheme.textTheme.bodyMedium!;
-        _buttonStyle    = ElevatedButton.styleFrom(
-          backgroundColor: _secondaryColor,
-          foregroundColor: _primaryColor,
-        );
+        _rewardType = storedType;
+        _notificationStyle = storedStyle;
+        _notificationFrequency = storedFrequency;
+        _notificationsAllowed = notificationsAllowed;
+        _themeData = themeBundle.themeData;
         _themeLoaded = true;
       });
     }
-  }
-
-  Future<void> _loadSettings() async {
-    final storedFrequency = await _storage.read(key: 'notificationFrequency');
-    final storedStyle = await _storage.read(key: 'notificationStyle');
-    final storedType = await _storage.read(key: 'rewardType');
-    final notificationsAllowed = await GoalNotifier.checkNotificationsPermissionsGranted();
-
-    if (mounted) {
-      setState(() {
-        _rewardType = storedType ?? 'Avatar';
-        _notificationStyle = storedStyle ?? 'Minimal';
-        _notificationFrequency = storedFrequency ?? 'Medium';
-        _notificationsAllowed = notificationsAllowed;
-      });
-    }
-
-
   }
 
   Future<void> updateNotificationFrequency(String oldFrequency, String newFrequency) async {
@@ -118,8 +77,6 @@ class _SettingsScreenState extends BaseState<SettingsScreen> with WidgetsBinding
 
   @override
   Widget build(BuildContext context) {
-    //final dashboardContext = ModalRoute.of(context)?.settings.arguments as BuildContext?;
-    debugPrint('BuildContext - $context');
     final bool isDark = userTheme == 'dark';
     final bool contrastMode = highContrastMode;
     final Color primaryColor = getPrimaryColor(isDark, contrastMode);
@@ -136,7 +93,6 @@ class _SettingsScreenState extends BaseState<SettingsScreen> with WidgetsBinding
       onPopInvokedWithResult: (bool didPop, Object? result) async {
         if (didPop) {
           Future.microtask(() async {
-            //await Future.delayed(Duration(seconds: 1));
             Navigator.of(context).pushReplacementNamed('dashboard');
             debugPrint("Dashboard re-opened and updated after exiting settings.");
           });

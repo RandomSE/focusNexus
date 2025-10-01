@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:focusNexus/utils/BaseState.dart';
 
+import '../utils/ThemeBundle.dart';
 import '../utils/notifier.dart';
 
 
@@ -27,66 +28,28 @@ class _DashboardScreenState extends BaseState<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _loadPoints();
-    _themeData = ThemeData.light();
-    initializeTheme(); // async theme setup from storage
-    _loadSettings();
+    _loadDashboard();
   }
 
-  Future<void> _loadSettings() async {
-    final storedType = await _storage.read(key: 'rewardType');
-    if (mounted) {
-      setState(() {
-        _rewardType = storedType ?? 'Avatar';
-      });
-    }
+  Future<void> _loadDashboard() async {
+    final storedType = await rewardType;
+    final themeBundle = await initializeScreenTheme();
+
+
+    await setThemeDataScreen(themeBundle, storedType);
+
     GoalNotifier.initialize();
+    await _loadPoints();
   }
 
-  Future<void> initializeTheme() async {
-    ThemeData loadedTheme;
-
-    final String? storedTheme = await _storage.read(key: 'themeData');
-    await Future.delayed(const Duration(seconds: 1));
-    if (storedTheme != null) {
-      loadedTheme = parseThemeData(storedTheme);
-    } else {
-      loadedTheme = await setAndGetThemeData(
-        isDark: userTheme == 'dark',
-        highContrastMode: highContrastMode,
-        userFontSize: userFontSize,
-        useDyslexiaFont: useDyslexiaFont,
-      );
-    }
-
-    if (mounted) {
-      setState(() {
-        _themeData = loadedTheme;
-        _primaryColor = loadedTheme.primaryColor;
-        _secondaryColor = loadedTheme.scaffoldBackgroundColor;
-        _textStyle = loadedTheme.textTheme.bodyMedium!;
-        _buttonStyle = ElevatedButton.styleFrom(
-          backgroundColor: _secondaryColor,
-          foregroundColor: _primaryColor,
-        );
-        _themeLoaded = true;
-      });
-    }
-    refreshDashboardTheme();
-  }
-
-  @override
-  void onThemeUpdated() {
-    refreshDashboardTheme();
-  }
-
-  Future<void> refreshDashboardTheme() async {
-    await initializeTheme();
-  }
-
-  void triggerThemeRefresh() {
+  Future<void> setThemeDataScreen (ThemeBundle themeBundle, String storedType)  async {
     setState(() {
-      _themeLoaded = false;
+      _themeData = themeBundle.themeData;
+      _primaryColor = themeBundle.primaryColor;
+      _secondaryColor = themeBundle.secondaryColor;
+      _textStyle = themeBundle.textStyle;
+      _themeLoaded = true;
+      _rewardType = storedType;
     });
   }
 
@@ -95,15 +58,6 @@ class _DashboardScreenState extends BaseState<DashboardScreen> {
     final value = stored == null ? 50 : int.tryParse(stored) ?? 50;
     if (stored == null) await _storage.write(key: 'points', value: '50');
     setState(() => _points = value);
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    setState(() {
-      _loadPoints(); // Refresh points
-      refreshDashboardTheme();
-    });
   }
 
   static Future<void> addPoints(int amount, String source) async {
@@ -143,14 +97,8 @@ class _DashboardScreenState extends BaseState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isDark = userTheme == 'dark';
-    final bool contrastMode = highContrastMode;
-    final Color primaryColor = getPrimaryColor(isDark, contrastMode);
-    final Color secondaryColor = getSecondaryColor(isDark, contrastMode);
-    final TextStyle textStyle = getTextStyle(
-        userFontSize, primaryColor, useDyslexiaFont);
 
-    if (!_themeLoaded) {
+    while (!_themeLoaded) {
       return const Center(child: CircularProgressIndicator());
     }
 
@@ -160,21 +108,20 @@ class _DashboardScreenState extends BaseState<DashboardScreen> {
         appBar: AppBar(
           title: Text(
             'FocusNexus Dashboard',
-            style: TextStyle(
-                backgroundColor: secondaryColor, color: primaryColor),
+            style: _textStyle,
             textAlign: TextAlign.center,
           ),
-          backgroundColor: secondaryColor,
+          backgroundColor: _secondaryColor,
         ),
-        backgroundColor: secondaryColor,
+        backgroundColor: _secondaryColor,
         body: Container(
-          color: secondaryColor,
+          color: _secondaryColor,
           child: ListView(
             padding: const EdgeInsets.all(16.0),
             children: [
               Align(
                 alignment: Alignment.centerLeft,
-                child: Text('Points: $_points', style: textStyle, textAlign: TextAlign.left),
+                child: Text('Points: $_points', style: _textStyle, textAlign: TextAlign.left),
               ),
               const SizedBox(height: 60),
 
@@ -184,32 +131,32 @@ class _DashboardScreenState extends BaseState<DashboardScreen> {
                 onPressed: () =>
                     Navigator.pushNamed(context, 'settings', arguments: context)
                         .then((_) => _themeLoaded = false),
-                style: textStyle,
-                backgroundColor: secondaryColor,
+                style: _textStyle,
+                backgroundColor: _secondaryColor,
               ),
 
               _buildCenteredButton(
                 context,
                 label: 'Reward: $_rewardType',
                 onPressed: () => Navigator.pushNamed(context, 'reward'),
-                style: textStyle,
-                backgroundColor: secondaryColor,
+                style: _textStyle,
+                backgroundColor: _secondaryColor,
               ),
 
               _buildCenteredButton(
                 context,
                 label: 'AI Chat / Therapist Space',
                 onPressed: () => Navigator.pushNamed(context, 'chat'),
-                style: textStyle,
-                backgroundColor: secondaryColor,
+                style: _textStyle,
+                backgroundColor: _secondaryColor,
               ),
 
               _buildCenteredButton(
                 context,
                 label: 'Achievements',
                 onPressed: () => Navigator.pushNamed(context, 'achievements'),
-                style: textStyle,
-                backgroundColor: secondaryColor,
+                style: _textStyle,
+                backgroundColor: _secondaryColor,
               ),
 
               _buildCenteredButton(
@@ -218,8 +165,8 @@ class _DashboardScreenState extends BaseState<DashboardScreen> {
                 onPressed: () =>
                     Navigator.pushNamed(context, 'goals').then((_) =>
                         _loadPoints()),
-                style: textStyle,
-                backgroundColor: secondaryColor,
+                style: _textStyle,
+                backgroundColor: _secondaryColor,
               ),
             ],
           ),

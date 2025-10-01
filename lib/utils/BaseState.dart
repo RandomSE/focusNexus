@@ -3,6 +3,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import 'ThemeBundle.dart';
+import '../utils/common_utils.dart';
+
 abstract class BaseState<T extends StatefulWidget> extends State<T> {
   final _storage = const FlutterSecureStorage();
 
@@ -21,9 +24,13 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
   bool _pauseGoals = false;
   bool _loggedIn = false;
   late ThemeData _themeData;
+  late Color _primaryColor;
+  late Color _secondaryColor;
+  late TextStyle _textStyle;
+  late ButtonStyle _buttonStyle;
+  bool _themeLoaded = false;
   bool _notificationsEnabled = false;
   bool _onboardingCompleted = false;
-
 
   @override
   void initState() {
@@ -31,6 +38,7 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     _loadUserPreferences();
     _checkNotificationsEnabled();
     initializeTheme(); // <- unified async theme init
+    //applyThemeToState(this);
   }
 
   Future<void> initializeTheme() async {
@@ -51,6 +59,46 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     }
   }
 
+  Future<ThemeBundle> initializeScreenTheme() async {
+    await CommonUtils.waitForMilliseconds(500); // Takes about 80ms to load on a 2021 device, extra loading time for older devices.
+
+    final bool isDark = userTheme == 'dark';
+    final bool contrastMode = highContrastMode;
+    final Color primaryColor = getPrimaryColor(isDark, contrastMode);
+    final Color secondaryColor = getSecondaryColor(isDark, contrastMode);
+    final TextStyle textStyle = getTextStyle(userFontSize, primaryColor, useDyslexiaFont);
+    final ButtonStyle buttonStyle = getButtonStyle(primaryColor, secondaryColor);
+
+    ThemeData loadedTheme;
+    final String? storedTheme = await _storage.read(key: 'themeData');
+    if (storedTheme != null) {
+      loadedTheme = parseThemeData(storedTheme);
+      debugPrint('Loaded stored theme.');
+    } else {
+      debugPrint('Stored theme unable to be loaded.');
+      loadedTheme = await setAndGetThemeData(
+        isDark: isDark,
+        highContrastMode: contrastMode,
+        userFontSize: userFontSize,
+        useDyslexiaFont: useDyslexiaFont,
+      );
+    }
+
+    return ThemeBundle(
+      themeData: loadedTheme,
+      primaryColor: primaryColor,
+      secondaryColor: secondaryColor,
+      textStyle: textStyle,
+      buttonStyle: buttonStyle,
+    );
+  }
+
+  Future<String> readFromStorage(String key) async { // Simple method instead of doing a .read for every variable
+    final String? value = await _storage.read(key: key);
+    return value ?? '';
+    // TODO: Do a check to confirm this key hasn't recently been read, if it has it can easily just be cached.
+  }
+
 
   Future<void> loadStoredTheme() async {
     final String? storedTheme = await _storage.read(key: 'themeData');
@@ -65,17 +113,16 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     }
   }
 
-  Future<void> _loadUserPreferences() async {
-    final theme = await _storage.read(key: 'theme') ?? 'light';
-    final fontSize = double.tryParse(await _storage.read(key: 'fontSize') ?? '') ?? 14.0;
-    final useDyslexiaFont = (await _storage.read(key: 'dyslexiaFont')) == 'true';
-    final highContrastMode = (await _storage.read(key: 'highContrast')) == 'true';
-    final dailyAffirmations = (await _storage.read(key: 'dailyAffirmations')) == 'true';
-    final aiEncouragement = (await _storage.read(key: 'aiEncouragement')) == 'true';
-    final rememberMe = (await _storage.read(key: 'rememberMe')) == 'true';
-    final bgBrightness = double.tryParse(await _storage.read(key: 'bgBrightness') ?? '') ?? 0.0;
-    final notificationFrequency = (await _storage.read(key: 'notificationFrequency')) ?? 'Low';
-    final notificationStyle = (await _storage.read(key: 'notificationStyle')) ?? 'Minimal';
+  Future<void> _loadUserPreferences() async { // TODO: Refactor to remove the need for this.
+    final theme = await readFromStorage('theme') ?? 'light';
+    final fontSize = double.tryParse(await readFromStorage('fontSize') ?? '') ?? 14.0;
+    final useDyslexiaFont = (await readFromStorage('dyslexiaFont')) == 'true';
+    final highContrastMode = (await readFromStorage('highContrast')) == 'true';
+    final dailyAffirmations = (await readFromStorage('dailyAffirmations')) == 'true';
+    final aiEncouragement = (await readFromStorage('aiEncouragement')) == 'true';
+    final rememberMe = (await readFromStorage('rememberMe')) == 'true';
+    final notificationFrequency = (await readFromStorage('notificationFrequency')) ?? 'Low';
+    final notificationStyle = (await readFromStorage('notificationStyle')) ?? 'Minimal';
 
     if (!mounted) return;
     setState(() {
@@ -94,9 +141,6 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
   // Getters
   double get userFontSize => _userFontSize;
   String get userTheme => _userTheme;
-  String get rewardType => _rewardType;
-  String get notificationStyle => _notificationStyle;
-  String get notificationFrequency => _notificationFrequency;
   bool get rememberMe => _rememberMe;
   bool get highContrastMode => _highContrastMode;
   bool get useDyslexiaFont => _useDyslexiaFont;
@@ -107,6 +151,94 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
   bool get loggedIn => _loggedIn;
   bool get onboardingCompleted => _onboardingCompleted;
   ThemeData get themeData => _themeData;
+
+  // TODO: Change most of these to explicitly check from storage.
+  /*
+  Future<String> get variable async {
+    String extractedString = await readFromStorage('variable');
+    if (extractedString == '') {
+      return 'Something';
+    }
+    else {
+      _variable = extractedString;
+      return _variable;
+    }
+  }
+
+
+   */
+
+  Future<String> get rewardType async {
+    String extractedString = await readFromStorage('rewardType');
+    if (extractedString == '') {
+      return 'Avatar';
+    }
+    else {
+      _rewardType = extractedString;
+      return _rewardType;
+    }
+  }
+
+  Future<String> get notificationFrequency async {
+    String extractedString = await readFromStorage('notificationFrequency');
+    if (extractedString == '') {
+      return 'No notifications';
+    }
+    else {
+      _notificationFrequency = extractedString;
+      return _notificationFrequency;
+    }
+  }
+
+  Future<String> get notificationStyle async {
+    String extractedString = await readFromStorage('notificationStyle');
+    if (extractedString == '') {
+      return 'Minimal';
+    }
+    else {
+      _notificationStyle = extractedString;
+      return _notificationStyle;
+    }
+  }
+
+  Color getPrimaryColor(bool isDark, bool contrastMode) {
+    if (contrastMode) return Colors.cyan;
+    if (isDark) return Colors.white;
+    return Colors.black87;
+  }
+
+  Color getSecondaryColor(bool isDark, bool contrastMode) {
+    if (contrastMode) return Colors.black;
+    if (isDark) return Colors.black;
+    return const Color(0xFFF5F5F5);
+  }
+
+  Future<String> getNotificationStyle() async { // TODO: update references
+    await _checkNotificationStyle();
+    return _notificationStyle;
+  }
+
+  Future<String> getNotificationFrequency() async { // TODO: update references
+    await _checkNotificationsEnabled();
+    return _notificationFrequency;
+  }
+
+  TextStyle getTextStyle(double fontSize, Color primaryColor, bool useDyslexiaFont) {
+    return TextStyle(
+        fontSize: fontSize,
+        fontWeight: FontWeight.bold,
+        color: primaryColor,
+        fontFamily: useDyslexiaFont ? 'OpenDyslexic' : null
+    );
+
+  }
+
+  ButtonStyle getButtonStyle(Color primaryColor, Color secondaryColor) {
+    debugPrint('secondaryColor: $secondaryColor');
+    return ElevatedButton.styleFrom(
+      backgroundColor: secondaryColor, // secondaryColor
+    );
+  }
 
   // Setters
   Future<void> setUserFontSize(double value) async {
@@ -203,37 +335,53 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     double? userFontSize,
     bool? useDyslexiaFont,
   }) async {
-    setState(() {
-      // Determine primary and secondary colors
-      final bool darkMode = isDark ?? false;
-      final bool contrastMode = highContrastMode ?? false;
+    try {
+      setState(() {
+        // Determine primary and secondary colors
+        final bool darkMode = isDark ?? false;
+        final bool contrastMode = highContrastMode ?? false;
 
-      primaryColor = contrastMode ? Colors.cyan : (darkMode ? Colors.white : Colors.black);
-      secondaryColor = contrastMode ? Colors.black : (darkMode ? Colors.black : Colors.white);
+        primaryColor =
+        contrastMode ? Colors.cyan : (darkMode ? Colors.white : Colors.black);
+        secondaryColor =
+        contrastMode ? Colors.black : (darkMode ? Colors.black : Colors.white);
 
-      _themeData = themeData ??
-          ThemeData(
-            brightness: darkMode ? Brightness.dark : Brightness.light,
-            primaryColor: primaryColor,
-            scaffoldBackgroundColor: secondaryColor,
-            textTheme: ThemeData.light().textTheme.apply(
-              fontSizeFactor: (userFontSize ?? 14.0) / 14.0,
-              fontFamily: useDyslexiaFont ?? false ? 'OpenDyslexic' : null,
-              bodyColor: primaryColor,
-              displayColor: primaryColor,
-            ),
-          );
-    });
+        _themeData = themeData ??
+            ThemeData(
+              brightness: darkMode ? Brightness.dark : Brightness.light,
+              primaryColor: primaryColor,
+              scaffoldBackgroundColor: secondaryColor,
+              textTheme: ThemeData
+                  .light()
+                  .textTheme
+                  .apply(
+                fontSizeFactor: (userFontSize ?? 14.0) / 14.0,
+                fontFamily: useDyslexiaFont ?? false ? 'OpenDyslexic' : null,
+                bodyColor: primaryColor,
+                displayColor: primaryColor,
+              ),
+            );
+      });
 
-    await _storage.write(key: 'themeData', value: jsonEncode({
-      'isDark': isDark,
-      'primaryColor': primaryColor!.value,
-      'secondaryColor': secondaryColor!.value,
-      'userFontSize': userFontSize ?? 14.0,
-      'useDyslexiaFont': useDyslexiaFont ?? false,
-    }));
-    onThemeUpdated();
+      await _storage.write(key: 'themeData', value: jsonEncode({
+        'isDark': isDark,
+        'primaryColor': primaryColor!.value,
+        'secondaryColor': secondaryColor!.value,
+        'userFontSize': userFontSize ?? 14.0,
+        'useDyslexiaFont': useDyslexiaFont ?? false,
+      }));
+      onThemeUpdated();
+    } catch (e) {
+      final isFontSizeError = e.toString().contains('fontSize != null');
 
+      if (isFontSizeError) {
+        debugPrint('Font size scaling failed, ignoring: $e'); // This happens when you change the font size due to flutter's... eccentricities. Doesn't prevent font size from being changed, so it will be ignored here.
+      } else {
+        debugPrint('Theme application failed: $e');
+        // Apply a safe fallback theme
+        _themeData = ThemeData.light();
+      }
+    }
   }
 
   Future<ThemeData> setAndGetThemeData({
@@ -256,12 +404,9 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     final Color resolvedPrimaryColor =
         primaryColor ?? (contrastMode ? Colors.cyan : (darkMode ? Colors.white : Colors.black));
 
-    final Color resolvedSecondaryColor = secondaryColor ??
-        (contrastMode
-            ? Colors.black
-            : (darkMode
-            ? Colors.black
-            : Colors.white));
+    final Color resolvedSecondaryColor = contrastMode
+        ? Colors.black
+        : (secondaryColor ?? (darkMode ? Colors.black : Colors.white));
 
     // Build theme either from parameter or calculated values
     newTheme = themeData ??
@@ -295,6 +440,7 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
 
     return newTheme;
   }
+
 
 
   Future<void> clearPreferences() async {
@@ -367,28 +513,7 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     );
   }
 
-  Color getPrimaryColor(bool isDark, bool contrastMode) {
-    if (contrastMode) return Colors.cyan;
-    if (isDark) return Colors.white;
-    return Colors.black87; // Less stark than pure black, more readable than opacity tricks
-  }
 
-  Color getSecondaryColor(bool isDark, bool contrastMode) {
-    if (contrastMode) return Colors.black;
-    if (isDark) return Colors.black;
-    return const Color(0xFFF5F5F5); // A soft, neutral off-white for light mode
-  }
-
-
-  TextStyle getTextStyle(double fontSize, Color primaryColor, bool useDyslexiaFont) {
-    return TextStyle(
-      fontSize: fontSize,
-      fontWeight: FontWeight.bold,
-      color: primaryColor,
-      fontFamily: useDyslexiaFont ? 'OpenDyslexic' : null
-    );
-
-  }
 
   void onThemeUpdated() {
 
@@ -423,16 +548,6 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
       _notificationStyle = notificationStyle;
     }
     debugPrint('NotificationStyle: $notificationStyle');
-  }
-
-  Future<String> getNotificationStyle() async {
-    await _checkNotificationStyle();
-    return _notificationStyle;
-  }
-
-  Future<String> getNotificationFrequency() async {
-    await _checkNotificationsEnabled();
-    return _notificationFrequency;
   }
 
   Future<bool> checkOnboardingCompleted() async {

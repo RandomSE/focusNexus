@@ -103,7 +103,7 @@ class GoalNotifier {
       if (totalDays > 1) {
         for (int i = 1; i <= totalDays; i++) {
           final dailyTime = deadline.subtract(Duration(days: i));
-          await scheduleReminder(goalId + 3 + i, 'Daily Goal Reminder', buildFollowUpReminderMessage(goalName, goalId, notificationStyle, deadline), dailyTime, scheduleMode, goalRepeatingGroupId, 'Daily Goal Reminders', 'Daily reminders for goals', 'daily_goal_group', 'Daily Goal Reminder', 'Daily Goal Reminders', 'Daily Reminders for goals');
+          await scheduleReminder(goalId + 10 + i, 'Daily Goal Reminder', buildFollowUpReminderMessage(goalName, goalId, notificationStyle, deadline), dailyTime, scheduleMode, goalRepeatingGroupId, 'Daily Goal Reminders', 'Daily reminders for goals', 'daily_goal_group', 'Daily Goal Reminder', 'Daily Goal Reminders', 'Daily Reminders for goals');
         }
       }
       if (totalDays == 1 && hoursToExpire >24){
@@ -122,6 +122,7 @@ class GoalNotifier {
     await _plugin.cancel(goalId + 1); // 4-hour before - all
     await _plugin.cancel(goalId + 2); // 1 day before - medium, High
     await _plugin.cancel(goalId + 3); // 2-hours before - High
+    // TODO: Ai encouragement stuff
 
     final deadlineDate = formatter.parse(deadline);
     final daysToExpire = deadlineDate
@@ -131,7 +132,7 @@ class GoalNotifier {
     if (daysToExpire > 0) {
       await _plugin.cancel(1); // group for all the daily notifications (High)
       for (int i = 1; i <= daysToExpire; i++) {
-        await _plugin.cancel(goalId + 3 + i);
+        await _plugin.cancel(goalId + 10 + i);
       }
   }
 
