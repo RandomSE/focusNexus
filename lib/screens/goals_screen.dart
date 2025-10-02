@@ -7,7 +7,8 @@ import 'package:intl/intl.dart';
 import 'dart:convert';
 
 import '../utils/BaseState.dart';
-import '../utils/ThemeBundle.dart';
+import '../models/classes/theme_bundle.dart';
+import '../models/classes/goal_set.dart';
 import '../utils/notifier.dart';
 
 class GoalsScreen extends StatefulWidget {
@@ -115,9 +116,9 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
   }
 
   Future<void> loadNotificationStyleAndFrequency() async {
-    _notificationStyle = await getNotificationStyle();
-    _notificationFrequency = await getNotificationFrequency();
-    debugPrint('AT THIS TIME: $_notificationStyle');
+    _notificationsEnabled = getNotificationsEnabled();
+    _notificationStyle = await notificationStyle;
+    _notificationFrequency = await notificationFrequency;
   }
 
 
@@ -127,8 +128,6 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
     await _loadGoals();
     await _loadTemplates();
     await _loadTemplateGroups();
-    _themeData = ThemeData.light();
-    //await _initializeTheme(); // async theme setup from storage
     await loadNotificationStyleAndFrequency();
     final themeBundle = await initializeScreenTheme();
     await setThemeDataScreen(themeBundle);
@@ -372,68 +371,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
     await _storage.write(key: 'points', value: (value + totalAmount).toString());
   }
 
-  Future<void> _createGoal() async {
-    if (_stepsController.text == '') {
-      _stepsController.text = '1'; // default.
-    }
-    if (_formKey.currentState!.validate()) {
-      final String deadlineHours = _deadlineController.text.trim();
-      String deadline;
-      final goalId = generateGoalId(_titleController.text);
-      if (deadlineHours.isEmpty) {
-        deadline = 'no deadline';
-      } else {
-        _notificationsEnabled = getNotificationsEnabled(); // Put here to check every time a goal is made that it checks.
-        loadNotificationStyleAndFrequency();
-        String notificationFrequency = await getNotificationFrequency();
-        final int hours = int.tryParse(deadlineHours) ?? 0;
-        final DateTime deadlineDate = _currentDate.add(Duration(hours: hours));
-        deadline = formatter.format(deadlineDate);
-        if (_notificationsEnabled && hours > 0) { // No deadline, no notifications.
-          GoalNotifier.startGoalCheck(_titleController.text, hours, goalId, _notificationStyle, notificationFrequency);
-        }
-        else {
-          debugPrint('Notifications not enabled — skipping goal check scheduling');
-        }
-      }
-
-    final goal = {
-        'title': _titleController.text,
-        'category': _category,
-        'complexity': _complexity,
-        'effort': _effort,
-        'motivation': _motivation,
-        'time': _timeController.text,
-        'Deadline': deadline,
-        'steps': _stepsController.text,
-        'points': _calculatePoints(),
-        'stepProgress': 0,
-        'Id': goalId,
-      };
-      setState(() {
-        _activeGoals.add(goal);
-      });
-      _saveGoals();
-      _titleController.clear();
-      _timeController.clear();
-      _deadlineController.clear();
-      _stepsController.text = '1';
-    }
-  }
-
-  void _incrementStepProgress(int index) { // TODO: Cancel AI encouragement if progress has started.
-    final goal = _activeGoals[index];
-    final max = int.tryParse(goal['steps']) ?? 1;
-    if (goal['stepProgress'] < max) {
-      setState(() {
-        goal['stepProgress']++;
-      });
-      if (goal['stepProgress'] >= max) _completeGoal(index);
-      _saveGoals();
-    }
-  }
-
-  Future<void> _createGoalFromTemplates({
+  Map<String, dynamic> buildAndSaveGoal({
     required String title,
     required String category,
     required String complexity,
@@ -441,25 +379,9 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
     required String motivation,
     required String time,
     required String steps,
-    required String deadlineHours,
-  }) async {
-    String deadline;
-    final goalId = generateGoalId(title);
-    if (deadlineHours.isEmpty) {
-      deadline = 'no deadline';
-    } else {
-      _notificationsEnabled = getNotificationsEnabled();
-      loadNotificationStyleAndFrequency();
-      String notificationFrequency = await getNotificationFrequency();
-      final int hours = int.tryParse(deadlineHours) ?? 0;
-      final DateTime deadlineDate = _currentDate.add(Duration(hours: hours));
-      deadline = formatter.format(deadlineDate);
-      if (_notificationsEnabled && hours > 0) { // No deadline, no notification.
-        GoalNotifier.startGoalCheck(title, hours, goalId, _notificationStyle, notificationFrequency);
-      } else {
-        debugPrint('Notifications not enabled — skipping goal check scheduling');
-      }
-    }
+    required String deadline,
+    required String goalId,
+  }) {
 
     final goal = {
       'title': title,
@@ -486,12 +408,108 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
       _activeGoals.add(goal);
     });
     _saveGoals();
+    return goal;
+
+
+  }
+
+
+  Future<void> _createGoal() async {
+    if (_stepsController.text == '') {
+      _stepsController.text = '1'; // default.
+    }
+    if (_formKey.currentState!.validate()) {
+      final goalId = generateGoalId(_titleController.text);
+      final int hours = int.tryParse(_deadlineController.text.trim()) ?? 0;
+      final String deadline = _deadlineController.text.trim().isEmpty
+          ? 'no deadline'
+          : formatter.format(_currentDate.add(Duration(hours: hours)));
+      loadNotificationStyleAndFrequency();
+
+      final goal = buildAndSaveGoal(
+        title: _titleController.text,
+        category: _category,
+        complexity: _complexity,
+        effort: _effort,
+        motivation: _motivation,
+        time: _timeController.text,
+        steps: _stepsController.text,
+        deadline: deadline,
+        goalId: goalId.toString(),
+      );
+
+      if (_notificationsEnabled && hours > 0) {
+        final goalSet = GoalSet.fromMap(goal);
+        GoalNotifier.startGoalCheck(goalSet, _notificationStyle, _notificationFrequency, hours);
+      } else {
+        debugPrint('Notifications not enabled — skipping goal check scheduling');
+      }
+      _resetControllers();
+    }
+  }
+
+  void _resetControllers() {
+    _titleController.clear();
+    _timeController.clear();
+    _deadlineController.clear();
+    _stepsController.text = '1';
+  }
+
+  void _incrementStepProgress(int index) {
+    final goal = _activeGoals[index];
+    GoalNotifier.cancelAiEncouragementNotification(int.parse(goal['Id']));
+    final max = int.tryParse(goal['steps']) ?? 1;
+    if (goal['stepProgress'] < max) {
+      setState(() {
+        goal['stepProgress']++;
+      });
+      if (goal['stepProgress'] >= max) _completeGoal(index);
+      _saveGoals();
+    }
+  }
+
+  Future<void> _createGoalFromTemplates({
+    required String title,
+    required String category,
+    required String complexity,
+    required String effort,
+    required String motivation,
+    required String time,
+    required String steps,
+    required String deadlineHours,
+  }) async {
+    final goalId = generateGoalId(title);
+    final int hours = int.tryParse(deadlineHours) ?? 0;
+    final String deadline = deadlineHours.isEmpty
+        ? 'no deadline'
+        : formatter.format(_currentDate.add(Duration(hours: hours)));
+    loadNotificationStyleAndFrequency();
+
+    final goal = buildAndSaveGoal(
+      title: title,
+      category: category,
+      complexity: complexity,
+      effort: effort,
+      motivation: motivation,
+      time: time,
+      steps: steps,
+      deadline: deadline,
+      goalId: goalId.toString(),
+    );
+
+    if (_notificationsEnabled && hours > 0) {
+      final goalSet = GoalSet.fromMap(goal);
+      GoalNotifier.startGoalCheck(goalSet, _notificationStyle, _notificationFrequency, hours);
+    } else {
+      debugPrint('Notifications not enabled — skipping goal check scheduling');
+    }
   }
 
 
   void _completeGoal(int index) {
     final goal = _activeGoals.removeAt(index);
-    GoalNotifier.cancelGoalNotification(goal['Id'], goal['title'], goal['Deadline'] ); // Cancel notifications
+    final goalSet = GoalSet.fromMap(goal);
+    GoalNotifier.cancelGoalNotification(goalSet); // Cancel notifications
     _completedGoals.add(goal);
     _addPoints(goal['points'], 'goal:${goal['title']}');
     _saveGoals();
@@ -500,7 +518,8 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
 
   void _removeGoal(int index) {
     final goal = _activeGoals[index];
-    GoalNotifier.cancelGoalNotification(goal['Id'], goal['title'], goal['Deadline'] ); // Cancel notifications
+    final goalSet = GoalSet.fromMap(goal);
+    GoalNotifier.cancelGoalNotification(goalSet); // Cancel notifications
     setState(() {
       _activeGoals.removeAt(index);
     });
@@ -689,8 +708,8 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                       ),
                       validator: (v) {
                         final parsed = int.tryParse(v?.trim() ?? '');
-                        if (parsed == null || parsed < 1) {
-                          return 'Please enter a valid number greater than 0';
+                        if (parsed == null || parsed < 1 || parsed > 999) {
+                          return 'Please enter a valid number greater than 0 and smaller than 1000';
                         }
                         minutesRequired = parsed;
                         return null;
@@ -709,7 +728,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                         if (parsed == null || parsed <= 0 || parsed > 10000) {
                           return 'Must be a whole number > 0 and < 10000';
                         }
-                        minutesToDeadline = parsed;
+                        minutesToDeadline = parsed * 60;
                         if (minutesRequired > minutesToDeadline) {
                           return 'Deadline must be greater than time required.';
                         }
@@ -726,8 +745,8 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                       validator: (v) {
                         final trimmed = v?.trim();
                         final parsed = int.tryParse(trimmed?.isEmpty ?? true ? '1' : trimmed!);
-                        if (parsed == null || parsed < 1) {
-                          return 'Please enter a valid whole number above 0';
+                        if (parsed == null || parsed < 1 || parsed > 999) {
+                          return 'Please enter a valid whole number above 0 and smaller than 1000';
                         }
                         return null;
                       },
@@ -1222,11 +1241,11 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                                     if (parsed == null || parsed <= 0 || parsed > 9999) {
                                       return 'Must be a whole number > 0 and < 10000';
                                     }
-                                    minutesToDeadline = (parsed * 60);
+                                    minutesToDeadline = parsed * 60;
                                     if (minutesRequired > minutesToDeadline) {
                                       return 'Deadline must be greater than time required.';
                                     }
-                                    return null; // ✅ Input is a valid number
+                                    return null;
                                   },
                                 ),
                                 TextFormField(

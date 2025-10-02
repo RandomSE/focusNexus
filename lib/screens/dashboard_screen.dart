@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:focusNexus/utils/BaseState.dart';
 
-import '../utils/ThemeBundle.dart';
+import '../models/classes/theme_bundle.dart';
 import '../utils/notifier.dart';
 
 
@@ -32,14 +32,11 @@ class _DashboardScreenState extends BaseState<DashboardScreen> {
   }
 
   Future<void> _loadDashboard() async {
+    await _loadPoints();
     final storedType = await rewardType;
     final themeBundle = await initializeScreenTheme();
-
-
     await setThemeDataScreen(themeBundle, storedType);
-
     GoalNotifier.initialize();
-    await _loadPoints();
   }
 
   Future<void> setThemeDataScreen (ThemeBundle themeBundle, String storedType)  async {

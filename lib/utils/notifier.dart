@@ -2,6 +2,7 @@
 
 import 'dart:async';
 import 'dart:math';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:intl/intl.dart';
@@ -9,29 +10,42 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/foundation.dart';
 import 'package:timezone/data/latest.dart';
 import 'package:timezone/timezone.dart' as tz;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+import '../models/classes/goal_set.dart';
+import '../utils/text_utils.dart';
+import 'common_utils.dart';
 
 class GoalNotifier {
   static final FlutterLocalNotificationsPlugin _plugin =
   FlutterLocalNotificationsPlugin();
   static bool _initialized = false;
-  static const platform = MethodChannel('flutter_native_timezone');
+  static const _platform = MethodChannel('flutter_native_timezone');
+  static final _storage = const FlutterSecureStorage();
 
   // Track active timers per goal
+  static final _encouragementThreshold = 6;
   static final Map<String, List<Timer>> _activeTimers = {};
-  static final DateFormat formatter = DateFormat('dd MMMM yyyy HH:mm');
-  static var now = tz.TZDateTime.now(tz.local);
-  static var mostRecentTimeGoal = DateTime.now().subtract(Duration(seconds: 10)); // Set in the past to ensure it's overwritten.
-  static var mostRecentTimeRepeatingGoal = DateTime.now().subtract(Duration(seconds: 10)); // Set in the past to ensure it's overwritten.
-  static final goalGroupId = 1;
-  static final goalRepeatingGroupId = 2;
-  static AndroidScheduleMode scheduleMode = AndroidScheduleMode.inexactAllowWhileIdle; // Fallback
+  static final DateFormat _formatter = DateFormat('dd MMMM yyyy HH:mm');
+  static var _now = tz.TZDateTime.now(tz.local);
+  static var _mostRecentTimeGoal = DateTime.now().subtract(Duration(seconds: 10)); // Set in the past to ensure it's overwritten.
+  static var _mostRecentTimeRepeatingGoal = DateTime.now().subtract(Duration(seconds: 10)); // Set in the past to ensure it's overwritten.
+  static final _goalGroupId = 1;
+  static final _goalRepeatingGroupId = 2;
+  static final _aiEncouragementGroupId = 3;
+  static final _dailyAffirmationsGroupId = 4;
+  static bool _aiEncouragement = false;
+  static bool _dailyAffirmations = false;
+  static AndroidScheduleMode _scheduleMode = AndroidScheduleMode.inexactAllowWhileIdle; // Fallback
 
   /// Initialize notifications plugin
   static Future<void> initialize() async {
+    await checkAdditionalNotificationSettings(); // Check each time. if they change settings, should apply before any notifications are sent / not sent
     if (_initialized) return;
 
     initializeTimeZones();
-    scheduleMode = await getScheduleMode();
+    _scheduleMode = await getScheduleMode();
+
 
     try {
       final String currentTimeZone = await getLocalTimezone();
@@ -56,85 +70,129 @@ class GoalNotifier {
     debugPrint('Notifications initialized.');
   }
 
+  static Future<void> checkAdditionalNotificationSettings () async {
+    await checkAiEncouragement();
+    await checkDailyAffirmations();
+    debugPrint('Notification additional settings confirmed. aiEncouragement: $_aiEncouragement, dailyAffirmations: $_dailyAffirmations');
+  }
+
+  static Future<void> checkAiEncouragement () async {
+    String? aiEncouragementString = await _storage.read(key: 'aiEncouragement');
+    _aiEncouragement = aiEncouragementString == 'true';
+
+  }
+
+  static Future<void> checkDailyAffirmations () async {
+    String? dailyAffirmationsString = await _storage.read(key: 'dailyAffirmations');
+    _dailyAffirmations = dailyAffirmationsString == 'true';
+  }
+
   /// Schedule goal reminders.
-  static Future<void> startGoalCheck(String goalName,
-      int hoursToExpire,
-      int goalId,
+  static Future<void> startGoalCheck(GoalSet goalSet, // pass in entire goalSet for any later additions to this method (e.g AI encouragement for tasks that need more energy to begin.)
       String notificationStyle,
       String notificationFrequency,
-      // 'Low', 'Medium', 'High' - No notifications not factored in here as checked separately.
+      int hoursToExpire,
       ) async {
-
-    now = tz.TZDateTime.now(tz.local);
-    final deadline = now.add(Duration(hours: hoursToExpire));
-    final oneHourBeforeDeadline = deadline.subtract(const Duration(hours: 1));
-    final twoHourBeforeDeadline = deadline.subtract(const Duration(hours: 2));
-    final fourHourBeforeDeadline = deadline.subtract(const Duration(hours: 4));
-    final dayBeforeDeadline = deadline.subtract(const Duration(hours: 24));
-
-
-    debugPrint('Notification frequency: $notificationFrequency');
-
-    if(notificationFrequency == 'Low') { // to test notification function
-      // await scheduleReminder(goalId, 'Goal Reminder', buildFollowUpReminderMessage(goalName, goalId, notificationStyle, deadline), now.add(Duration(seconds: 10)), scheduleMode, goalGroupId, 'Goal Reminders', 'Reminders for goals', 'goal_group', 'Goal Reminder', 'Goal Reminders', 'Reminders for goals');
-      // await scheduleReminder(goalId + 1, 'Goal Reminder', buildFollowUpReminderMessage(goalName, goalId, notificationStyle, deadline), now.add(Duration(seconds: 15)), scheduleMode, goalGroupId, 'Goal Reminders', 'Reminders for goals', 'goal_group', 'Goal Reminder', 'Goal Reminders', 'Reminders for goals');
-      // await scheduleReminder(goalId + 3, 'Goal Reminder', buildFollowUpReminderMessage(goalName, goalId, notificationStyle, deadline), now.add(Duration(seconds: 30)), scheduleMode, goalGroupId, 'Goal Reminders', 'Reminders for goals', 'goal_group', 'Goal Reminder', 'Goal Reminders', 'Reminders for goals');
-    }
+    String goalName = goalSet.title;
+    int goalId = goalSet.goalId;
+    _now = tz.TZDateTime.now(tz.local);
+    final deadline = _now.add(Duration(hours: hoursToExpire));
+    final oneHourBeforeDeadline = CommonUtils.newTimeMinusHours(deadline, 1);
+    final twoHourBeforeDeadline = CommonUtils.newTimeMinusHours(deadline, 2);
+    final fourHourBeforeDeadline = CommonUtils.newTimeMinusHours(deadline, 4);
+    final twelveHourBeforeDeadline = CommonUtils.newTimeMinusHours(deadline, 12);
+    final dayBeforeDeadline = CommonUtils.newTimeMinusHours(deadline, 24);
 
     // Shared reminder for Low, Medium & High frequency.
-    if (fourHourBeforeDeadline.isAfter(now)) {
-      await scheduleReminder(goalId + 2, 'Goal Reminder', buildFollowUpReminderMessage(goalName, goalId, notificationStyle, deadline), fourHourBeforeDeadline, scheduleMode, goalGroupId, 'Goal Reminders', 'Reminders for goals', 'goal_group', 'Goal Reminder', 'Goal Reminders', 'Reminders for goals');
+    if (fourHourBeforeDeadline.isAfter(_now)) {
+      await scheduleReminder(goalId + 2, 'Goal Reminder', TextUtils.buildFollowUpReminderMessage(goalName, goalId, notificationStyle, deadline), fourHourBeforeDeadline, _scheduleMode, _goalGroupId, 'Goal Reminders', 'Reminders for goals', 'goal_group', 'Goal Reminder', 'Goal Reminders', 'Reminders for goals');
     }
 
-    if (notificationFrequency == 'Medium' && dayBeforeDeadline.isAfter(now)) {
-      await scheduleReminder(goalId + 3, 'Goal Reminder', buildFollowUpReminderMessage(goalName, goalId, notificationStyle, deadline), dayBeforeDeadline, scheduleMode, goalGroupId, 'Goal Reminders', 'Reminders for goals', 'goal_group', 'Goal Reminder', 'Goal Reminders', 'Reminders for goals');
+    if (notificationFrequency == 'Medium' && dayBeforeDeadline.isAfter(_now)) {
+      await scheduleReminder(goalId + 3, 'Goal Reminder', TextUtils.buildFollowUpReminderMessage(goalName, goalId, notificationStyle, deadline), dayBeforeDeadline, _scheduleMode, _goalGroupId, 'Goal Reminders', 'Reminders for goals', 'goal_group', 'Goal Reminder', 'Goal Reminders', 'Reminders for goals');
     }
 
     if (notificationFrequency == 'High') {
-      if (oneHourBeforeDeadline.isAfter(now)) {
-        await scheduleReminder(goalId, 'Goal Reminder', buildFollowUpReminderMessage(goalName, goalId, notificationStyle, deadline), oneHourBeforeDeadline, scheduleMode, goalGroupId, 'Goal Reminders', 'Reminders for goals', 'goal_group', 'Goal Reminder', 'Goal Reminders', 'Reminders for goals');
+      if (oneHourBeforeDeadline.isAfter(_now)) {
+        await scheduleReminder(goalId, 'Goal Reminder', TextUtils.buildFollowUpReminderMessage(goalName, goalId, notificationStyle, deadline), oneHourBeforeDeadline, _scheduleMode, _goalGroupId, 'Goal Reminders', 'Reminders for goals', 'goal_group', 'Goal Reminder', 'Goal Reminders', 'Reminders for goals');
       }
       
-      if (twoHourBeforeDeadline.isAfter(now)) {
-        await scheduleReminder(goalId + 1, 'Goal Reminder', buildFollowUpReminderMessage(goalName, goalId, notificationStyle, deadline), twoHourBeforeDeadline, scheduleMode, goalGroupId, 'Goal Reminders', 'Reminders for goals', 'goal_group', 'Goal Reminder', 'Goal Reminders', 'Reminders for goals');
+      if (twoHourBeforeDeadline.isAfter(_now)) {
+        await scheduleReminder(goalId + 1, 'Goal Reminder', TextUtils.buildFollowUpReminderMessage(goalName, goalId, notificationStyle, deadline), twoHourBeforeDeadline, _scheduleMode, _goalGroupId, 'Goal Reminders', 'Reminders for goals', 'goal_group', 'Goal Reminder', 'Goal Reminders', 'Reminders for goals');
       }
       
       final totalDays = hoursToExpire ~/ 24;
       if (totalDays > 1) {
         for (int i = 1; i <= totalDays; i++) {
           final dailyTime = deadline.subtract(Duration(days: i));
-          await scheduleReminder(goalId + 10 + i, 'Daily Goal Reminder', buildFollowUpReminderMessage(goalName, goalId, notificationStyle, deadline), dailyTime, scheduleMode, goalRepeatingGroupId, 'Daily Goal Reminders', 'Daily reminders for goals', 'daily_goal_group', 'Daily Goal Reminder', 'Daily Goal Reminders', 'Daily Reminders for goals');
+          await scheduleReminder(goalId + 10 + i, 'Daily Goal Reminder', TextUtils.buildFollowUpReminderMessage(goalName, goalId, notificationStyle, deadline), dailyTime, _scheduleMode, _goalRepeatingGroupId, 'Daily Goal Reminders', 'Daily reminders for goals', 'daily_goal_group', 'Daily Goal Reminder', 'Daily Goal Reminders', 'Daily Reminders for goals');
         }
       }
       if (totalDays == 1 && hoursToExpire >24){
-        await scheduleReminder(goalId + 3, 'Goal Reminder', buildFollowUpReminderMessage(goalName, goalId, notificationStyle, deadline), dayBeforeDeadline, scheduleMode, goalGroupId, 'Goal Reminders', 'Reminders for goals', 'goal_group', 'Goal Reminder', 'Goal Reminders', 'Reminders for goals');
+        await scheduleReminder(goalId + 3, 'Goal Reminder', TextUtils.buildFollowUpReminderMessage(goalName, goalId, notificationStyle, deadline), dayBeforeDeadline, _scheduleMode, _goalGroupId, 'Goal Reminders', 'Reminders for goals', 'goal_group', 'Goal Reminder', 'Goal Reminders', 'Reminders for goals');
+      }
+    }
+
+    if (_aiEncouragement & (hoursToExpire > 24)) { // so it doesn't trigger unnecessarily if someone sets a deadline of say, 13 hours.
+      final (score, reasons, biggest) = getEncouragementValue(goalSet);
+      if (score >= _encouragementThreshold || biggest > 3) {
+        // goalId + 4
+        int timeScore = getScoreByTypeAndString('Time', goalSet.time.toString());
+        int stepScore = getScoreByTypeAndString('Steps', goalSet.steps.toString());
+        int complexityScore = getScoreByTypeAndString('Levels', goalSet.complexity);
+        int effortScore = getScoreByTypeAndString('Levels', goalSet.effort);
+        int motivationScore = getScoreByTypeAndString('Levels', goalSet.motivation);
+        final message = TextUtils.buildEncouragementMessage(goalName, goalId, goalSet.deadline, reasons, score, biggest, timeScore, stepScore, complexityScore, effortScore, motivationScore, notificationStyle);
+        await scheduleReminder(goalId + 4, 'AI encouragement', message, twelveHourBeforeDeadline, _scheduleMode, _aiEncouragementGroupId, 'AI encouragement', 'Encouragement for more intense goals', 'ai_encouragement_group', 'AI encouragement', 'AI encouragement', 'Encouragement for more intense goals');
       }
     }
   }
 
-  /// Cancel notifications for a specific goal
-  static Future<void> cancelGoalNotification(int goalId, String goalName,
-      String deadline) async {
-    debugPrint('Cancelling notifications for goal: $goalName, goalID: $goalId');
-    final now = DateTime.now();
+  static Future<void> startDailyAffirmations(String timeToTrigger) async {
+    await initialize(); // ensure daily affirmations are enabled, and check scheduleMode
+    final tz.TZDateTime? triggerTimer = await CommonUtils.tzDateTimeFromHHmm(timeToTrigger);
+    final String body = 'testing testing, this would be made by text utils, just test this here, yes?';
 
-    await _plugin.cancel(goalId); // 1-hour before - High
-    await _plugin.cancel(goalId + 1); // 4-hour before - all
-    await _plugin.cancel(goalId + 2); // 1 day before - medium, High
-    await _plugin.cancel(goalId + 3); // 2-hours before - High
-    // TODO: Ai encouragement stuff
 
-    final deadlineDate = formatter.parse(deadline);
-    final daysToExpire = deadlineDate
-        .difference(now)
-        .inDays;
+    if (triggerTimer == null) {
+      debugPrint('Invalid timeToTrigger: $timeToTrigger');
+      return;
+    }
 
-    if (daysToExpire > 0) {
-      await _plugin.cancel(1); // group for all the daily notifications (High)
-      for (int i = 1; i <= daysToExpire; i++) {
-        await _plugin.cancel(goalId + 10 + i);
-      }
+    // build the body
+    debugPrint('Started. Time to trigger: $triggerTimer');
+
+    scheduleDailyAffirmations(triggerTimer, _scheduleMode, 'Daily Affirmations', body);
   }
+
+  /// Cancel notifications for a specific goal. The group/summary notifications are not removed here, only by cancel all goals (a summary is only shown if there are at least 2 notifications in that group. So an empty summary is not an issue.)
+  static Future<void> cancelGoalNotification(GoalSet goalSet) async {
+    int goalId = goalSet.goalId;
+    String goalName = goalSet.title;
+    String deadline = goalSet.deadline;
+    debugPrint('Cancelling notifications for goal: $goalName, goalID: $goalId');
+    if (deadline != 'no deadline') { // when canceling goals without a deadline.
+      final now = DateTime.now();
+      final deadlineDate = _formatter.parse(deadline);
+      final daysToExpire = deadlineDate
+          .difference(now)
+          .inDays;
+
+
+      await _plugin.cancel(goalId); // 1-hour before - High
+      await _plugin.cancel(goalId + 1); // 4-hours before - all
+      await _plugin.cancel(goalId + 3); // 2-hours before - High
+
+      if (daysToExpire > 0) {
+        for (int i = 1; i <= daysToExpire; i++) {
+          await _plugin.cancel(goalId + 10 + i);
+        }
+        await _plugin.cancel(goalId + 2); // 1 day before - medium, High
+        await _plugin.cancel(goalId + 4); // 12-hours before, all -  AI encouragement
+      }
+    }
+
+
 
     // Cancel any active timers
     if (_activeTimers.containsKey(goalName)) {
@@ -145,6 +203,11 @@ class GoalNotifier {
     }
 
     debugPrint('Notifications cancelled for goal: $goalName');
+  }
+
+  static Future<void> cancelAiEncouragementNotification(int goalId) async {
+    await _plugin.cancel(goalId + 4); // 12-hours before, all -  AI encouragement
+    debugPrint('Goal canceled due to step progress addition.');
   }
 
   /// Cancel all notifications and timers indiscriminately
@@ -161,6 +224,11 @@ class GoalNotifier {
       }
     }
     _activeTimers.clear();
+
+    if(_dailyAffirmations) {
+      final timeToTrigger = await _storage.read(key: 'dailyAffirmationsTime');
+      await startDailyAffirmations(timeToTrigger!);
+    }
 
     debugPrint('All goal notifications and timers cancelled.');
   }
@@ -214,100 +282,8 @@ class GoalNotifier {
   }
 
 
-  static String _format(DateTime dt) =>
-      DateFormat('dd MMMM yyyy HH:mm').format(dt);
 
-  static String buildInitialReminderMessage(
-    String goalName,
-    String notificationStyle,
-    DateTime deadline,
-  ) {
-    final formattedDeadline = _format(deadline);
 
-    switch (notificationStyle) {
-      case 'Vibrant':
-        final messages = [
-          '🔥 You’ve sparked something! "$goalName" is set for $formattedDeadline.',
-          '🎯 Goal locked in: "$goalName" - due by $formattedDeadline.',
-          '🌟 Bright beginning! "$goalName" is on track for $formattedDeadline.',
-          '📆 Just added: "$goalName" - deadline is $formattedDeadline.',
-          '🚀 Ready for lift-off: "$goalName" lands on $formattedDeadline.',
-          '💡 Fresh start! "$goalName" is scheduled for $formattedDeadline.',
-          '🎉 You’re on your way - "$goalName" wraps up by $formattedDeadline.',
-          '📣 New goal alert: "$goalName" ends $formattedDeadline.',
-          '⚡ Kickoff complete! "$goalName" is due $formattedDeadline.',
-          '🌈 Let the journey begin - "$goalName" finishes by $formattedDeadline.',
-        ];
-        return messages[_randomIndex(messages.length)];
-
-      case 'Animated':
-        final messages = [
-          'Just letting you know, "$goalName" is all set. Deadline’s $formattedDeadline.',
-          '"$goalName" is officially on the books. Due by $formattedDeadline.',
-          'Cool, "$goalName" is in motion. You’ve got until $formattedDeadline.',
-          'Hey, "$goalName" was created. Deadline’s $formattedDeadline, just FYI.',
-          'Alright, "$goalName" is live. You’ve got time $formattedDeadline’s the mark.',
-          'No rush, just a heads-up. "$goalName" is due $formattedDeadline.',
-          'You’ve added "$goalName". Deadline’s $formattedDeadline, in case you’re wondering.',
-          'Nice, "$goalName" is saved. It wraps up on $formattedDeadline.',
-          'Goal noted: "$goalName". Deadline’s $formattedDeadline, all chill.',
-          'Just a quiet ping "$goalName" is set with a deadline of $formattedDeadline.',
-        ];
-        return messages[_randomIndex(messages.length)];
-
-      case 'Minimal':
-      default:
-        return 'Your goal "$goalName" expires on $formattedDeadline.';
-    }
-  }
-
-  static String buildFollowUpReminderMessage(
-    String goalName,
-    int goalId,
-    String notificationStyle,
-    DateTime deadline,
-  ) {
-    final formattedDeadline = _format(deadline);
-
-    if (notificationStyle == 'Minimal') {
-      return '"$goalName / Id: $goalId" is due $formattedDeadline.';
-    }
-
-    if (notificationStyle == 'Vibrant') {
-      final messages = [
-        'Reminder - "$goalName / Id: $goalId" is closing in. Deadline is $formattedDeadline.',
-        'Heads up. "$goalName / Id: $goalId" wraps up by $formattedDeadline.',
-        'Reminder - "$goalName / Id: $goalId" is almost there. Due $formattedDeadline.',
-        '"$goalName / Id: $goalId" is reaching its finish line. Deadline is $formattedDeadline.',
-        'Quick check-in. "$goalName / Id: $goalId" ends $formattedDeadline.',
-        'Reminder - "$goalName / Id: $goalId" is on the final stretch. Deadline is $formattedDeadline.',
-        '"$goalName / Id: $goalId" is counting down. Due $formattedDeadline.',
-        'Time’s ticking. "$goalName" closes $formattedDeadline.',
-        'Reminder - "$goalName / Id: $goalId" is nearly done. Deadline is $formattedDeadline.',
-        'Just a flash reminder. "$goalName / Id: $goalId" finishes $formattedDeadline.',
-      ];
-      return messages[_randomIndex(messages.length)];
-    }
-
-    if (notificationStyle == 'Animated') {
-      final messages = [
-        'Hey again. "$goalName / Id: $goalId" is still hanging out. Deadline is $formattedDeadline.',
-        'Just checking in. "$goalName / Id: $goalId" is due $formattedDeadline.',
-        'Reminder - "$goalName / Id: $goalId" is inching closer to $formattedDeadline.',
-        'Still time. "$goalName / Id: $goalId" wraps up $formattedDeadline.',
-        'Friendly ping. "$goalName / Id: $goalId" is due $formattedDeadline.',
-        'You’re doing great. "$goalName / Id: $goalId" finishes $formattedDeadline.',
-        'Reminder - "$goalName / Id: $goalId" is quietly approaching $formattedDeadline.',
-        'Just keeping you posted. "$goalName / Id: $goalId" ends $formattedDeadline.',
-        'Almost there. "$goalName / Id: $goalId" is due $formattedDeadline.',
-        'Reminder vibes. "$goalName / Id: $goalId" deadline is $formattedDeadline.',
-      ];
-      return messages[_randomIndex(messages.length)];
-    }
-
-    // Fallback
-    return 'Reminder: "$goalName / Id: $goalId" is due $formattedDeadline.';
-  }
 
   static Future<void> showInstantNotifications({
     required int id,
@@ -332,12 +308,15 @@ class GoalNotifier {
 
   static Future<void> scheduleReminder(int id, String title, String body, DateTime scheduledTime, AndroidScheduleMode mode, int summaryNotificationId, String summaryTitle,
      String summaryBody, String groupKey, String channelId, String channelName, String channelDescription) async {
-    if (summaryNotificationId == 2) {
+    if (summaryNotificationId == _goalRepeatingGroupId) {
       await scheduleRepeatingGoalSummaryNotification(scheduledTime, mode, groupKey, channelId, channelName, channelDescription, summaryTitle, summaryBody);
       debugPrint('Daily reminder scheduled for $scheduledTime, goalId: $id');
     }
-    else {
+    else if (summaryNotificationId == _goalGroupId) {
       debugPrint('Reminder scheduled for $scheduledTime, goalId: $id');
+      await scheduleSummaryNotification(scheduledTime, mode, summaryNotificationId, groupKey, channelId, channelName, channelDescription, summaryTitle, summaryBody);
+    }
+    else if (summaryNotificationId == _aiEncouragementGroupId) {
       await scheduleSummaryNotification(scheduledTime, mode, summaryNotificationId, groupKey, channelId, channelName, channelDescription, summaryTitle, summaryBody);
     }
 
@@ -364,14 +343,14 @@ class GoalNotifier {
 
   static Future<void> scheduleSummaryNotification(DateTime triggerTime, AndroidScheduleMode mode, int id, String groupKey, String channelId, String channelName, String channelDescription, String title, String body) async {
     setNow();
-    debugPrint('Now: $now. Trigger time: $triggerTime. Most recent time: $mostRecentTimeGoal');
-    if (triggerTime.isAfter(mostRecentTimeGoal) &! mostRecentTimeGoal.isBefore(now)) { // triggerTime: passed in, e.g 10 seconds from now. mostRecentTimeGoal - 1 hour in the future.  if passed in time < mostRecent: set mostRecent to passed in time.
+    debugPrint('Now: $_now. Trigger time: $triggerTime. Most recent time: $_mostRecentTimeGoal');
+    if (triggerTime.isAfter(_mostRecentTimeGoal) &! _mostRecentTimeGoal.isBefore(_now)) { // triggerTime: passed in, e.g 10 seconds from now. mostRecentTimeGoal - 1 hour in the future.  if passed in time < mostRecent: set mostRecent to passed in time.
       debugPrint('A summary notification is already scheduled. No more will be scheduled currently.');
       return;
     }
-    else if (mostRecentTimeGoal.isAfter(triggerTime) || mostRecentTimeGoal.isBefore(now)) {
-      mostRecentTimeGoal = triggerTime;
-      debugPrint('Updated summary trigger time to: $mostRecentTimeGoal. Triggering summary at that time.');
+    else if (_mostRecentTimeGoal.isAfter(triggerTime) || _mostRecentTimeGoal.isBefore(_now)) {
+      _mostRecentTimeGoal = triggerTime;
+      debugPrint('Updated summary trigger time to: $_mostRecentTimeGoal. Triggering summary at that time.');
       AndroidNotificationDetails summaryDetails = AndroidNotificationDetails(
         channelId,
         channelName,
@@ -403,14 +382,14 @@ class GoalNotifier {
 
   static Future<void> scheduleRepeatingGoalSummaryNotification(DateTime triggerTime, AndroidScheduleMode mode, String groupKey, String channelId, String channelName, String channelDescription, String title, String body) async {
     setNow();
-    debugPrint('Now: $now. Trigger time: $triggerTime. Most recent time: $mostRecentTimeRepeatingGoal');
-    if (triggerTime.isAfter(mostRecentTimeRepeatingGoal) &! mostRecentTimeRepeatingGoal.isBefore(now)) {
+    debugPrint('Now: $_now. Trigger time: $triggerTime. Most recent time: $_mostRecentTimeRepeatingGoal');
+    if (triggerTime.isAfter(_mostRecentTimeRepeatingGoal) &! _mostRecentTimeRepeatingGoal.isBefore(_now)) {
       debugPrint('A repeating summary notification is already scheduled. No more will be scheduled currently.');
       return;
     }
-    else if (mostRecentTimeRepeatingGoal.isAfter(triggerTime) || mostRecentTimeRepeatingGoal.isBefore(now)) {
-      mostRecentTimeRepeatingGoal = triggerTime;
-      debugPrint('Updated repeating summary trigger time to: $mostRecentTimeRepeatingGoal. Triggering summary at that time.');
+    else if (_mostRecentTimeRepeatingGoal.isAfter(triggerTime) || _mostRecentTimeRepeatingGoal.isBefore(_now)) {
+      _mostRecentTimeRepeatingGoal = triggerTime;
+      debugPrint('Updated repeating summary trigger time to: $_mostRecentTimeRepeatingGoal. Triggering summary at that time.');
       AndroidNotificationDetails summaryDetails = AndroidNotificationDetails(
         channelId,
         channelName,
@@ -426,7 +405,7 @@ class GoalNotifier {
       );
 
       await _plugin.zonedSchedule(
-        goalRepeatingGroupId,
+        _goalRepeatingGroupId,
         title,
         body,
         tz.TZDateTime.from(triggerTime, tz.local),
@@ -439,6 +418,33 @@ class GoalNotifier {
     }
   }
 
+  static Future<void> scheduleDailyAffirmations(tz.TZDateTime triggerTime, AndroidScheduleMode mode, String title, String body) async {
+    AndroidNotificationDetails summaryDetails = AndroidNotificationDetails(
+      'daily_affirmations_channel',
+      'Daily Affirmations',
+      channelDescription: 'Daily affirmations to improve your mood and stay motivated.',
+      importance: Importance.max,
+      priority: Priority.high,
+      groupKey: 'daily_affirmations', // doesn't need group summary since only 1 notification, done every day.
+    );
+
+    NotificationDetails summaryPlatformDetails = NotificationDetails(
+      android: summaryDetails,
+    );
+
+    await _plugin.zonedSchedule(
+      _dailyAffirmationsGroupId,
+      title,
+      body,
+      triggerTime,
+      summaryPlatformDetails,
+      androidScheduleMode: mode,
+      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: DateTimeComponents.time,
+    );
+  }
+
+
 
   static Future<AndroidScheduleMode> getScheduleMode() async {
     final status = await Permission.scheduleExactAlarm.status;
@@ -450,11 +456,6 @@ class GoalNotifier {
       debugPrint('Exact alarm permission not granted. Using inexact mode.');
       return AndroidScheduleMode.inexactAllowWhileIdle;
     }
-  }
-
-  static int _randomIndex(int length) {
-    final random = Random();
-    return random.nextInt(length);
   }
 
   static int generateGoalId(String goalName) {
@@ -472,12 +473,12 @@ class GoalNotifier {
   }
 
   static void setNow() {
-    now = tz.TZDateTime.now(tz.local);
+    _now = tz.TZDateTime.now(tz.local);
   }
 
   static Future<void> openNotificationSettings() async {
     try {
-      await platform.invokeMethod('openNotificationSettings');
+      await _platform.invokeMethod('openNotificationSettings');
     } catch (e) {
       debugPrint('Error opening notification settings: $e');
     }
@@ -485,10 +486,80 @@ class GoalNotifier {
 
   static Future<String> getLocalTimezone() async {
     try {
-      final timezone = await platform.invokeMethod<String>('getLocalTimezone');
+      final timezone = await _platform.invokeMethod<String>('getLocalTimezone');
       return timezone ?? 'America/Chicago';
     } catch (e) {
       return 'America/Chicago';
     }
+  }
+
+  static int scoreFromLevel(String level) {
+    switch (level.toLowerCase()) {
+      case 'high': return 3;
+      case 'medium': return 1;
+      default: return 0;
+    }
+  }
+
+  static int scoreFromTime(int minutes) {
+    if (minutes >= 600) return 5;
+    if (minutes >= 300) return 4;
+    if (minutes >= 150) return 3;
+    if (minutes >= 90) return 2;
+    if (minutes >= 30) return 1;
+    return 0;
+  }
+
+  static int scoreFromSteps(int steps) {
+    if (steps >= 50) return 5;
+    if (steps >= 25) return 4;
+    if (steps >= 15) return 3;
+    if (steps >= 8) return 2;
+    if (steps > 3) return 1;
+    return 0;
+  }
+
+  static int getScoreByTypeAndString(String type, String value) {
+    int score = 0;
+
+    if (type == 'Steps') {
+      score = scoreFromSteps(int.parse(value));
+    }
+
+    if (type == 'Time') {
+      score = scoreFromTime(int.parse(value));
+    }
+
+    else {
+      score = scoreFromLevel(value);
+    }
+
+    return score;
+  }
+
+  static (int, List<String>, int) getEncouragementValue(GoalSet goalSet) {
+    final complexityScore = scoreFromLevel(goalSet.complexity);
+    final effortScore = scoreFromLevel(goalSet.effort);
+    final motivationScore = scoreFromLevel(goalSet.motivation);
+    final timeScore = scoreFromTime(goalSet.time);
+    final stepsScore = scoreFromSteps(goalSet.steps);
+
+    final totalScore = complexityScore + effortScore + motivationScore + timeScore + stepsScore;
+    final biggestFactorScore = [
+      complexityScore,
+      effortScore,
+      motivationScore,
+      timeScore,
+      stepsScore,
+    ].reduce((a, b) => a > b ? a : b);
+
+    final List<String> reasons = [];
+    if (complexityScore > 0) reasons.add('This goal has a challenging complexity level.');
+    if (effortScore > 0) reasons.add('It requires notable effort to complete.');
+    if (motivationScore > 0) reasons.add('Staying motivated might be tough.');
+    if (timeScore > 0) reasons.add('It spans a significant amount of time.');
+    if (stepsScore > 0) reasons.add('It involves many steps to complete.');
+
+    return (totalScore, reasons, biggestFactorScore);
   }
 }

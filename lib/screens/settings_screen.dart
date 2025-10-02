@@ -10,12 +10,14 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends BaseState<SettingsScreen> with WidgetsBindingObserver {
+  final TextEditingController _affirmationTimeController = TextEditingController();
   late ThemeData _themeData;
   bool _themeLoaded = false;
   late String _rewardType;
   late String _notificationStyle;
   late String _notificationFrequency;
   late bool _notificationsAllowed;
+  late String _dailyAffirmationsTime;
 
   @override
   void initState() {
@@ -27,6 +29,7 @@ class _SettingsScreenState extends BaseState<SettingsScreen> with WidgetsBinding
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _affirmationTimeController.dispose();
     super.dispose();
   }
 
@@ -47,6 +50,7 @@ class _SettingsScreenState extends BaseState<SettingsScreen> with WidgetsBinding
     final storedType = await rewardType;
     final notificationsAllowed = await GoalNotifier.checkNotificationsPermissionsGranted();
     final themeBundle = await initializeScreenTheme();
+    final storedTime = await dailyAffirmationsTime;
 
     if (mounted) {
       setState(() {
@@ -56,8 +60,17 @@ class _SettingsScreenState extends BaseState<SettingsScreen> with WidgetsBinding
         _notificationsAllowed = notificationsAllowed;
         _themeData = themeBundle.themeData;
         _themeLoaded = true;
+        _dailyAffirmationsTime = storedTime;
       });
     }
+  }
+
+  Future<void> updateDailyAffirmations(String time) async {
+    await setStringValue('dailyAffirmationsTime', time);
+    await GoalNotifier.startDailyAffirmations(time);
+    setState(() {
+      _dailyAffirmationsTime = time;
+    });
   }
 
   Future<void> updateNotificationFrequency(String oldFrequency, String newFrequency) async {
@@ -74,6 +87,32 @@ class _SettingsScreenState extends BaseState<SettingsScreen> with WidgetsBinding
       });
     }
   }
+
+  ThemeData buildTimePickerTheme(Color primaryColor, Color secondaryColor, TextStyle textStyle) {
+    return ThemeData(
+      timePickerTheme: TimePickerThemeData(
+        backgroundColor: secondaryColor,
+        dialBackgroundColor: secondaryColor,
+        dialHandColor: Colors.deepPurple,
+        dialTextColor: primaryColor,
+        entryModeIconColor: primaryColor,
+
+        hourMinuteColor: WidgetStateColor.resolveWith((states) =>
+        states.contains(WidgetState.selected) ? primaryColor : secondaryColor),
+        hourMinuteTextColor: WidgetStateColor.resolveWith((states) =>
+        states.contains(WidgetState.selected) ? secondaryColor : primaryColor),
+
+        dayPeriodColor: WidgetStateColor.resolveWith((states) =>
+        states.contains(WidgetState.selected) ? primaryColor : secondaryColor),
+        dayPeriodTextColor: WidgetStateColor.resolveWith((states) =>
+        states.contains(WidgetState.selected) ? secondaryColor : primaryColor),
+
+        helpTextStyle: textStyle,
+        hourMinuteTextStyle: textStyle,
+      ),
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -193,7 +232,62 @@ class _SettingsScreenState extends BaseState<SettingsScreen> with WidgetsBinding
                 ),
 
                 SwitchListTile(title: Text('Daily Affirmations', style: textStyle), value: dailyAffirmations, onChanged: setDailyAffirmations, tileColor: primaryColor),
+                  if(dailyAffirmations) ... [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Daily Affirmation Time:',
+                                style: textStyle,
+                              ),
+                              const SizedBox(height: 4),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: secondaryColor,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(4),
+                                    side: BorderSide(color: Colors.grey.shade400),
+                                  ),
+                                ),
+                                onPressed: () async {
+                                  final selected = await showTimePicker(
+                                    context: context,
+                                    initialTime: TimeOfDay.now(),
+                                    initialEntryMode: TimePickerEntryMode.dial,
+                                    builder: (context, child) => Theme(
+                                      data: buildTimePickerTheme(primaryColor, secondaryColor, textStyle),
+                                      child: child!,
+                                    ),
+                                  );
+
+                                  if (selected != null) {
+                                    final formatted = selected.hour.toString().padLeft(2, '0') +
+                                        ':' +
+                                        selected.minute.toString().padLeft(2, '0');
+                                    updateDailyAffirmations(formatted);
+                                  }
+                                },
+                                child: Text(
+                                  _dailyAffirmationsTime.isNotEmpty
+                                      ? 'Selected daily affirmations time: $_dailyAffirmationsTime click me to change'
+                                      : 'Choose Time',
+                                  style: textStyle,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                      ],
+                    )
+                  ],
                 SwitchListTile(title: Text('AI Encouragement', style: textStyle), value: aiEncouragement, onChanged: setAiEncouragement, tileColor: primaryColor),
+
 
                   if (!_notificationsAllowed) ... [
                     SwitchListTile(title: Text('You have notifications enabled in the app, but not on your phone. Would you like to enable them?', style: textStyle), value: false, onChanged: (val) {

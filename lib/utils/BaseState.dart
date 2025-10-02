@@ -1,9 +1,10 @@
 import 'dart:convert';
+import 'dart:ffi';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-import 'ThemeBundle.dart';
+import '../models/classes/theme_bundle.dart';
 import '../utils/common_utils.dart';
 
 abstract class BaseState<T extends StatefulWidget> extends State<T> {
@@ -31,6 +32,7 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
   bool _themeLoaded = false;
   bool _notificationsEnabled = false;
   bool _onboardingCompleted = false;
+  String _dailyAffirmationsTime = '06:00';
 
   @override
   void initState() {
@@ -113,6 +115,10 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     }
   }
 
+  bool stringEqualsTrue(String value)  {
+    return value == 'true';
+  }
+
   Future<void> _loadUserPreferences() async { // TODO: Refactor to remove the need for this.
     final theme = await readFromStorage('theme') ?? 'light';
     final fontSize = double.tryParse(await readFromStorage('fontSize') ?? '') ?? 14.0;
@@ -144,8 +150,8 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
   bool get rememberMe => _rememberMe;
   bool get highContrastMode => _highContrastMode;
   bool get useDyslexiaFont => _useDyslexiaFont;
-  bool get aiEncouragement => _aiEncouragement;
   bool get dailyAffirmations => _dailyAffirmations;
+  bool get aiEncouragement => _aiEncouragement;
   bool get skipToday => _skipToday;
   bool get pauseGoals => _pauseGoals;
   bool get loggedIn => _loggedIn;
@@ -167,6 +173,17 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
 
 
    */
+
+  Future<String> get dailyAffirmationsTime async {
+    String extractedString = await readFromStorage('dailyAffirmationsTime');
+    if (extractedString == '') {
+      return 'No current time.';
+    }
+    else {
+      _dailyAffirmationsTime = extractedString;
+      return _dailyAffirmationsTime;
+    }
+  }
 
   Future<String> get rewardType async {
     String extractedString = await readFromStorage('rewardType');
@@ -201,6 +218,17 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     }
   }
 
+  Future<bool> getBoolFromStorage (String key) async {
+    String extractedString = await readFromStorage(key);
+    bool returnedValue = false;
+    if (extractedString == '') {
+      return returnedValue;
+    }
+    else {
+      return stringEqualsTrue(extractedString);
+    }
+  }
+
   Color getPrimaryColor(bool isDark, bool contrastMode) {
     if (contrastMode) return Colors.cyan;
     if (isDark) return Colors.white;
@@ -222,6 +250,12 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     await _checkNotificationsEnabled();
     return _notificationFrequency;
   }
+
+  bool getNotificationsEnabled () {
+    _checkNotificationsEnabled();
+    return _notificationsEnabled;
+  }
+
 
   TextStyle getTextStyle(double fontSize, Color primaryColor, bool useDyslexiaFont) {
     return TextStyle(
@@ -320,10 +354,29 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     onThemeUpdated();
   }
 
-  Future<void> setOnboardingComplete(bool value) async {
+  Future<void> setOnboardingCompleted(bool value) async {
     setState(() => _onboardingCompleted = value);
     await _storage.write(key: 'onboardingCompleted', value: value.toString());
     onThemeUpdated();
+  }
+
+
+  Future<void> setBoolVariable(String key, bool value) async { // TODO: Replace all calls to set bool variables with THIS instead, once all bool variables are added here.
+    final Map<String, void Function()> localSetters = {
+      'onboardingCompleted': () => setState(() => _onboardingCompleted = value),
+      'rememberMe': () => setState(() => _rememberMe = value),
+      'aiEncouragement': () => setState(() => _aiEncouragement = value),
+      'dailyAffirmations': () => setState(() => _dailyAffirmations = value),
+    };
+
+    final setter = localSetters[key];
+    if (setter != null) {
+      setter(); // update local state
+      await _storage.write(key: key, value: value.toString()); // persist
+      onThemeUpdated(); // trigger any downstream updates
+    } else {
+      debugPrint('No known set method was called for key "$key".');
+    }
   }
 
   Future<void> setThemeData({
@@ -441,7 +494,9 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     return newTheme;
   }
 
-
+  Future<void> setStringValue(String key, String value) async {
+    await _storage.write(key: key, value: value);
+  }
 
   Future<void> clearPreferences() async {
     await _storage.deleteAll();
@@ -476,7 +531,7 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     await setSkipToday(false);
     await setPauseGoals(false);
     await setLoggedIn(false);
-    await setOnboardingComplete(false);
+    await setOnboardingCompleted(false);
   }
 
   final ThemeData defaultThemeData = ThemeData(
@@ -532,11 +587,6 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
       debugPrint('Unexpected scenario caught - invalid notification frequency: $notificationFrequency');
       _notificationsEnabled =  false; /// This case should never happen
     }
-  }
-
-  bool getNotificationsEnabled () {
-    _checkNotificationsEnabled();
-    return _notificationsEnabled;
   }
 
   Future<void> _checkNotificationStyle() async {

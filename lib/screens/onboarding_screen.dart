@@ -92,7 +92,7 @@ class _OnboardingScreenState extends BaseState<OnboardingScreen> {
       }
     }
 
-    setOnboardingComplete(true); // To ensure user only has to endure onboarding once per account made.
+    setOnboardingCompleted(true); // To ensure user only has to endure onboarding once per account made.
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const DashboardScreen()),
