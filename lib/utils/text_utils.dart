@@ -2,7 +2,7 @@ import 'dart:math';
 
 import 'package:intl/intl.dart';
 
-class TextUtils{
+class TextUtils {
   static int _randomIndex(int length) {
     final random = Random();
     return random.nextInt(length);
@@ -12,10 +12,10 @@ class TextUtils{
       DateFormat('dd MMMM yyyy HH:mm').format(dt);
 
   static String buildInitialReminderMessage(
-      String goalName,
-      String notificationStyle,
-      DateTime deadline,
-      ) {
+    String goalName,
+    String notificationStyle,
+    DateTime deadline,
+  ) {
     final formattedDeadline = _format(deadline);
 
     switch (notificationStyle) {
@@ -56,11 +56,11 @@ class TextUtils{
   }
 
   static String buildFollowUpReminderMessage(
-      String goalName,
-      int goalId,
-      String notificationStyle,
-      DateTime deadline,
-      ) {
+    String goalName,
+    int goalId,
+    String notificationStyle,
+    DateTime deadline,
+  ) {
     final formattedDeadline = _format(deadline);
 
     if (notificationStyle == 'Minimal') {
@@ -104,19 +104,19 @@ class TextUtils{
   }
 
   static String buildEncouragementMessage(
-      String goalName,
-      int goalId,
-      String deadline,
-      List<String> reasons,
-      int encouragementValue,
-      int biggestValue,
-      int timeScore,
-      int stepScore,
-      int complexityScore,
-      int effortScore,
-      int motivationScore,
-      String notificationStyle,
-      ) {
+    String goalName,
+    int goalId,
+    String deadline,
+    List<String> reasons,
+    int encouragementValue,
+    int biggestValue,
+    int timeScore,
+    int stepScore,
+    int complexityScore,
+    int effortScore,
+    int motivationScore,
+    String notificationStyle,
+  ) {
     // determine dominant factor among the five scores
     final Map<String, int> factorScores = {
       'time': timeScore,
@@ -156,7 +156,10 @@ class TextUtils{
       }
     }
     if (!addedDominantFromList) {
-      orderedReasons.add(factorReasonFallback[dominantFactor] ?? factorReasonFallback['overall']!);
+      orderedReasons.add(
+        factorReasonFallback[dominantFactor] ??
+            factorReasonFallback['overall']!,
+      );
     }
     // append other unique reasons without duplicating
     for (final r in reasons) {
@@ -183,7 +186,6 @@ class TextUtils{
       'Consistency beats speed. Keep $goalName going.',
     ];
 
-
     final List<String> vibrantVariants = [
       'Momentum’s building. Keep $goalName alive!',
       'Turn $goalName into a bold win!',
@@ -196,7 +198,6 @@ class TextUtils{
       'Today’s step drives $goalName tomorrow!',
       'Light the fuse. Push through $goalName!',
     ];
-
 
     final List<String> animatedVariants = [
       'You’re the star. Shine with $goalName!',
@@ -211,7 +212,6 @@ class TextUtils{
       'Bring character. Start $goalName with fun!',
     ];
 
-
     // build core message based on rules
     String coreMessage;
 
@@ -219,22 +219,28 @@ class TextUtils{
     if (biggestValue >= 3) {
       // if the dominant factor is time or steps, use their combined intensity for tier base message
       if (dominantFactor == 'time' || dominantFactor == 'steps') {
-        final int intensity = dominantScore; // caller already used larger scaling
+        final int intensity =
+            dominantScore; // caller already used larger scaling
         if (intensity > 13) {
-          coreMessage = 'This goal is a major commitment and worth special attention.';
+          coreMessage =
+              'This goal is a major commitment and worth special attention.';
         } else if (intensity > 8) {
           coreMessage = 'This goal requires notable dedication and planning.';
         } else {
-          coreMessage = 'This goal has important demands in terms of $dominantFactor.';
+          coreMessage =
+              'This goal has important demands in terms of $dominantFactor.';
         }
       } else {
         // dominant is complexity/effort/motivation
-        coreMessage = 'This goal is mainly challenging because of $dominantFactor.';
+        coreMessage =
+            'This goal is mainly challenging because of $dominantFactor.';
       }
     } else if (biggestValue == encouragementValue) {
-      coreMessage = 'The primary challenge here is $dominantFactor. Take it step by step.';
+      coreMessage =
+          'The primary challenge here is $dominantFactor. Take it step by step.';
     } else {
-      coreMessage = 'You’ve set a meaningful goal. Stay steady and be kind to yourself.';
+      coreMessage =
+          'You’ve set a meaningful goal. Stay steady and be kind to yourself.';
     }
 
     // pick styled variant
@@ -253,16 +259,57 @@ class TextUtils{
 
     // assemble reason text: dominant reason first, then up to 3 others to avoid overwhelm
     final int maxReasonsToShow = 3;
-    final List<String> reasonsToShow = orderedReasons.take(maxReasonsToShow).toList();
-    final String reasonText = reasonsToShow.isNotEmpty
-        ? '\n\nWhy this matters:\n• ${reasonsToShow.join('\n• ')}'
-        : '';
+    final List<String> reasonsToShow =
+        orderedReasons.take(maxReasonsToShow).toList();
+    final String reasonText =
+        reasonsToShow.isNotEmpty
+            ? '\n\nWhy this matters:\n• ${reasonsToShow.join('\n• ')}'
+            : '';
 
     // produce final message: variantPrefix + a short core sentence + reasons + deadline info
     final String finalCore = '$variantPrefix $coreMessage';
-    final String deadlineText = deadline.isNotEmpty ? '\n\nDeadline: $deadline' : '';
+    final String deadlineText =
+        deadline.isNotEmpty ? '\n\nDeadline: $deadline' : '';
 
     return '$finalCore$reasonText$deadlineText';
   }
 
+  static final List<String> _affirmations = [
+    'You are capable of amazing things.',
+    'Today is a fresh start. make it count.',
+    'Your effort matters, even in small steps.',
+    'You bring value just by being you.',
+    'Progress is progress, no matter the pace.',
+    'You’ve overcome before. you’ll do it again.',
+    'Your presence makes a difference.',
+    'You are worthy of kindness and care.',
+    'One step forward is still forward.',
+    'You’re allowed to take breaks and still succeed.',
+    'You are growing, even when it’s hard to see.',
+    'You deserve encouragement. here it is.',
+    'You’re doing better than you think.',
+    'You are not alone in this journey.',
+    'You’ve got strength that shows up quietly.',
+    'You are enough, exactly as you are.',
+    'You’re building something meaningful.',
+    'You’ve got this. one moment at a time.',
+    'You are resilient and resourceful.',
+    'You’re allowed to ask for help.',
+    'You are making progress, even when it’s slow.',
+    'You’re showing up. and that matters.',
+    'You are more than your productivity.',
+    'You’re allowed to feel proud of yourself.',
+    'You are learning and evolving every day.',
+    'You’ve got courage tucked inside you.',
+    'You are worthy of rest and renewal.',
+    'You’re doing something brave by trying.',
+    'You are making space for growth.',
+    'You are a work in progress. and that’s beautiful.',
+  ];
+
+  static String generateDailyAffirmationBody() {
+    final random = Random();
+    final index = random.nextInt(_affirmations.length);
+    return _affirmations[index];
+  }
 }

@@ -150,19 +150,19 @@ class GoalNotifier {
 
   static Future<void> startDailyAffirmations(String timeToTrigger) async {
     await initialize(); // ensure daily affirmations are enabled, and check scheduleMode
-    final tz.TZDateTime? triggerTimer = await CommonUtils.tzDateTimeFromHHmm(timeToTrigger);
-    final String body = 'testing testing, this would be made by text utils, just test this here, yes?';
+    final tz.TZDateTime? triggerTime = await CommonUtils.tzDateTimeFromHHmm(timeToTrigger);
+    final String body = TextUtils.generateDailyAffirmationBody();
 
 
-    if (triggerTimer == null) {
+    if (triggerTime == null) {
       debugPrint('Invalid timeToTrigger: $timeToTrigger');
       return;
     }
 
     // build the body
-    debugPrint('Started. Time to trigger: $triggerTimer');
+    debugPrint('Started. Time to trigger: $triggerTime');
 
-    scheduleDailyAffirmations(triggerTimer, _scheduleMode, 'Daily Affirmations', body);
+    scheduleDailyAffirmations(triggerTime, _scheduleMode, 'Daily Affirmations', body);
   }
 
   /// Cancel notifications for a specific goal. The group/summary notifications are not removed here, only by cancel all goals (a summary is only shown if there are at least 2 notifications in that group. So an empty summary is not an issue.)
@@ -208,6 +208,11 @@ class GoalNotifier {
   static Future<void> cancelAiEncouragementNotification(int goalId) async {
     await _plugin.cancel(goalId + 4); // 12-hours before, all -  AI encouragement
     debugPrint('Goal canceled due to step progress addition.');
+  }
+
+  static Future<void> cancelDailyAffirmationsNotification() async {
+    await _plugin.cancel(_dailyAffirmationsGroupId);
+    debugPrint('Daily affirmations canceled.');
   }
 
   /// Cancel all notifications and timers indiscriminately
@@ -280,9 +285,6 @@ class GoalNotifier {
       return false;
     }
   }
-
-
-
 
 
   static Future<void> showInstantNotifications({
@@ -493,56 +495,31 @@ class GoalNotifier {
     }
   }
 
-  static int scoreFromLevel(String level) {
-    switch (level.toLowerCase()) {
-      case 'high': return 3;
-      case 'medium': return 1;
-      default: return 0;
-    }
-  }
-
-  static int scoreFromTime(int minutes) {
-    if (minutes >= 600) return 5;
-    if (minutes >= 300) return 4;
-    if (minutes >= 150) return 3;
-    if (minutes >= 90) return 2;
-    if (minutes >= 30) return 1;
-    return 0;
-  }
-
-  static int scoreFromSteps(int steps) {
-    if (steps >= 50) return 5;
-    if (steps >= 25) return 4;
-    if (steps >= 15) return 3;
-    if (steps >= 8) return 2;
-    if (steps > 3) return 1;
-    return 0;
-  }
 
   static int getScoreByTypeAndString(String type, String value) {
     int score = 0;
 
     if (type == 'Steps') {
-      score = scoreFromSteps(int.parse(value));
+      score = CommonUtils.scoreFromSteps(int.parse(value));
     }
 
     if (type == 'Time') {
-      score = scoreFromTime(int.parse(value));
+      score = CommonUtils.scoreFromTime(int.parse(value));
     }
 
     else {
-      score = scoreFromLevel(value);
+      score = CommonUtils.scoreFromLevel(value);
     }
 
     return score;
   }
 
   static (int, List<String>, int) getEncouragementValue(GoalSet goalSet) {
-    final complexityScore = scoreFromLevel(goalSet.complexity);
-    final effortScore = scoreFromLevel(goalSet.effort);
-    final motivationScore = scoreFromLevel(goalSet.motivation);
-    final timeScore = scoreFromTime(goalSet.time);
-    final stepsScore = scoreFromSteps(goalSet.steps);
+    final complexityScore = CommonUtils.scoreFromLevel(goalSet.complexity);
+    final effortScore = CommonUtils.scoreFromLevel(goalSet.effort);
+    final motivationScore = CommonUtils.scoreFromLevel(goalSet.motivation);
+    final timeScore = CommonUtils.scoreFromTime(goalSet.time);
+    final stepsScore = CommonUtils.scoreFromSteps(goalSet.steps);
 
     final totalScore = complexityScore + effortScore + motivationScore + timeScore + stepsScore;
     final biggestFactorScore = [

@@ -65,6 +65,18 @@ class _SettingsScreenState extends BaseState<SettingsScreen> with WidgetsBinding
     }
   }
 
+  Future<void> setAndCheckDailyAffirmations(bool value) async {
+    await setDailyAffirmations(value);
+
+    if (value) { // enabled - schedule daily affirmations.
+      final dailyAffirmationTime = await dailyAffirmationsTime;
+      updateDailyAffirmations(dailyAffirmationTime);
+    }
+    else { // disabled - do not schedule daily affirmations.
+      await GoalNotifier.cancelDailyAffirmationsNotification();
+    }
+  }
+
   Future<void> updateDailyAffirmations(String time) async {
     await setStringValue('dailyAffirmationsTime', time);
     await GoalNotifier.startDailyAffirmations(time);
@@ -231,7 +243,7 @@ class _SettingsScreenState extends BaseState<SettingsScreen> with WidgetsBinding
                   dropdownColor: secondaryColor,
                 ),
 
-                SwitchListTile(title: Text('Daily Affirmations', style: textStyle), value: dailyAffirmations, onChanged: setDailyAffirmations, tileColor: primaryColor),
+                SwitchListTile(title: Text('Daily Affirmations', style: textStyle), value: dailyAffirmations, onChanged: setAndCheckDailyAffirmations, tileColor: primaryColor),
                   if(dailyAffirmations) ... [
                     Row(
                       children: [

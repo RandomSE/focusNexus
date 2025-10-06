@@ -1,6 +1,7 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:focusNexus/screens/achievements_screen.dart';
 import 'package:focusNexus/screens/goals_screen.dart';
 import 'package:focusNexus/screens/onboarding_screen.dart';
 import 'package:focusNexus/screens/settings_screen.dart';
@@ -63,7 +64,7 @@ class FocusNexusApp extends StatelessWidget {
               },
             ),
         'chat': (_) => PlaceholderScreen('AI Chat / Therapist Space'),
-        'achievements': (_) => PlaceholderScreen('Achievements'),
+        'achievements': (_) => const AchievementScreen(),
         'goals': (_) => const GoalsScreen(),
       },
     );

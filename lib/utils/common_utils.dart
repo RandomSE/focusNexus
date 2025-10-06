@@ -1,4 +1,5 @@
 // .../utils/common_utils.dart
+import 'package:flutter/material.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 class CommonUtils {
@@ -29,6 +30,39 @@ class CommonUtils {
     }
 
     return candidate;
+  }
+
+  static int scoreFromLevel(String level) {
+    switch (level.toLowerCase()) {
+      case 'high': return 3;
+      case 'medium': return 1;
+      default: return 0;
+    }
+  }
+
+  static int scoreFromTime(int minutes) {
+    if (minutes >= 600) return 5;
+    if (minutes >= 300) return 4;
+    if (minutes >= 150) return 3;
+    if (minutes >= 90) return 2;
+    if (minutes >= 30) return 1;
+    return 0;
+  }
+
+  static int scoreFromSteps(int steps) {
+    if (steps >= 50) return 5;
+    if (steps >= 25) return 4;
+    if (steps >= 15) return 3;
+    if (steps >= 8) return 2;
+    if (steps > 3) return 1;
+    return 0;
+  }
+
+  static Text buildText(String text, TextStyle style) {
+    return Text(
+      text,
+      style: style,
+    );
   }
 
 

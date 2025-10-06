@@ -9,6 +9,7 @@ import 'dart:convert';
 import '../utils/BaseState.dart';
 import '../models/classes/theme_bundle.dart';
 import '../models/classes/goal_set.dart';
+import '../utils/common_utils.dart';
 import '../utils/notifier.dart';
 
 class GoalsScreen extends StatefulWidget {
@@ -148,9 +149,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
   Future<int> getTotalAmount(int amount) async {
     final String today = DateFormat('dd MM yyyy').format(DateTime.now());
 
-    // Read stored value
     final String? stored = await _storage.read(key: 'completedToday');
-
     int count = 1;
 
     if (stored != null) {
@@ -163,15 +162,25 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
       }
     }
 
-    // Save updated value
     await _storage.write(key: 'completedToday', value: '$today|$count');
     debugPrint('today: $today, count: $count');
 
-    // Apply reward logic
-    if (count == 1) return amount * 2 + 100;
-    if (count >= 2 && count <= 5) return (amount * 1.5).round() + 20;
-    if (count >= 6 && count <= 10) return (amount * 1.25).round() + 5;
-    return amount;
+    double reward = amount.toDouble();
+
+    if (count == 1) {
+      reward = amount * 2 + 100;
+
+    } else if (count <= 5) {
+      reward = amount * 1.5 + 20;
+    }
+
+    else if (count <= 10) {
+      reward = amount * 1.25 + 5;
+    }
+
+    // Round up to nearest multiple of 5
+    final int rounded = ((reward + 4) ~/ 5) * 5;
+    return rounded;
   }
 
   Future<void> _loadTemplates() async {
@@ -189,6 +198,8 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
       key: 'userTemplates',
       value: json.encode(_userTemplates),
     );
+    setState(() {
+    });
   }
 
   Future<void> _loadGoals() async {
@@ -303,27 +314,6 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
     }
   }
 
-  int _calculatePoints() {
-    const int base = 5;
-
-    int complexityWeight = (_complexity == 'Medium') ? 1 : (_complexity == 'High') ? 2 : 0;
-    int effortWeight     = (_effort == 'Medium')     ? 1 : (_effort == 'High')     ? 2 : 0;
-    int motivationWeight = (_motivation == 'Medium') ? 1 : (_motivation == 'High') ? 2 : 0;
-    int deadlineBonus = (_deadlineController.text != '') ? 2 : 0;
-
-    int time = int.tryParse(_time) ?? 0;
-    int timeBonus = (time > 15) ? ((time - 15) ~/ 5) : 0;
-    timeBonus = timeBonus.clamp(0, 4);
-
-    int steps = int.tryParse(_steps) ?? 1;
-    int stepMultiplier = (steps > 1) ? (steps - 1) : 1;
-    stepMultiplier = stepMultiplier.clamp(1, 4);
-
-    int totalMultiplier = 1 + complexityWeight + effortWeight + motivationWeight + timeBonus + stepMultiplier + deadlineBonus;
-
-    return base * totalMultiplier;
-  }
-
   int _calculatePointsFromTemplate({
     required String complexity,
     required String effort,
@@ -334,22 +324,38 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
   }) {
     const int base = 5;
 
-    int complexityWeight = (complexity == 'Medium') ? 1 : (complexity == 'High') ? 2 : 0;
-    int effortWeight     = (effort == 'Medium')     ? 1 : (effort == 'High')     ? 2 : 0;
-    int motivationWeight = (motivation == 'Medium') ? 1 : (motivation == 'High') ? 2 : 0;
-    int deadlineBonus = (deadline != '') ? 2 : 0;
+    // Parse inputs
+    final int timeVal = int.tryParse(time) ?? 0;
+    final int stepsVal = int.tryParse(steps) ?? 0;
 
-    int timeVal = int.tryParse(time) ?? 0;
-    int timeBonus = (timeVal > 15) ? ((timeVal - 15) ~/ 5) : 0;
-    timeBonus = timeBonus.clamp(0, 4);
+    // Score components
+    final int complexityScore = CommonUtils.scoreFromLevel(complexity);
+    final int effortScore = CommonUtils.scoreFromLevel(effort);
+    final int motivationScore = CommonUtils.scoreFromLevel(motivation);
+    final int timeScore = CommonUtils.scoreFromTime(timeVal);
+    final int stepScore = CommonUtils.scoreFromSteps(stepsVal);
+    final int deadlineBonus = (deadline.isNotEmpty && deadline != 'no deadline') ? 2 : 0;
 
-    int stepsVal = int.tryParse(steps) ?? 1;
-    int stepMultiplier = (stepsVal > 1) ? (stepsVal - 1) : 1;
-    stepMultiplier = stepMultiplier.clamp(1, 4);
+    // Additive multiplier
+    final int additive = 1 + complexityScore + effortScore + motivationScore + timeScore + stepScore + deadlineBonus;
+    int rawScore = base * additive;
 
-    int totalMultiplier = 1 + complexityWeight + effortWeight + motivationWeight + timeBonus + stepMultiplier + deadlineBonus;
+    // Final multiplier based on "high" levels
+    final List<String> levels = [complexity, effort, motivation];
+    final int highCount = levels.where((l) => l.toLowerCase() == 'high').length;
 
-    return base * totalMultiplier;
+    double multiplier = switch (highCount) {
+      3 => 2.0,
+      2 => 1.5,
+      1 => 1.25,
+      _ => 1.0,
+    };
+
+    // Apply multiplier and round up to nearest 5
+    final double adjusted = rawScore * multiplier;
+    final int rounded = ((adjusted + 4) ~/ 5) * 5;
+
+    return rounded;
   }
 
 
@@ -606,15 +612,15 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
   }
 
   void _openTemplateManager() {
-    String _templateCategory = _categories.first;
-    String _templateComplexity = _levels.first;
-    String _templateEffort = _levels.first;
-    String _templateMotivation = _levels.first;
+    String templateCategory = _categories.first;
+    String templateComplexity = _levels.first;
+    String templateEffort = _levels.first;
+    String templateMotivation = _levels.first;
 
     int minutesRequired = 0;
     int minutesToDeadline = 0;
 
-    final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+    final GlobalKey<FormState> templateFormKey = GlobalKey<FormState>();
 
     showDialog(
       context: context,
@@ -626,7 +632,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
             child: Container(
               color: _secondaryColor,
               child: Form(
-                key: _formKey,
+                key: templateFormKey,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -649,7 +655,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                     ),
                     DropdownButtonFormField(
                       dropdownColor: _secondaryColor,
-                      value: _templateCategory,
+                      value: templateCategory,
                       decoration: InputDecoration(
                         labelText: 'Category',
                         labelStyle: _textStyle,
@@ -658,11 +664,11 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                           .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                           .toList(),
                       style: _textStyle,
-                      onChanged: (v) => setState(() => _templateCategory = v!),
+                      onChanged: (v) => setState(() => templateCategory = v!),
                     ),
                     DropdownButtonFormField(
                       dropdownColor: _secondaryColor,
-                      value: _templateComplexity,
+                      value: templateComplexity,
                       decoration: InputDecoration(
                         labelText: 'Complexity',
                         labelStyle: _textStyle,
@@ -671,11 +677,11 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                           .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                           .toList(),
                       style: _textStyle,
-                      onChanged: (v) => setState(() => _templateComplexity = v!),
+                      onChanged: (v) => setState(() => templateComplexity = v!),
                     ),
                     DropdownButtonFormField(
                       dropdownColor: _secondaryColor,
-                      value: _templateEffort,
+                      value: templateEffort,
                       decoration: InputDecoration(
                         labelText: 'Effort',
                         labelStyle: _textStyle,
@@ -684,11 +690,11 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                           .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                           .toList(),
                       style: _textStyle,
-                      onChanged: (v) => setState(() => _templateEffort = v!),
+                      onChanged: (v) => setState(() => templateEffort = v!),
                     ),
                     DropdownButtonFormField(
                       dropdownColor: _secondaryColor,
-                      value: _templateMotivation,
+                      value: templateMotivation,
                       decoration: InputDecoration(
                         labelText: 'Motivation',
                         labelStyle: _textStyle,
@@ -697,7 +703,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                           .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                           .toList(),
                       style: _textStyle,
-                      onChanged: (v) => setState(() => _templateMotivation = v!),
+                      onChanged: (v) => setState(() => templateMotivation = v!),
                     ),
                     TextFormField(
                       style: _textStyle,
@@ -753,7 +759,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                     ),
                     ElevatedButton(
                       onPressed: () {
-                        if (!_formKey.currentState!.validate()) {
+                        if (!templateFormKey.currentState!.validate()) {
                           return; // stop if validation fails
                         }
                         if(_templateSteps.text.trim() == '') {
@@ -761,10 +767,10 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                         }
                         final name = _templateName.text.trim();
                         final data = {
-                          'category': _templateCategory,
-                          'complexity': _templateComplexity,
-                          'effort': _templateEffort,
-                          'motivation': _templateMotivation,
+                          'category': templateCategory,
+                          'complexity': templateComplexity,
+                          'effort': templateEffort,
+                          'motivation': templateMotivation,
                           'time': _templateTime.text.trim(),
                           'steps': _templateSteps.text.trim(),
                           'Hours to complete': _templateDeadline.text.trim(),
@@ -812,10 +818,10 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                           final t = _templateDetails[name] ?? _userTemplates[name]!;
                           setState(() {
                             _templateName.text = name;
-                            _templateCategory = t['category'];
-                            _templateComplexity = t['complexity'];
-                            _templateEffort = t['effort'];
-                            _templateMotivation = t['motivation'];
+                            templateCategory = t['category'];
+                            templateComplexity = t['complexity'];
+                            templateEffort = t['effort'];
+                            templateMotivation = t['motivation'];
                             _templateTime.text = t['time'];
                             _templateDeadline.text = t['Hours to complete'];
                             _templateSteps.text = t['steps'];
@@ -870,11 +876,11 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
   }
 
   void _openMultiTemplateManager() {
-    String? _validationMessage;
+    String? validationMessage;
 
-    final TextEditingController _groupNameController = TextEditingController();
-    List<String> _selectedTemplates = [];
-    String? _selectedGroup;
+    final TextEditingController groupNameController = TextEditingController();
+    List<String> selectedTemplates = [];
+    String? selectedGroup;
 
     showDialog(
       context: context,
@@ -888,7 +894,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   DropdownButton<String>(
-                    value: _selectedGroup,
+                    value: selectedGroup,
                     hint: Text('Load Saved Group', style: _textStyle),
                     dropdownColor: _secondaryColor,
                     items: _templateGroups.keys.map((groupName) {
@@ -899,15 +905,15 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                     }).toList(),
                     onChanged: (groupName) {
                       setState(() {
-                        _selectedGroup = groupName;
-                        _selectedTemplates = List.from(_templateGroups[groupName!] ?? []);
-                        _groupNameController.text = groupName; // auto-fill name when loading group
+                        selectedGroup = groupName;
+                        selectedTemplates = List.from(_templateGroups[groupName!] ?? []);
+                        groupNameController.text = groupName; // auto-fill name when loading group
                       });
                     },
                   ),
                   const SizedBox(height: 10),
                   TextField(
-                    controller: _groupNameController,
+                    controller: groupNameController,
                     style: _textStyle,
                     decoration: InputDecoration(
                       labelText: 'Group Name (required to save/update)',
@@ -917,7 +923,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                   const SizedBox(height: 10),
                   Text('Select Templates to Create Goals:', style: _textStyle),
                   ...[..._templateDetails.keys, ..._userTemplates.keys].map((templateName) {
-                    final selected = _selectedTemplates.contains(templateName);
+                    final selected = selectedTemplates.contains(templateName);
                     return CheckboxListTile(
                       title: Text(templateName, style: _textStyle),
                       value: selected,
@@ -926,14 +932,14 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                       onChanged: (bool? value) {
                         setState(() {
                           if (value == true) {
-                            _selectedTemplates.add(templateName);
+                            selectedTemplates.add(templateName);
                           } else {
-                            _selectedTemplates.remove(templateName);
+                            selectedTemplates.remove(templateName);
                           }
                         });
                       },
                     );
-                  }).toList(),
+                  }),
                   const Divider(),
                   Text('Existing Groups:', style: _textStyle),
                   ..._templateGroups.keys.map((name) {
@@ -951,9 +957,9 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                       ),
                       onTap: () {
                         setState(() {
-                          _selectedGroup = name;
-                          _selectedTemplates = List.from(_templateGroups[name]!);
-                          _groupNameController.text = name; // auto-fill name when selecting existing group
+                          selectedGroup = name;
+                          selectedTemplates = List.from(_templateGroups[name]!);
+                          groupNameController.text = name; // auto-fill name when selecting existing group
                         });
                       },
                     );
@@ -968,28 +974,28 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
               ),
               TextButton(
                 onPressed: () {
-                  final groupName = _groupNameController.text.trim();
-                  if (groupName.isEmpty || _selectedTemplates.isEmpty) {
+                  final groupName = groupNameController.text.trim();
+                  if (groupName.isEmpty || selectedTemplates.isEmpty) {
                     setState(() {
-                      _validationMessage = 'Please enter a group name and select at least one template.';
+                      validationMessage = 'Please enter a group name and select at least one template.';
                     });
                     return;
                   }
 
                   setState(() {
-                    _templateGroups[groupName] = List.from(_selectedTemplates);
-                    _validationMessage = null; // clear message on success
+                    _templateGroups[groupName] = List.from(selectedTemplates);
+                    validationMessage = null; // clear message on success
                   });
                   _saveTemplateGroups();
                   Navigator.of(context).pop(); // close dialog
                   },
                   child: Text('Save/Update Group', style: _textStyle),
                 ),
-                if (_validationMessage != null)
+                if (validationMessage != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 8.0),
                     child: Text(
-                      _validationMessage!,
+                      validationMessage!,
                       style: _textStyle.copyWith(color: Colors.red),
                     ),
                   ),
@@ -999,8 +1005,8 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                   foregroundColor: _primaryColor,
                 ),
                 onPressed: () async {
-                  if (_selectedTemplates.isEmpty) return;
-                  for (final templateName in _selectedTemplates) {
+                  if (selectedTemplates.isEmpty) return;
+                  for (final templateName in selectedTemplates) {
                     final data = _templateDetails[templateName] ?? _userTemplates[templateName]!;
                     await _createGoalFromTemplates(
                     title: templateName,
@@ -1438,7 +1444,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                                               IconButton(
                                                 color: _primaryColor,
                                                 icon: const Icon(
-                                                  Icons.add_task,
+                                                  Icons.add_circle_outline,
                                                 ),
                                                 onPressed:
                                                     () =>
@@ -1448,6 +1454,20 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                                                           ),
                                                         ),
                                                 tooltip: 'Add Step Progress',
+                                              ),
+                                              IconButton(
+                                                color: _primaryColor,
+                                                icon: const Icon(
+                                                  Icons.add_task,
+                                                ),
+                                                onPressed:
+                                                    () =>
+                                                    _completeGoal(
+                                                      _activeGoals.indexOf(
+                                                        g,
+                                                      ),
+                                                    ),
+                                                tooltip: 'Complete Goal',
                                               ),
                                               IconButton(
                                                 color: _primaryColor,

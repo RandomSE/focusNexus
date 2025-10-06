@@ -57,13 +57,6 @@ class _DashboardScreenState extends BaseState<DashboardScreen> {
     setState(() => _points = value);
   }
 
-  static Future<void> addPoints(int amount, String source) async {
-    final storage = FlutterSecureStorage();
-    final stored = await storage.read(key: 'points');
-    final current = int.tryParse(stored ?? '50') ?? 50;
-    final newTotal = current + amount;
-    await storage.write(key: 'points', value: newTotal.toString());
-  }
 
   Widget _buildCenteredButton(
       BuildContext context, {
