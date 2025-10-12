@@ -22,6 +22,9 @@ class _AchievementScreenState extends BaseState<AchievementScreen> {
   late ButtonStyle _buttonStyle;
   bool _themeLoaded = false;
   final _storage = const FlutterSecureStorage();
+  final achievementService = AchievementService();
+  late List<Achievement> visibleAchievements;
+
 
   @override
   void initState() {
@@ -31,11 +34,13 @@ class _AchievementScreenState extends BaseState<AchievementScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // TODO: implement build
     if (!_themeLoaded) {
-      // show placeholder while theme loads
       return const Center(child: CircularProgressIndicator());
     }
+
+    //debugPrint('Achievements: $visibleAchievements'); // TODO: Continue here. check why LateInitializationError is being thrown.
+
+
 
     return Theme(
       data: _themeData,
@@ -54,12 +59,28 @@ class _AchievementScreenState extends BaseState<AchievementScreen> {
         backgroundColor: _secondaryColor,
         body: Container(
           color: _secondaryColor,
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-          child: Row(
-            children: [
-              CommonUtils.buildText('Test 1', _textStyle),
-              CommonUtils.buildText('Test 2', _textStyle),
-            ],
+          padding: const EdgeInsets.all(12),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: visibleAchievements.map((achievement) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: CommonUtils.buildElevatedButton(
+                    achievement.title,
+                    ElevatedButton.styleFrom( // TODO: Check if I can instead just make this neat.
+                      backgroundColor: _primaryColor,
+                      foregroundColor: _secondaryColor,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                        () => AchievementService.viewAchievement(int.parse(achievement.id)),
+                  ),
+                );
+              }).toList(),
+            ),
           ),
         ),
       ),
@@ -67,9 +88,22 @@ class _AchievementScreenState extends BaseState<AchievementScreen> {
   }
 
   Future<void> _loadAchievementScreen() async {
+    await achievementService.initialize();
     final themeBundle = await initializeScreenTheme();
     await setThemeDataScreen(themeBundle);
+
+    // Ensure achievements are initialized before accessing .all
+
+
+    setState(() {
+      visibleAchievements = achievementService.all
+          .where((a) => !a.isSecret)
+          .toList();
+    });
+
+    debugPrint('Loaded ${visibleAchievements.length} visible achievements.');
   }
+
 
   Future<void> setThemeDataScreen(ThemeBundle themeBundle) async {
     setState(() {
