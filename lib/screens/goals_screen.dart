@@ -792,7 +792,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                         backgroundColor: _secondaryColor,
                         foregroundColor: _primaryColor,
                       ),
-                      child: const Text('Save Template'),
+                      child: Text('Save Template', style:_textStyle),
                     ),
                     const Divider(),
                     Text('Templates:', style: _textStyle),

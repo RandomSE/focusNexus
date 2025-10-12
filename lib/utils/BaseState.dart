@@ -229,6 +229,11 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     }
   }
 
+  Future<String> getStringFromStorage (String key) async {
+    String extractedString = await readFromStorage(key);
+    return extractedString; // no real validation needed here. If specific values are warranted, simply validate there or make a wrapper method that calls this and validates that way.
+  }
+
   Color getPrimaryColor(bool isDark, bool contrastMode) {
     if (contrastMode) return Colors.cyan;
     if (isDark) return Colors.white;
@@ -360,6 +365,13 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     onThemeUpdated();
   }
 
+  Future<void> setBoolVariableStorageOnly(String key, bool value) async {
+    if (key != '') {
+      debugPrint('Key: $key, Value: $value');
+      await _storage.write(key: key, value: value.toString());
+    }
+  }
+
 
   Future<void> setBoolVariable(String key, bool value) async { // TODO: Replace all calls to set bool variables with THIS instead, once all bool variables are added here.
     final Map<String, void Function()> localSetters = {
@@ -377,6 +389,15 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     } else {
       debugPrint('No known set method was called for key "$key".');
     }
+  }
+
+  Future<void> setStringVariableStorageOnly (String key, String value) async {// TODO: Replace all calls to set string variables with THIS instead, once all string variables are added here.)
+  debugPrint('Key: $key, Value: $value');
+  if (key != '' && value != '') {
+    await _storage.write(key: key, value: value);
+  } else {
+    debugPrint('Key or value is empty. Key: $key, Value: $value');
+  }
   }
 
   Future<void> setThemeData({

@@ -65,5 +65,13 @@ class CommonUtils {
     );
   }
 
+  static ElevatedButton buildElevatedButton(String text, ButtonStyle buttonStyle,  Function() onPressed) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: buttonStyle,
+      child: Text(text),
+    );
+  }
+
 
 }

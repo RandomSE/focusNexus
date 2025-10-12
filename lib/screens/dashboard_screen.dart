@@ -5,6 +5,7 @@ import 'package:focusNexus/utils/BaseState.dart';
 
 import '../models/classes/theme_bundle.dart';
 import '../utils/notifier.dart';
+import '../services/achievement_service.dart';
 
 
 class DashboardScreen extends StatefulWidget {
@@ -36,6 +37,7 @@ class _DashboardScreenState extends BaseState<DashboardScreen> {
     final storedType = await rewardType;
     final themeBundle = await initializeScreenTheme();
     await setThemeDataScreen(themeBundle, storedType);
+    await AchievementService().initialize();
     GoalNotifier.initialize();
   }
 

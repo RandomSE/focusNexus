@@ -4,6 +4,8 @@ import 'package:focusNexus/utils/BaseState.dart';
 import '../utils/common_utils.dart';
 
 import '../models/classes/theme_bundle.dart';
+import '../models/classes/achievement.dart';
+import '../services/achievement_service.dart';
 
 class AchievementScreen extends StatefulWidget {
   const AchievementScreen({super.key});
