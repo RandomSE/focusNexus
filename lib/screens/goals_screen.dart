@@ -95,7 +95,8 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
     DateTime.now().year,
     DateTime.now().month,
     DateTime.now().day,
-    DateTime.now().hour
+    DateTime.now().hour,
+    DateTime.now().minute
   );
   final DateFormat formatter = DateFormat('dd MMMM yyyy HH:mm');
   Map<String, Map<String, dynamic>> _userTemplates = {};
@@ -306,6 +307,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
       _removeGoalWithoutRemovingNotifications(0);
     }
     GoalNotifier.cancelAllGoalNotifications(); // Handled here separately.
+    setStoredInt('totalGoalsActive', 0);
   }
 
   void _clearCompleteGoals () {
@@ -430,6 +432,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
       final String deadline = _deadlineController.text.trim().isEmpty
           ? 'no deadline'
           : formatter.format(_currentDate.add(Duration(hours: hours)));
+      debugPrint('Current deadline: $deadline');
       loadNotificationStyleAndFrequency();
 
       final goal = buildAndSaveGoal(
@@ -451,6 +454,8 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
         debugPrint('Notifications not enabled — skipping goal check scheduling');
       }
       _resetControllers();
+      await incrementStoredInt('totalGoalsCreated');
+      await incrementStoredInt('totalGoalsActive'); // decrease this when a goal expires, is deleted, or completed.
     }
   }
 
@@ -489,6 +494,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
     final String deadline = deadlineHours.isEmpty
         ? 'no deadline'
         : formatter.format(_currentDate.add(Duration(hours: hours)));
+    debugPrint('Current deadline: $deadline');
     loadNotificationStyleAndFrequency();
 
     final goal = buildAndSaveGoal(
@@ -509,6 +515,16 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
     } else {
       debugPrint('Notifications not enabled — skipping goal check scheduling');
     }
+
+    await incrementStoredInt('totalGoalsCreated');
+    await incrementStoredInt('totalGoalsActive'); // decrease this when a goal expires, is deleted, or completed.
+  }
+
+  Future<void> _checkGoalCompletionAchievementVariables(GoalSet goalSet) async {
+    await decreaseStoredInt('totalGoalsActive');
+    await incrementStoredInt('totalGoalsCompleted');
+    await checkOrAddDate();
+    await checkAndUpdateGoalAchievementStats(goalSet);
   }
 
 
@@ -520,6 +536,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
     _addPoints(goal['points'], 'goal:${goal['title']}');
     _saveGoals();
     setState(() {});
+    _checkGoalCompletionAchievementVariables(goalSet);
   }
 
   void _removeGoal(int index) {
@@ -530,6 +547,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
       _activeGoals.removeAt(index);
     });
     _saveGoals();
+    decreaseStoredInt('totalGoalsActive');
   }
 
   void _removeGoalWithoutRemovingNotifications(int index) {
@@ -538,6 +556,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
       _activeGoals.removeAt(index);
     });
     _saveGoals();
+    decreaseStoredInt('totalGoalsActive');
   }
 
   void _removeCompletedGoal(int index) {

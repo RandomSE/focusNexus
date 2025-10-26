@@ -38,10 +38,6 @@ class _AchievementScreenState extends BaseState<AchievementScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    //debugPrint('Achievements: $visibleAchievements'); // TODO: Continue here. check why LateInitializationError is being thrown.
-
-
-
     return Theme(
       data: _themeData,
       child: Scaffold(

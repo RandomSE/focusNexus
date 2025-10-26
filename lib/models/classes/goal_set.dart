@@ -1,4 +1,4 @@
-class GoalSet { /// here so I can pass over many variables without many lines of code. Mostly used when goals are passed to notifier to be canceled, so it can filter correctly.
+class GoalSet { /// here so I can pass over many variables without many lines of code. Mostly used when goals are passed to notifier to be canceled, so it can filter correctly. Also used as part of achievement logic.
   final String title;
   final String category;
   final String complexity;

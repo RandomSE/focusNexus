@@ -3,7 +3,9 @@ import 'dart:ffi';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:intl/intl.dart';
 
+import '../models/classes/goal_set.dart';
 import '../models/classes/theme_bundle.dart';
 import '../utils/common_utils.dart';
 
@@ -234,6 +236,13 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     return extractedString; // no real validation needed here. If specific values are warranted, simply validate there or make a wrapper method that calls this and validates that way.
   }
 
+  Future<int> getIntFromStorage(String key) async {
+    if (key.isEmpty) return 0;
+    final String? stored = await _storage.read(key: key);
+    final int parsed = int.tryParse(stored ?? '') ?? 0;
+    return parsed;
+  }
+
   Color getPrimaryColor(bool isDark, bool contrastMode) {
     if (contrastMode) return Colors.cyan;
     if (isDark) return Colors.white;
@@ -392,12 +401,12 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
   }
 
   Future<void> setStringVariableStorageOnly (String key, String value) async {// TODO: Replace all calls to set string variables with THIS instead, once all string variables are added here.)
-  debugPrint('Key: $key, Value: $value');
-  if (key != '' && value != '') {
-    await _storage.write(key: key, value: value);
-  } else {
-    debugPrint('Key or value is empty. Key: $key, Value: $value');
-  }
+    debugPrint('Key: $key, Value: $value');
+    if (key != '' && value != '') {
+      await _storage.write(key: key, value: value);
+    } else {
+      debugPrint('Key or value is empty. Key: $key, Value: $value');
+    }
   }
 
   Future<void> setThemeData({
@@ -627,4 +636,192 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     _onboardingCompleted = (value == 'true');
     return _onboardingCompleted;
   }
+
+  Future<void> incrementStoredInt(String key) async {
+    if (key.isEmpty) {
+      debugPrint('Cannot increment: key is empty.');
+      return;
+    }
+
+    final int current = await getIntFromStorage(key);
+    final int updated = current + 1;
+    await _storage.write(key: key, value: updated.toString());
+    debugPrint('Incremented $key: $current → $updated');
+  }
+
+  Future<void> decreaseStoredInt(String key) async {
+    if (key.isEmpty) {
+      debugPrint('Cannot decrease: key is empty.');
+      return;
+    }
+
+    final int current = await getIntFromStorage(key);
+    final int updated = current - 1;
+    await _storage.write(key: key, value: updated.toString());
+    debugPrint('Decreased $key: $current → $updated');
+  }
+
+  Future<void> setStoredInt(String key, int value) async {
+    if (key.isEmpty || value.toString().isEmpty) {
+      debugPrint('Cannot increment: key or value is empty. key: $key value: $value');
+      return;
+    }
+
+    final int current = await getIntFromStorage(key);
+    await _storage.write(key: key, value: value.toString());
+    debugPrint('Set $key: $current → $value');
+  }
+
+  Future<void> checkOrAddDate() async {
+    const String key = 'dateGoalsCompleted';
+    final String today = DateFormat('dd-MM-yyyy').format(DateTime.now());
+    await checkAndUpdateWeekProgress();
+    await checkAndUpdateMonthProgress();
+
+    String extracted = await getStringFromStorage(key);
+    List<String> dates = extracted.isNotEmpty
+        ? extracted.split(',').map((e) => e.trim()).toList()
+        : [];
+
+    // If today's date is already the last entry, do nothing
+    if (dates.isNotEmpty && dates.last == today || dates.contains(today)) {
+      await updateDailyVariables(dates, key, today);
+      debugPrint('Date already recorded as last entry: $today');
+      return;
+    }
+
+    // If list is full, remove the oldest entry
+    if (dates.length >= 31) {
+      dates.removeAt(0);
+    }
+
+    // Add today's date
+    await setStoredInt('goalsCompletedToday', 1);
+    dates.add(today);
+    final updated = dates.join(',');
+
+    await setStringVariableStorageOnly(key, updated);
+    debugPrint('Added date: $today → $updated');
+  }
+
+  Future<void> updateDailyVariables(List<String> dates, String key, String dateToday) async {
+    await incrementStoredInt('goalsCompletedToday');
+
+    final DateTime yesterday = DateTime.now().subtract(const Duration(days: 1));
+    final String formattedYesterday = DateFormat('dd-MM-yyyy').format(yesterday);
+
+    if (dates.contains(formattedYesterday)) {
+      await incrementStoredInt('consecutiveDaysWithGoalsCompleted');
+      debugPrint('Yesterday was also completed. Incremented streak.');
+    } else {
+      await setStoredInt('consecutiveDaysWithGoalsCompleted', 1);
+      debugPrint('No goal completed yesterday. Streak reset to 1.');
+    }
+  }
+
+  Future<void> checkAndUpdateWeekProgress() async {
+    const String weekKey = 'lastWeekGoalWasCompleted';
+    final String currentWeek = _getWeekIdentifier(DateTime.now());
+    final String storedWeek = await getStringFromStorage(weekKey);
+
+    if (storedWeek != currentWeek) {
+      await setStringVariableStorageOnly(weekKey, currentWeek);
+      await setStoredInt('goalsCompletedThisWeek', 1);
+
+      final bool isConsecutive = _isPreviousWeek(storedWeek, currentWeek);
+      if (isConsecutive) {
+        await incrementStoredInt('consecutiveWeeksWithGoalsCompleted');
+      } else {
+        await setStoredInt('consecutiveWeeksWithGoalsCompleted', 1);
+      }
+
+      debugPrint('New week detected. Reset weekly count and updated streak logic.');
+    } else {
+      await incrementStoredInt('goalsCompletedThisWeek');
+      debugPrint('Same week. Incremented weekly goal count.');
+    }
+  }
+
+  Future<void> checkAndUpdateMonthProgress() async {
+    const String monthKey = 'lastMonthGoalWasCompleted';
+    final String currentMonth = DateFormat('yyyy-MM').format(DateTime.now());
+    final String storedMonth = await getStringFromStorage(monthKey);
+
+    if (storedMonth != currentMonth) {
+      await setStringVariableStorageOnly(monthKey, currentMonth);
+      await setStoredInt('goalsCompletedThisMonth', 1);
+      debugPrint('New month detected. Reset monthly count.');
+    } else {
+      await incrementStoredInt('goalsCompletedThisMonth');
+      debugPrint('Same month. Incremented monthly goal count.');
+    }
+  }
+
+  Future<void> checkAndUpdateGoalAchievementStats(GoalSet goal) async {
+    final bool isHighComplexity = goal.complexity.toLowerCase() == 'high';
+    final bool isHighEffort = goal.effort.toLowerCase() == 'high';
+    final bool isHighMotivation = goal.motivation.toLowerCase() == 'high';
+    final bool isAllHigh = isHighComplexity && isHighEffort && isHighMotivation;
+
+    if (goal.points >= 100) {
+      await incrementStoredInt('goalsCompletedWithHighPoints');
+    }
+    if (isHighComplexity) {
+      await incrementStoredInt('goalsCompletedWithHighComplexity');
+    }
+    if (isHighEffort) {
+      await incrementStoredInt('goalsCompletedWithHighEffort');
+    }
+    if (isHighMotivation) {
+      await incrementStoredInt('goalsCompletedWithHighMotivation');
+    }
+    if (isAllHigh) {
+      await incrementStoredInt('goalsCompletedWithAllHigh');
+    }
+    if (goal.time >= 150) {
+      await incrementStoredInt('goalsCompletedWithHighTimeRequirement');
+    }
+    if (goal.steps >= 15) {
+      await incrementStoredInt('goalsCompletedWithManySteps');
+    }
+
+    // Check if completed at least 20 hours before deadline
+    if (goal.deadline.isNotEmpty) {
+      try {
+        final DateTime deadlineDate = DateFormat('dd MMMM yyyy HH:mm').parse(goal.deadline);
+        final DateTime now = DateTime.now();
+        final Duration difference = deadlineDate.difference(now);
+        if (difference.inHours >= 20) {
+          await incrementStoredInt('goalsCompletedEarly');
+        }
+      } catch (e) {
+        debugPrint('Invalid deadline format: ${goal.deadline}');
+      }
+    }
+  }
+
+
+  bool _isPreviousWeek(String storedWeek, String currentWeek) {
+    if (storedWeek.isEmpty || currentWeek.isEmpty) return false;
+
+    try {
+      final DateTime current = DateFormat('yyyy-MM-dd').parse(currentWeek);
+      final DateTime previousWeekStart = current.subtract(const Duration(days: 7));
+      final String previousWeek = _getWeekIdentifier(previousWeekStart);
+      return storedWeek == previousWeek;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  String _getWeekIdentifier(DateTime date) {
+    final int weekday = date.weekday;
+    final DateTime startOfWeek = date.subtract(Duration(days: weekday - 1));
+    debugPrint(startOfWeek.toString());
+    return DateFormat('yyyy-MM-dd').format(startOfWeek);
+  }
+
+
+
+
 }

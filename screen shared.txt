@@ -34,6 +34,10 @@ class _NewScreenState extends BaseState<NewScreen> {
   Widget build(BuildContext context) {
     // TODO: implement build
 
+    if (!_themeLoaded) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
     return Theme(
           data: _themeData,
           child: Scaffold(

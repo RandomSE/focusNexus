@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:focusNexus/utils/BaseState.dart';
 
+import '../models/classes/achievement_tracking_variables.dart';
 import '../models/classes/theme_bundle.dart';
 import '../utils/notifier.dart';
 import '../services/achievement_service.dart';
@@ -34,6 +35,7 @@ class _DashboardScreenState extends BaseState<DashboardScreen> {
 
   Future<void> _loadDashboard() async {
     await _loadPoints();
+    await AchievementTrackingVariables().initializeIfNeeded();
     final storedType = await rewardType;
     final themeBundle = await initializeScreenTheme();
     await setThemeDataScreen(themeBundle, storedType);

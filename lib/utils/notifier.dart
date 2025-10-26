@@ -207,7 +207,7 @@ class GoalNotifier {
 
   static Future<void> cancelAiEncouragementNotification(int goalId) async {
     await _plugin.cancel(goalId + 4); // 12-hours before, all -  AI encouragement
-    debugPrint('Goal canceled due to step progress addition.');
+    debugPrint('AI encouragement for goal canceled due to step progress addition.');
   }
 
   static Future<void> cancelDailyAffirmationsNotification() async {

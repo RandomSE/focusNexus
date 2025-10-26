@@ -1,5 +1,6 @@
 // lib/services/achievement_tracking_service.dart
 import 'dart:convert';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// Global tracking service for goal-related achievement progress.
@@ -34,6 +35,19 @@ class AchievementTrackingVariables {
   String lastMonthGoalWasCompleted = '';
   int consecutiveDaysWithGoalsCompleted = 0;
   int consecutiveWeeksWithGoalsCompleted = 0;
+
+  /// Ensures tracking variables are initialized once on app startup.
+  Future<void> initializeIfNeeded() async {
+    final existing = await _storage.read(key: _key);
+    if (existing == null) {
+      await reset(); // creates and saves default values
+      await _storage.write(key: _key, value: jsonEncode(_toJson()));
+      debugPrint('Achievement tracking initialized with default values.');
+    } else {
+      await load(); // loads existing values
+      debugPrint('Achievement tracking loaded from storage.');
+    }
+  }
 
   /// load existing data
   Future<void> load() async {
