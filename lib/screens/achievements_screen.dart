@@ -59,23 +59,29 @@ class _AchievementScreenState extends BaseState<AchievementScreen> {
           child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: visibleAchievements.map((achievement) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: CommonUtils.buildElevatedButton(
-                    achievement.title,
-                    ElevatedButton.styleFrom( // TODO: Check if I can instead just make this neat.
-                      backgroundColor: _primaryColor,
-                      foregroundColor: _secondaryColor,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+              children: [
+                Text(
+                  'Incomplete goals',
+                  style: _textStyle,
+                ),
+                ...visibleAchievements.map((achievement) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: CommonUtils.buildElevatedButton(
+                      achievement.title,
+                      ElevatedButton.styleFrom(
+                        backgroundColor: _primaryColor,
+                        foregroundColor: _secondaryColor,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
+                          () => AchievementService.viewAchievement(int.parse(achievement.id)),
                     ),
-                        () => AchievementService.viewAchievement(int.parse(achievement.id)),
-                  ),
-                );
-              }).toList(),
+                  );
+                }).toList(),
+              ],
             ),
           ),
         ),
@@ -94,6 +100,7 @@ class _AchievementScreenState extends BaseState<AchievementScreen> {
     setState(() {
       visibleAchievements = achievementService.all
           .where((a) => !a.isSecret)
+          .where((a) => !a.isCompleted)
           .toList();
     });
 
