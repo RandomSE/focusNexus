@@ -65,13 +65,28 @@ class CommonUtils {
     );
   }
 
-  static ElevatedButton buildElevatedButton(String text, ButtonStyle buttonStyle,  Function() onPressed) {
+  static ElevatedButton buildElevatedButton(
+      String text,
+      Color primaryColor,
+      Color secondaryColor,
+      double paddingPixels,
+      double radius,
+      VoidCallback? onPressed, //  nullable, for conditional buttons.
+      ) {
     return ElevatedButton(
       onPressed: onPressed,
-      style: buttonStyle,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: primaryColor,
+        foregroundColor: secondaryColor,
+        padding: EdgeInsets.symmetric(vertical: paddingPixels),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radius),
+        ),
+      ),
       child: Text(text),
     );
   }
+
 
 
 }

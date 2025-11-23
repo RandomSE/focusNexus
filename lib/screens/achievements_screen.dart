@@ -68,16 +68,8 @@ class _AchievementScreenState extends BaseState<AchievementScreen> {
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 6),
                     child: CommonUtils.buildElevatedButton(
-                      achievement.title,
-                      ElevatedButton.styleFrom(
-                        backgroundColor: _primaryColor,
-                        foregroundColor: _secondaryColor,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                          () => AchievementService.viewAchievement(int.parse(achievement.id)),
+                      achievement.title, _primaryColor, _secondaryColor, 14, 10,
+                          () => AchievementService.viewAchievement(achievement.id, _themeData, _primaryColor, _secondaryColor, _textStyle, _buttonStyle, context)
                     ),
                   );
                 }).toList(),

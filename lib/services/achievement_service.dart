@@ -1,21 +1,37 @@
 // lib/services/achievement_service.dart
 import 'dart:convert';
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/classes/achievement.dart';
 import '../models/classes/achievement_tracking_variables.dart';
+import '../views/AchievementDetailView.dart';
 
 class AchievementService {
   static const _key = 'achievements';
-  final _storage = const FlutterSecureStorage();
+  static final _storage = const FlutterSecureStorage();
+  static const _numOfAchievements = 99;
 
-  List<Achievement> _cachedAchievements = [];
+  static List<Achievement> _cachedAchievements = [];
+  static late List<int> achievementRepetitions;
+
+  static late Map<List<int>, String> achievementVariableMap;
+
+  List<int> repetitionsCreationAndCompletion = [10, 100, 1000];
+  List<int> repetitionsActive = [10, 20];
+  List<int> repetitionsSingleDay = [3, 5, 10];
+  List<int> repetitionsSingleWeek = [5, 10, 20];
+  List<int> repetitionsSingleMonth = [10, 25, 50];
+  List<int> repetitionsHigh = [3, 5, 10, 25, 50, 100, 250, 500, 1000];
+  List<int> repetitionsAllHigh = [3, 5, 10, 25, 50, 100,250];
+  List<int> dailyStreakRepetitions = [2, 3, 7, 14, 30];
+  List<int> weeklyStreakRepetitions = [2, 4, 8, 12, 16, 20];
 
   /// Initialize cache from storage
   Future<void> initialize() async {
-    await _storage.write(key: _key, value: ''); // clear storage (for testing) TODO: remove this after adding all the unique achievements.
+    await setInitializationPrerequisites();
+    //await _storage.write(key: _key, value: ''); // clear storage (for testing) TODO: remove this after adding all the unique achievements.
     final jsonStr = await _storage.read(key: _key);
-    if (jsonStr == null || jsonStr == '') { // no achievements in storage
+    if (jsonStr == null || jsonStr == '') { // no achievements in storage. It can be assumed that the user would have no achievement progress at this point.
       debugPrint("No achievements. creating");
       _cachedAchievements = [];
       await initializeAchievements();
@@ -26,16 +42,63 @@ class AchievementService {
           decoded.map((e) => Achievement.fromJson(e)).toList();
     }
     await AchievementTrackingVariables().load();
+    for (int i = 1; i<= _numOfAchievements; i++){
+      await updateProgress(i.toString());
+    }
   }
 
   /// Returns all cached achievements
   List<Achievement> get all => _cachedAchievements;
 
   /// Save all cached achievements back to storage
-  Future<void> _saveToStorage() async {
+  static Future<void> _saveToStorage() async {
     final encoded =
     jsonEncode(_cachedAchievements.map((a) => a.toJson()).toList());
     await _storage.write(key: _key, value: encoded);
+  }
+
+  /// sets pre-requisites needed during initialization
+  Future<void> setInitializationPrerequisites () async {
+
+
+    achievementRepetitions = [
+      ...repetitionsCreationAndCompletion,
+      ...repetitionsActive,
+      ...repetitionsCreationAndCompletion,
+      ...repetitionsSingleDay,
+      ...repetitionsSingleWeek,
+      ...repetitionsSingleMonth,
+      ...repetitionsHigh,
+      ...repetitionsHigh,
+      ...repetitionsHigh,
+      ...repetitionsHigh,
+      ...repetitionsHigh,
+      ...repetitionsHigh,
+      ...repetitionsAllHigh,
+      ...repetitionsHigh,
+      ...dailyStreakRepetitions,
+      31, // secret achievement
+      ...weeklyStreakRepetitions,
+    ];
+
+    achievementVariableMap = {
+      [1, 2, 3]: 'totalGoalsCreated',
+      [4, 5]: 'totalGoalsActive',
+      [6, 7, 8]: 'totalGoalsCompleted',
+      [9, 10, 11]: 'goalsCompletedToday',
+      [12, 13, 14]: 'goalsCompletedThisWeek',
+      [15, 16, 17]: 'goalsCompletedThisMonth',
+      [18, 19, 20, 21, 22, 23, 24, 25, 26]: 'goalsCompletedWithHighPoints',
+      [27, 28, 29, 30, 31, 32, 33, 34, 35]: 'goalsCompletedWithHighComplexity',
+      [36, 37, 38, 39, 40, 41, 42, 43, 44]: 'goalsCompletedWithHighEffort',
+      [45, 46, 47, 48, 49, 50, 51, 52, 53]: 'goalsCompletedWithHighMotivation',
+      [54, 55, 56, 57, 58, 59, 60, 61, 62]: 'goalsCompletedWithHighTimeRequirement',
+      [63, 64, 65, 66, 67, 68, 69, 70, 71]: 'goalsCompletedWithManySteps',
+      [72, 73, 74, 75, 76, 77, 78]: 'goalsCompletedWithAllHigh',
+      [79, 80, 81, 82, 83, 84, 85, 86, 87]: 'goalsCompletedEarly',
+      [88, 89, 90, 91, 92, 93]: 'consecutiveDaysWithGoalsCompleted',
+      [94, 95, 96, 97, 98, 99]: 'consecutiveWeeksWithGoalsCompleted',
+    };
   }
 
   /// Add a new achievement (if it doesn't already exist)
@@ -48,7 +111,13 @@ class AchievementService {
   }
 
   Future<void> addBulkAchievements(
-      int startingId, String titlePrefix, bool isSecret, String taskPrefix, List<String> pointRewards, List<String> repetitions, int goalsToCreate,
+      int startingId,
+      String titlePrefix,
+      bool isSecret,
+      String taskPrefix,
+      List<int> pointRewards,
+      List<int> repetitions,
+      int goalsToCreate,
       ) async {
     const List<String> romanNumerals = [
       'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX'
@@ -57,8 +126,9 @@ class AchievementService {
     for (int i = 0; i < goalsToCreate; i++) {
       final String id = (startingId + i).toString();
       final String title = '$titlePrefix${romanNumerals[i]}';
-      final String reward = pointRewards[i];
-      final String task = '$taskPrefix: ${repetitions[i]}';
+      final String reward = '${pointRewards[i]} points';
+      // Instead of "prefix: repetition", make it flow naturally
+      final String task = '$taskPrefix ${repetitions[i].toString()} times';
 
       await addAchievement(Achievement(
         id: id,
@@ -74,68 +144,35 @@ class AchievementService {
   Future<void> initializeAchievements() async {
     debugPrint('Achievements not initialized — creating.');
 
+    const int numBasicAchievements = 3;
     const int numHighAchievements = 9;
+    List<int> pointRewardsCreationAndCompletion = [100, 250, 1000];
+    List<int> pointRewardsSingleDay = [100, 250, 500];
+    List<int> pointRewardsSingleWeek = [250, 500, 1000];
+    List<int> pointRewardsSingleMonth = [250, 500, 1000];
+    List<int> pointRewardsHigh = [100, 200, 250, 500, 750, 1000, 1500, 2000, 3000];
+    List<int> pointRewardsAllHigh = [1000, 2000, 3000, 4000, 5000, 7500, 10000];
+    List<int> pointRewardsDailyStreak = [100, 1000, 250,  500, 1000];
+    List<int> pointRewardsWeeklyStreak = [250, 500, 1000, 1500, 2000, 2500,];
 
-    List<String> pointRewardsHigh = [
-      '100 points', '200 points', '250 points', '500 points',
-      '750 points', '1000 points', '1500 points', '2000 points', '3000 points'
-    ];
+    // Goal creation (1-3)
+    await addBulkAchievements(1, 'Goal Setter ', false, 'Create goals', pointRewardsCreationAndCompletion, repetitionsCreationAndCompletion, numBasicAchievements);
 
-    List<String> repetitionsHigh = [
-      '3', '5', '10', '25', '50', '100', '250', '500', '1000'
-    ];
+    // Active goals (4-5)
+    await addAchievement(Achievement(id: '4', title: 'Juggler I', reward: '100 points', task: 'Have 10 active goals simultaneously', isSecret: true));
+    await addAchievement(Achievement(id: '5', title: 'Juggler II', reward: '250 points', task: 'Have 20 active goals simultaneously', isSecret: true));
 
-    List<String> pointRewardsAllHigh = [
-      '1000 points', '2000 points', '3000 points', '4000 points', '5000 points', '7500 points',
-      '10000 points'
-    ];
+    // Completed goals (6-8)
+    await addBulkAchievements(6, 'Completionist ', false, 'Complete goals', pointRewardsCreationAndCompletion, repetitionsCreationAndCompletion, numBasicAchievements);
 
-    List<String> repetitionsAllHigh = [
-      '3', '5', '10', '25', '50', '100', '250'
-    ];
+    // Completions in a single day (9-11)
+    await addBulkAchievements(9, 'Daily Driver ', false, 'Complete goals in one day', pointRewardsSingleDay, repetitionsSingleDay, numBasicAchievements);
 
-    List<String> pointRewardsDailyStreak = [
-      '100 points', '1000 points', '250 points',  '500 points', '1000 points'
-    ];
+    // Completions in a single week (12-14)
+    await addBulkAchievements(12, 'Weekly Warrior ', false, 'Complete goals in one calendar week', pointRewardsSingleWeek, repetitionsSingleWeek, numBasicAchievements);
 
-    List<String> dailyStreakRepetitions = [
-      '2', '3', '7', '14', '30'
-    ];
-
-    List<String> pointRewardsWeeklyStreak = [
-      '250 points', '500 points', '1000 points', '1500 points', '2000 points', '2500 points',
-    ];
-
-    List<String> weeklyStreakRepetitions = ['2', '4', '8', '12', '16', '20'];
-
-    // Goal creation
-    await addAchievement(Achievement(id: '1', title: 'Goal Setter I', reward: '100 points', task: 'Create 10 goals', isSecret: false));
-    await addAchievement(Achievement(id: '2', title: 'Goal Setter II', reward: '250 points', task: 'Create 100 goals', isSecret: false));
-    await addAchievement(Achievement(id: '3', title: 'Goal Setter III', reward: '1000 points', task: 'Create 1000 goals', isSecret: false));
-
-    // Active goals
-    await addAchievement(Achievement(id: '4', title: 'Juggler I', reward: '100 points', task: 'Have 10 active goals', isSecret: false));
-    await addAchievement(Achievement(id: '5', title: 'Juggler II', reward: '250 points', task: 'Have 20 active goals', isSecret: false));
-
-    // Completed goals
-    await addAchievement(Achievement(id: '6', title: 'Completionist I', reward: '100 points', task: 'Complete 10 goals', isSecret: false));
-    await addAchievement(Achievement(id: '7', title: 'Completionist II', reward: '250 points', task: 'Complete 100 goals', isSecret: false));
-    await addAchievement(Achievement(id: '8', title: 'Completionist III', reward: '1000 points', task: 'Complete 1000 goals', isSecret: false));
-
-    // Daily completions
-    await addAchievement(Achievement(id: '9', title: 'Daily Driver I', reward: '100 points', task: 'Complete 3 goals in one day', isSecret: false));
-    await addAchievement(Achievement(id: '10', title: 'Daily Driver II', reward: '250 points', task: 'Complete 5 goals in one day', isSecret: false));
-    await addAchievement(Achievement(id: '11', title: 'Daily Driver III', reward: '500 points', task: 'Complete 10 goals in one day', isSecret: false));
-
-    // Weekly completions
-    await addAchievement(Achievement(id: '12', title: 'Weekly Warrior I', reward: '250 points', task: 'Complete 5 goals in one week', isSecret: false));
-    await addAchievement(Achievement(id: '13', title: 'Weekly Warrior II', reward: '500 points', task: 'Complete 10 goals in one week', isSecret: false));
-    await addAchievement(Achievement(id: '14', title: 'Weekly Warrior III', reward: '1000 points', task: 'Complete 20 goals in one week', isSecret: false));
-
-    // Monthly completions
-    await addAchievement(Achievement(id: '15', title: 'Monthly Momentum I', reward: '250 points', task: 'Complete 10 goals in one month', isSecret: false));
-    await addAchievement(Achievement(id: '16', title: 'Monthly Momentum II', reward: '500 points', task: 'Complete 25 goals in one month', isSecret: false));
-    await addAchievement(Achievement(id: '17', title: 'Monthly Momentum III', reward: '1000 points', task: 'Complete 50 goals in one month', isSecret: false));
+    // Completions in a single month (15-17)
+    await addBulkAchievements(15, 'Monthly Momentum ', false, 'Complete goals in one calendar month', pointRewardsSingleMonth, repetitionsSingleMonth, numBasicAchievements);
 
     // High-point goals -> 18-26
     await addBulkAchievements(18, 'Power Player ', false, 'Complete high-point goals', pointRewardsHigh, repetitionsHigh, numHighAchievements);
@@ -162,11 +199,11 @@ class AchievementService {
     await addBulkAchievements(79, 'Early Finisher ', false, 'Complete goals at least 20 hours before deadline times ', pointRewardsHigh,  repetitionsHigh, numHighAchievements);
 
     // Daily Streak based achievements -> 88-93
-    await addBulkAchievements(88, 'Consistent Completionist ', false, 'Complete goals every day for days', pointRewardsDailyStreak, dailyStreakRepetitions, 5);
+    await addBulkAchievements(88, 'Consistent Completionist ', false, 'Complete at least 1 goal a day', pointRewardsDailyStreak, dailyStreakRepetitions, 5);
     await addAchievement(Achievement(id: '93', title: '31-Day Club', reward: '1000 points', task: 'Complete goals on 31 days in a row', isSecret: true));
 
     // Weekly Streak based achievements -> 94 - 99
-    await addBulkAchievements(94, 'Weekly Streak Master ', false, 'Complete goals every week for weeks', pointRewardsWeeklyStreak, weeklyStreakRepetitions, 6);
+    await addBulkAchievements(94, 'Weekly Streak Master ', false, 'Complete at least 1 goal a week', pointRewardsWeeklyStreak, weeklyStreakRepetitions, 6);
 
     // Special achievement for 100? TODO
 
@@ -191,7 +228,7 @@ class AchievementService {
   }
 
   /// Retrieve one achievement by ID
-  Achievement? getById(String id) {
+  static Achievement? getById(String id) {
     try {
       return _cachedAchievements.firstWhere((a) => a.id == id);
     } catch (_) {
@@ -199,6 +236,51 @@ class AchievementService {
       return null;
     }
   }
+
+  /// update progress for an achievement
+  static Future<void> updateProgress(String id) async {
+    try {
+      final index = _cachedAchievements.indexWhere((a) => a.id == id);
+      if (index == -1) {
+        debugPrint('updateProgress: achievement not found. id: $id');
+        return;
+      }
+
+      final variableName = getVariableForAchievement(id);
+      if (variableName == null) {
+        debugPrint('No tracking variable found for achievement $id');
+        return;
+      }
+
+      final repetitionsNeeded = achievementRepetitions[index];
+      final currentRepetitions = int.parse(await getAchievementTrackingVariable(variableName));
+      final achievementProgress = double.parse(((currentRepetitions / repetitionsNeeded) * 100).toStringAsFixed(1));
+
+      // Update the cached achievement
+      final currentAchievement = _cachedAchievements[index];
+      if (_cachedAchievements[index].progress >= 100 && achievementProgress <=_cachedAchievements[index].progress) { // For any streak / time based ones that reset. This is so if you fulfilled requirements of an achievement but didn't complete it it doesn't reset.
+        debugPrint('Achievement progress will not decrease here.');
+        return;
+      }
+      _cachedAchievements[index] = Achievement(
+        id: currentAchievement.id,
+        title: currentAchievement.title,
+        reward: currentAchievement.reward,
+        task: currentAchievement.task,
+        dateCompleted: currentAchievement.dateCompleted,
+        isCompleted: currentAchievement.isCompleted, // User must manually complete achievement.
+        isSecret: currentAchievement.isSecret,
+        progress: achievementProgress,
+      );
+
+      // Persist changes
+      _saveToStorage();
+      debugPrint('Achievement successfully saved. title: ${_cachedAchievements[index].title}, progress: ${_cachedAchievements[index].progress}%');
+    } catch (e) {
+      debugPrint('updateProgress: failed. id: $id, error: $e');
+    }
+  }
+
 
 
   /// Remove an achievement by ID
@@ -213,16 +295,52 @@ class AchievementService {
     await _storage.delete(key: _key);
   }
 
-  Future<String> getAchievementTrackingVariable(String key, String value) async {
+  static Future<String> getAchievementTrackingVariable(String key) async {
     final String? storedValue = await _storage.read(key: key);
     if (storedValue == null || storedValue == '') {
-      debugPrint('getAchievementTrackingVariable: no value found for key $key and value $value');
+      debugPrint('getAchievementTrackingVariable: no value found for key $key');
       return '';
     }
     return storedValue;
   }
 
-  static void viewAchievement(int ID) {
-    // TODO: This should show the achievement info.
+  static void viewAchievement(String id,
+      ThemeData themeData,
+      Color primaryColor,
+      Color secondaryColor,
+      TextStyle textStyle,
+      ButtonStyle buttonStyle,
+      BuildContext context) {
+    final achievement = getById(id);
+    if (achievement == null) {
+      debugPrint('Achievement not found: $id');
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AchievementDetailView(
+          achievement: achievement,
+          themeData: themeData,
+          primaryColor: primaryColor,
+          secondaryColor: secondaryColor,
+          textStyle: textStyle,
+          buttonStyle: buttonStyle,
+        ),
+      ),
+    );
   }
+
+  static String? getVariableForAchievement(String id) {
+    final int achievementId = int.parse(id);
+    for (final entry in achievementVariableMap.entries) {
+      if (entry.key.contains(achievementId)) {
+        return entry.value;
+      }
+    }
+    return null;
+  }
+
+
 }
