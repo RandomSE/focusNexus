@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:focusNexus/utils/BaseState.dart';
 import '../utils/common_utils.dart';
 
@@ -21,9 +20,9 @@ class _AchievementScreenState extends BaseState<AchievementScreen> {
   late TextStyle _textStyle;
   late ButtonStyle _buttonStyle;
   bool _themeLoaded = false;
-  final _storage = const FlutterSecureStorage();
   final achievementService = AchievementService();
-  late List<Achievement> visibleAchievements;
+  late List<Achievement> inProgressAchievements;
+  late List<Achievement> completedAchievements;
 
 
   @override
@@ -38,7 +37,18 @@ class _AchievementScreenState extends BaseState<AchievementScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return Theme(
+    return PopScope<Object?>(
+      canPop: true,
+      onPopInvokedWithResult: (bool didPop, Object? result) async {
+        if (didPop) {
+          Future.microtask(() async {
+            Navigator.of(context).pushReplacementNamed('dashboard');
+            debugPrint("Dashboard re-opened and updated after exiting achievements"); // When completing achievements, you update points. This is to reflect that visually.
+          });
+        }
+      },
+
+    child: Theme(
       data: _themeData,
       child: Scaffold(
         appBar: AppBar(
@@ -61,23 +71,38 @@ class _AchievementScreenState extends BaseState<AchievementScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Incomplete goals',
+                  'In-progress achievements',
                   style: _textStyle,
                 ),
-                ...visibleAchievements.map((achievement) {
+                ...inProgressAchievements.map((achievement) {
+                  final buttonColor = achievement.progress >= 100 ? Colors.deepPurple : _primaryColor;
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 6),
                     child: CommonUtils.buildElevatedButton(
-                      achievement.title, _primaryColor, _secondaryColor, 14, 10,
+                      achievement.title, buttonColor, _secondaryColor, 14, 10,
                           () => AchievementService.viewAchievement(achievement.id, _themeData, _primaryColor, _secondaryColor, _textStyle, _buttonStyle, context)
                     ),
                   );
-                }).toList(),
+                }),
+                Text(
+                  'Completed achievements',
+                  style: _textStyle,
+                ),
+                ...completedAchievements.map((achievement) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: CommonUtils.buildElevatedButton(
+                        achievement.title, _primaryColor, _secondaryColor, 14, 10,
+                            () => AchievementService.viewAchievement(achievement.id, _themeData, _primaryColor, _secondaryColor, _textStyle, _buttonStyle, context)
+                    ),
+                  );
+                }),
               ],
             ),
           ),
         ),
       ),
+    )
     );
   }
 
@@ -90,13 +115,19 @@ class _AchievementScreenState extends BaseState<AchievementScreen> {
 
 
     setState(() {
-      visibleAchievements = achievementService.all
+      inProgressAchievements = achievementService.all
           .where((a) => !a.isSecret)
           .where((a) => !a.isCompleted)
           .toList();
     });
 
-    debugPrint('Loaded ${visibleAchievements.length} visible achievements.');
+    setState(() {
+      completedAchievements = achievementService.all
+          .where((a) => a.isCompleted)
+          .toList();
+    });
+
+    debugPrint('Loaded ${inProgressAchievements.length} visible achievements.');
   }
 
 

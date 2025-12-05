@@ -12,6 +12,7 @@ class AchievementService {
   static const _numOfAchievements = 99;
 
   static List<Achievement> _cachedAchievements = [];
+  List<Achievement> get all => _cachedAchievements;
   static late List<int> achievementRepetitions;
 
   static late Map<List<int>, String> achievementVariableMap;
@@ -29,7 +30,6 @@ class AchievementService {
   /// Initialize cache from storage
   Future<void> initialize() async {
     await setInitializationPrerequisites();
-    //await _storage.write(key: _key, value: ''); // clear storage (for testing) TODO: remove this after adding all the unique achievements.
     final jsonStr = await _storage.read(key: _key);
     if (jsonStr == null || jsonStr == '') { // no achievements in storage. It can be assumed that the user would have no achievement progress at this point.
       debugPrint("No achievements. creating");
@@ -38,8 +38,7 @@ class AchievementService {
     } else {
       debugPrint('Achievements exist.');
       final List<dynamic> decoded = jsonDecode(jsonStr);
-      _cachedAchievements =
-          decoded.map((e) => Achievement.fromJson(e)).toList();
+      _cachedAchievements = decoded.map((e) => Achievement.fromJson(e)).toList();
     }
     await AchievementTrackingVariables().load();
     for (int i = 1; i<= _numOfAchievements; i++){
@@ -47,13 +46,9 @@ class AchievementService {
     }
   }
 
-  /// Returns all cached achievements
-  List<Achievement> get all => _cachedAchievements;
-
   /// Save all cached achievements back to storage
   static Future<void> _saveToStorage() async {
-    final encoded =
-    jsonEncode(_cachedAchievements.map((a) => a.toJson()).toList());
+    final encoded = jsonEncode(_cachedAchievements.map((a) => a.toJson()).toList());
     await _storage.write(key: _key, value: encoded);
   }
 
@@ -214,27 +209,49 @@ class AchievementService {
     final index = _cachedAchievements.indexWhere((a) => a.id == id);
     if (index != -1 && !_cachedAchievements[index].isCompleted) {
       final updated = Achievement(
-        id: _cachedAchievements[index].id,
-        title: _cachedAchievements[index].title,
-        reward: _cachedAchievements[index].reward,
-        task: _cachedAchievements[index].task,
-        dateCompleted: DateTime.now(),
-        isCompleted: true,
-        isSecret: false // once it's completed it's no longer secret.
+          id: _cachedAchievements[index].id,
+          title: _cachedAchievements[index].title,
+          reward: _cachedAchievements[index].reward,
+          task: _cachedAchievements[index].task,
+          dateCompleted: DateTime.now(),
+          isCompleted: true,
+          isSecret: false // once it's completed it's no longer secret.
       );
       _cachedAchievements[index] = updated;
       await _saveToStorage();
     }
   }
 
-  /// Retrieve one achievement by ID
-  static Achievement? getById(String id) {
-    try {
-      return _cachedAchievements.firstWhere((a) => a.id == id);
-    } catch (_) {
-      debugPrint('getByID: failed. id: $id');
-      return null;
+
+
+
+  static void viewAchievement(String id,
+      ThemeData themeData,
+      Color primaryColor,
+      Color secondaryColor,
+      TextStyle textStyle,
+      ButtonStyle buttonStyle,
+      BuildContext context) {
+    final achievement = getById(id);
+    if (achievement == null) {
+      debugPrint('Achievement not found: $id');
+      return;
     }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AchievementDetailView(
+          achievement: achievement,
+          themeData: themeData,
+          primaryColor: primaryColor,
+          secondaryColor: secondaryColor,
+          textStyle: textStyle,
+          buttonStyle: buttonStyle,
+          achievementService: AchievementService(),
+        ),
+      ),
+    );
   }
 
   /// update progress for an achievement
@@ -281,12 +298,49 @@ class AchievementService {
     }
   }
 
-
-
   /// Remove an achievement by ID
   Future<void> removeAchievement(String id) async {
     _cachedAchievements.removeWhere((a) => a.id == id);
     await _saveToStorage();
+  }
+
+  /// Complete an achievement by ID
+  Future<void> completeAchievement(String id) async {
+    debugPrint('Achievement completed for id: $id');
+    final index = _cachedAchievements.indexWhere((a) => a.id == id);
+    final currentAchievement = _cachedAchievements[index];
+    if (currentAchievement.isCompleted) {
+      debugPrint('This achievement is already completed!');
+      return;
+    }
+    _cachedAchievements[index] = Achievement(
+      id: currentAchievement.id,
+      title: currentAchievement.title,
+      reward: currentAchievement.reward,
+      task: currentAchievement.task,
+      dateCompleted: currentAchievement.dateCompleted,
+      isCompleted: true,
+      isSecret: currentAchievement.isSecret,
+      progress: currentAchievement.progress,
+    );
+    String reward = currentAchievement.reward;
+    if (reward.contains('points')) {
+      final pointsToAdd = int.tryParse(reward.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+      await _addPoints(pointsToAdd);
+    } else {
+      // TODO: special rewards
+      debugPrint('Special reward spotted. ID: $id reward: $reward');
+    }
+    await _saveToStorage();
+    debugPrint('Achievement successfully saved. title: ${_cachedAchievements[index].title}, progress: ${_cachedAchievements[index].progress}%');
+  }
+
+  /// Safely adds points to the user's total in storage. Separate to goal's addition of points.
+  static Future<void> _addPoints(int pointsToAdd) async {
+    if (pointsToAdd <= 0) return;
+    final currentPointsString = await _storage.read(key: 'points');
+    final currentPoints = int.tryParse(currentPointsString ?? '0') ?? 0;
+    await _storage.write(key: 'points', value: (currentPoints + pointsToAdd).toString());
   }
 
   /// Clear all achievements (for testing / reset)
@@ -295,6 +349,17 @@ class AchievementService {
     await _storage.delete(key: _key);
   }
 
+  /// Retrieve one achievement by ID
+  static Achievement? getById(String id) {
+    try {
+      return _cachedAchievements.firstWhere((a) => a.id == id);
+    } catch (_) {
+      debugPrint('getByID: failed. id: $id');
+      return null;
+    }
+  }
+
+
   static Future<String> getAchievementTrackingVariable(String key) async {
     final String? storedValue = await _storage.read(key: key);
     if (storedValue == null || storedValue == '') {
@@ -302,34 +367,6 @@ class AchievementService {
       return '';
     }
     return storedValue;
-  }
-
-  static void viewAchievement(String id,
-      ThemeData themeData,
-      Color primaryColor,
-      Color secondaryColor,
-      TextStyle textStyle,
-      ButtonStyle buttonStyle,
-      BuildContext context) {
-    final achievement = getById(id);
-    if (achievement == null) {
-      debugPrint('Achievement not found: $id');
-      return;
-    }
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => AchievementDetailView(
-          achievement: achievement,
-          themeData: themeData,
-          primaryColor: primaryColor,
-          secondaryColor: secondaryColor,
-          textStyle: textStyle,
-          buttonStyle: buttonStyle,
-        ),
-      ),
-    );
   }
 
   static String? getVariableForAchievement(String id) {
@@ -341,6 +378,7 @@ class AchievementService {
     }
     return null;
   }
+
 
 
 }
