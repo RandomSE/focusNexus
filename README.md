@@ -1,16 +1,11 @@
 # focusNexus
 
-AI productivity assistant for ADHD, memory, and prioritization
 
-## Getting Started
+A cross-platform productivity app built with **Flutter/Dart** that helps users stay motivated through **achievement tracking, goal management, and instant feedback**. Designed with accessibility and inclusivity in mind, the app provides clear progress communication and supportive feedback tailored for neurodivergent users.
 
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+##  Features
+-  Achievement tracking with streaks, rewards, and secure persistence
+-  Goal management system with progress indicators
+-  Instant feedback via SnackBars and automatic UI refresh
+-  Accessible UI themes with customizable styling
+-  Secure storage for saving achievements and points
