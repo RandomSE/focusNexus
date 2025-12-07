@@ -275,8 +275,9 @@ class AchievementService {
 
       // Update the cached achievement
       final currentAchievement = _cachedAchievements[index];
+      final currentProgress = currentAchievement.progress;
       if (_cachedAchievements[index].progress >= 100 && achievementProgress <=_cachedAchievements[index].progress) { // For any streak / time based ones that reset. This is so if you fulfilled requirements of an achievement but didn't complete it it doesn't reset.
-        debugPrint('Achievement progress will not decrease here.');
+        debugPrint('Achievement progress will not decrease here for id: $id.');
         return;
       }
       _cachedAchievements[index] = Achievement(
@@ -291,8 +292,10 @@ class AchievementService {
       );
 
       // Persist changes
-      _saveToStorage();
-      debugPrint('Achievement successfully saved. title: ${_cachedAchievements[index].title}, progress: ${_cachedAchievements[index].progress}%');
+      if (currentProgress != achievementProgress) { // only save if there's a change
+        _saveToStorage();
+        debugPrint('Achievement successfully saved. title: ${_cachedAchievements[index].title}, progress: ${_cachedAchievements[index].progress}%');
+      }
     } catch (e) {
       debugPrint('updateProgress: failed. id: $id, error: $e');
     }

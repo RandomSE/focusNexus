@@ -587,6 +587,37 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
     }
   }
 
+  void _preSaveTemplate(String templateCategory, String templateComplexity, String templateEffort, String templateMotivation, GlobalKey<FormState> templateFormKey) {
+    if (!templateFormKey.currentState!.validate()) {
+      return; // stop if validation fails
+    }
+    if(_templateSteps.text.trim() == '') {
+      _templateSteps.text = '1';
+    }
+    final name = _templateName.text.trim();
+    final data = {
+      'category': templateCategory,
+      'complexity': templateComplexity,
+      'effort': templateEffort,
+      'motivation': templateMotivation,
+      'time': _templateTime.text.trim(),
+      'steps': _templateSteps.text.trim(),
+      'Hours to complete': _templateDeadline.text.trim(),
+    };
+
+    if (_templateDetails.containsKey(name)) {
+      setState(() => _templateDetails[name] = data);
+    } else {
+      setState(() => _userTemplates[name] = data);
+    }
+    _saveTemplates();
+
+    _templateName.clear();
+    _templateTime.clear();
+    _templateSteps.text = '1';
+    _templateDeadline.clear();
+  }
+
   void _viewGoalDetails(Map<String, dynamic> goal) {
     showDialog(
       context: context,
@@ -655,164 +686,52 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    TextFormField(
-                      controller: _templateName,
-                      style: _textStyle,
-                      decoration: InputDecoration(
-                        labelText: 'Template Name (required)',
-                        labelStyle: _textStyle,
-                        filled: true,
-                        fillColor: _secondaryColor,
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
+                    CommonUtils.buildTextFormField(
+                      _templateName, 'Template Name (required)', _textStyle, _secondaryColor, true, (value) {
                         if (value == null || value.trim().isEmpty) {
                           return 'Template name is required';
                         }
                         return null;
-                      },
+                        },
                     ),
-                    DropdownButtonFormField(
-                      dropdownColor: _secondaryColor,
-                      value: templateCategory,
-                      decoration: InputDecoration(
-                        labelText: 'Category',
-                        labelStyle: _textStyle,
-                      ),
-                      items: _categories
-                          .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                          .toList(),
-                      style: _textStyle,
-                      onChanged: (v) => setState(() => templateCategory = v!),
+                    CommonUtils.buildDropdown('Category', templateCategory, _categories, _textStyle, _secondaryColor, (v) => setState(() => templateCategory = v!)),
+                    CommonUtils.buildDropdown('Complexity', templateComplexity, _levels, _textStyle, _secondaryColor, (v) => setState(() => templateComplexity = v!)),
+                    CommonUtils.buildDropdown('Effort', templateEffort, _levels, _textStyle, _secondaryColor, (v) => setState(() => templateEffort = v!)),
+                    CommonUtils.buildDropdown('Motivation', templateMotivation, _levels, _textStyle, _secondaryColor, (v) => setState(() => templateMotivation = v!)),
+                    CommonUtils.buildTextFormField(_templateTime, 'Time (minutes, required)', _textStyle, _secondaryColor, true, (v) {
+                      final parsed = int.tryParse(v?.trim() ?? '');
+                      if (parsed == null || parsed < 1 || parsed > 999) {
+                        return 'Please enter a whole number > 0 and < 1000';
+                      }
+                      minutesRequired = parsed;
+                      return null;
+                      }, keyboardType: TextInputType.number
                     ),
-                    DropdownButtonFormField(
-                      dropdownColor: _secondaryColor,
-                      value: templateComplexity,
-                      decoration: InputDecoration(
-                        labelText: 'Complexity',
-                        labelStyle: _textStyle,
-                      ),
-                      items: _levels
-                          .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                          .toList(),
-                      style: _textStyle,
-                      onChanged: (v) => setState(() => templateComplexity = v!),
-                    ),
-                    DropdownButtonFormField(
-                      dropdownColor: _secondaryColor,
-                      value: templateEffort,
-                      decoration: InputDecoration(
-                        labelText: 'Effort',
-                        labelStyle: _textStyle,
-                      ),
-                      items: _levels
-                          .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                          .toList(),
-                      style: _textStyle,
-                      onChanged: (v) => setState(() => templateEffort = v!),
-                    ),
-                    DropdownButtonFormField(
-                      dropdownColor: _secondaryColor,
-                      value: templateMotivation,
-                      decoration: InputDecoration(
-                        labelText: 'Motivation',
-                        labelStyle: _textStyle,
-                      ),
-                      items: _levels
-                          .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                          .toList(),
-                      style: _textStyle,
-                      onChanged: (v) => setState(() => templateMotivation = v!),
-                    ),
-                    TextFormField(
-                      style: _textStyle,
-                      controller: _templateTime,
-                      decoration: InputDecoration(
-                        labelText: 'Time (minutes, required)',
-                        labelStyle: _textStyle,
-                      ),
-                      validator: (v) {
-                        final parsed = int.tryParse(v?.trim() ?? '');
-                        if (parsed == null || parsed < 1 || parsed > 999) {
-                          return 'Please enter a valid number greater than 0 and smaller than 1000';
-                        }
-                        minutesRequired = parsed;
-                        return null;
-                      },
-                    ),
-                    TextFormField(
-                      style: _textStyle,
-                      controller: _templateDeadline,
-                      decoration: InputDecoration(
-                        labelText: 'Hours to complete (optional)',
-                        labelStyle: _textStyle,
-                      ),
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) return null; // optional
-                        final parsed = int.tryParse(v.trim());
-                        if (parsed == null || parsed <= 0 || parsed > 10000) {
-                          return 'Must be a whole number > 0 and < 10000';
-                        }
-                        minutesToDeadline = parsed * 60;
-                        if (minutesRequired > minutesToDeadline) {
-                          return 'Deadline must be greater than time required.';
-                        }
-                        return null;
-                      },
-                    ),
-                    TextFormField(
-                      style: _textStyle,
-                      controller: _templateSteps,
-                      decoration: InputDecoration(
-                        labelText: 'Steps',
-                        labelStyle: _textStyle,
-                      ),
-                      validator: (v) {
-                        final trimmed = v?.trim();
-                        final parsed = int.tryParse(trimmed?.isEmpty ?? true ? '1' : trimmed!);
-                        if (parsed == null || parsed < 1 || parsed > 999) {
-                          return 'Please enter a valid whole number above 0 and smaller than 1000';
-                        }
-                        return null;
-                      },
-                    ),
-                    ElevatedButton(
-                      onPressed: () {
-                        if (!templateFormKey.currentState!.validate()) {
-                          return; // stop if validation fails
-                        }
-                        if(_templateSteps.text.trim() == '') {
-                          _templateSteps.text = '1';
-                        }
-                        final name = _templateName.text.trim();
-                        final data = {
-                          'category': templateCategory,
-                          'complexity': templateComplexity,
-                          'effort': templateEffort,
-                          'motivation': templateMotivation,
-                          'time': _templateTime.text.trim(),
-                          'steps': _templateSteps.text.trim(),
-                          'Hours to complete': _templateDeadline.text.trim(),
-                        };
 
-                        if (_templateDetails.containsKey(name)) {
-                          setState(() => _templateDetails[name] = data);
-                        } else {
-                          setState(() => _userTemplates[name] = data);
-                        }
-                        _saveTemplates();
-
-                        _templateName.clear();
-                        _templateTime.clear();
-                        _templateSteps.text = '1';
-                        _templateDeadline.clear();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _secondaryColor,
-                        foregroundColor: _primaryColor,
-                      ),
-                      child: Text('Save Template', style:_textStyle),
+                    CommonUtils.buildTextFormField(_templateDeadline, 'Hours to complete (optional)', _textStyle, _secondaryColor, true, (v) {
+                      if (v == null || v.trim().isEmpty) return null; // optional
+                      final parsed = int.tryParse(v.trim());
+                      if (parsed == null || parsed <= 0 || parsed > 10000) {
+                        return 'Must be a whole number > 0 and < 10000';
+                      }
+                      minutesToDeadline = parsed * 60;
+                      if (minutesRequired > minutesToDeadline) {
+                        return 'Deadline must be greater than time required.';
+                      }
+                      return null;
+                      }, keyboardType: TextInputType.number
                     ),
+
+                    CommonUtils.buildTextFormField(_templateSteps, 'Steps (Required)', _textStyle, _secondaryColor, true, (v) {
+                      final trimmed = v?.trim();
+                      final parsed = int.tryParse(trimmed?.isEmpty ?? true ? '1' : trimmed!);
+                      if (parsed == null || parsed < 1 || parsed > 999) {
+                        return 'Please enter a valid whole number > 0 and smaller than 1000';
+                      }
+                      return null;
+                      },
+                    ),
+                    CommonUtils.buildElevatedButton('Save Template', _primaryColor, _secondaryColor, 14, 10, () => _preSaveTemplate(templateCategory, templateComplexity, templateEffort, templateMotivation, templateFormKey)),
                     const Divider(),
                     Text('Templates:', style: _textStyle),
                     ...[
@@ -829,6 +748,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                             setState(() {
                               _userTemplates.remove(name);
                               _saveTemplates();
+                              _validateTemplateGroups(); // check that no multi-templates were effected by this deletion.
                             });
                           },
                         )
@@ -881,6 +801,43 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
     );
   }
 
+  Future<void> _validateTemplateGroups() async { // Cleans up template groups with deleted templates.
+    // Collect all valid template names
+    final validTemplateNames = _userTemplates.keys.toSet();
+
+    final Map<String, List<String>> updatedGroups = {};
+
+    _templateGroups.forEach((groupName, templates) {
+      // Keep only templates that still exist
+      final validTemplates = templates.where((t) => validTemplateNames.contains(t)).toList();
+
+      if (validTemplates.isEmpty) {
+        debugPrint('Group "$groupName" only contained deleted templates. Removing group.');
+        CommonUtils.showAlertDialog(context, 'Multi-template using deleted template(s)', '$groupName contained only deleted templates. Removing group.', _textStyle, _secondaryColor);
+        // skip this group entirely
+      } else if (validTemplates.length < templates.length) {
+        debugPrint('Group "$groupName" had some deleted templates. Rebuilding with valid ones: $validTemplates');
+        CommonUtils.showAlertDialog(context, 'Multi-template using deleted template(s)', 'Group "$groupName" had some deleted templates. Rebuilding with valid ones: $validTemplates', _textStyle, _secondaryColor);
+        updatedGroups[groupName] = validTemplates;
+      } else {
+        // all templates still valid
+        updatedGroups[groupName] = templates;
+      }
+    });
+
+    setState(() {
+      _templateGroups = updatedGroups;
+    });
+
+    // persist the cleaned-up groups
+    await _storage.write(
+      key: 'templateGroups',
+      value: json.encode(_templateGroups),
+    );
+  }
+
+
+
   Future<void> _loadTemplateGroups() async {
     final saved = await _storage.read(key: 'templateGroups');
     if (saved != null && saved.isNotEmpty) {
@@ -922,7 +879,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                         child: Text(groupName, style: _textStyle),
                       );
                     }).toList(),
-                    onChanged: (groupName) {
+                    onChanged: (groupName) async {
                       setState(() {
                         selectedGroup = groupName;
                         selectedTemplates = List.from(_templateGroups[groupName!] ?? []);
@@ -974,7 +931,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                           _saveTemplateGroups();
                         },
                       ),
-                      onTap: () {
+                      onTap: () async {
                         setState(() {
                           selectedGroup = name;
                           selectedTemplates = List.from(_templateGroups[name]!);
@@ -1006,7 +963,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                     validationMessage = null; // clear message on success
                   });
                   _saveTemplateGroups();
-                  Navigator.of(context).pop(); // close dialog
+                  CommonUtils.showDialogWidget(context, '$groupName has been updated.', _textStyle, _secondaryColor);
                   },
                   child: Text('Save/Update Group', style: _textStyle),
                 ),
@@ -1015,7 +972,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                     padding: const EdgeInsets.only(top: 8.0),
                     child: Text(
                       validationMessage!,
-                      style: _textStyle.copyWith(color: Colors.red),
+                      style: _textStyle.copyWith(color: Colors.purple),
                     ),
                   ),
               ElevatedButton(
@@ -1024,7 +981,10 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                   foregroundColor: _primaryColor,
                 ),
                 onPressed: () async {
-                  if (selectedTemplates.isEmpty) return;
+                  if (selectedTemplates.isEmpty) {
+                    CommonUtils.showAlertDialog(context, 'No templates Selected', 'Please select at least one template to create goals from.', _textStyle, _secondaryColor);
+                    return;
+                  }
                   for (final templateName in selectedTemplates) {
                     final data = _templateDetails[templateName] ?? _userTemplates[templateName]!;
                     await _createGoalFromTemplates(
@@ -1038,7 +998,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                     deadlineHours: data['Hours to complete'],
                     );
                   }
-                  Navigator.pop(context);
+                  CommonUtils.showDialogWidget(context, 'Goals created from selected templates.', _textStyle, _secondaryColor);
                 },
                 child: Text('Create Goals', style: _textStyle),
               ),
@@ -1539,4 +1499,5 @@ Widget buildStepDisplay(Map<String, dynamic> g, double userFontSize) {
     ),
   );
 }
+
 

@@ -86,17 +86,7 @@ class _AchievementDetailViewState extends State<AchievementDetailView> {
                   _buttonDisabled = true; // disable after one click
                   _toRefresh = true;
                 });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Achievement completed! Well done on completing ${achievement.title}',
-                      style: widget.textStyle,
-                    ),
-                    duration: const Duration(seconds: 2),
-                    behavior: SnackBarBehavior.floating,
-                    margin: const EdgeInsets.all(12),
-                  ),
-                );
+                CommonUtils.showSnackBar(context, 'Achievement completed! Well done on completing ${achievement.title}', widget.textStyle, 2000, 12);
               }
                   : null, // disabled if already clicked or not ready
             ),

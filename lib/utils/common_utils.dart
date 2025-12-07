@@ -3,16 +3,19 @@ import 'package:flutter/material.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 class CommonUtils {
-
-  static Future<void> waitForMilliseconds(int milliseconds) async { // Mostly use seconds, but this is more dynamic (as there are areas I use < 1 second)
+  static Future<void> waitForMilliseconds(int milliseconds) async {
+    // Mostly use seconds, but this is more dynamic (as there are areas I use < 1 second)
     await Future.delayed(Duration(milliseconds: milliseconds));
   }
 
-  static tz.TZDateTime newTimeMinusHours (tz.TZDateTime time, int hours){
+  static tz.TZDateTime newTimeMinusHours(tz.TZDateTime time, int hours) {
     return time.subtract(Duration(hours: hours));
   }
 
-  static Future<tz.TZDateTime?> tzDateTimeFromHHmm(String hhmm, {tz.Location? location}) async {
+  static Future<tz.TZDateTime?> tzDateTimeFromHHmm(
+    String hhmm, {
+    tz.Location? location,
+  }) async {
     final loc = location ?? tz.local;
     final parts = hhmm.trim().split(':');
     if (parts.length != 2) return null;
@@ -23,7 +26,14 @@ class CommonUtils {
     if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
 
     final now = tz.TZDateTime.now(loc);
-    var candidate = tz.TZDateTime(loc, now.year, now.month, now.day, hour, minute);
+    var candidate = tz.TZDateTime(
+      loc,
+      now.year,
+      now.month,
+      now.day,
+      hour,
+      minute,
+    );
 
     if (!candidate.isAfter(now)) {
       candidate = candidate.add(const Duration(days: 1));
@@ -34,9 +44,12 @@ class CommonUtils {
 
   static int scoreFromLevel(String level) {
     switch (level.toLowerCase()) {
-      case 'high': return 3;
-      case 'medium': return 1;
-      default: return 0;
+      case 'high':
+        return 3;
+      case 'medium':
+        return 1;
+      default:
+        return 0;
     }
   }
 
@@ -59,20 +72,17 @@ class CommonUtils {
   }
 
   static Text buildText(String text, TextStyle style) {
-    return Text(
-      text,
-      style: style,
-    );
+    return Text(text, style: style);
   }
 
   static ElevatedButton buildElevatedButton(
-      String text,
-      Color primaryColor,
-      Color secondaryColor,
-      double paddingPixels,
-      double radius,
-      VoidCallback? onPressed, //  nullable, for conditional buttons.
-      ) {
+    String text,
+    Color primaryColor,
+    Color secondaryColor,
+    double paddingPixels,
+    double radius,
+    VoidCallback? onPressed, //  nullable, for conditional buttons.
+  ) {
     return ElevatedButton(
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
@@ -86,6 +96,116 @@ class CommonUtils {
       child: Text(text),
     );
   }
+
+  static void showSnackBar(
+    BuildContext context,
+    String text,
+    TextStyle textStyle,
+    int durationMilliseconds,
+    int margin,
+  ) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(text, style: textStyle),
+        duration: Duration(milliseconds: durationMilliseconds),
+        behavior: SnackBarBehavior.floating,
+        margin: EdgeInsets.all(margin.toDouble()),
+      ),
+    );
+  }
+
+  static void showAlertDialog(
+      BuildContext context,
+      String titleText,
+      String bodyText,
+      TextStyle textStyle,
+      Color backgroundColor,
+      ) {
+    showDialog(
+      context: context,
+      builder: (ctx) =>
+          AlertDialog(
+            backgroundColor: backgroundColor,
+            title: Text(titleText, style: textStyle),
+            content: Text(
+                bodyText,
+                style: textStyle),
+            actions: [
+              TextButton(onPressed: () => Navigator.of(ctx).pop(),
+                  child: Text('OK', style: textStyle
+                  ))
+            ],
+          ),
+    );
+  }
+
+  static void showDialogWidget(
+      BuildContext context,
+      String titleText,
+      TextStyle textStyle,
+      Color backgroundColor,
+      ) {
+    showDialog(
+      context: context,
+      builder: (ctx) =>
+          Dialog(
+            backgroundColor: backgroundColor,
+            child: Text('$titleText Click anywhere to close this pop-up.', style: textStyle),
+          ),
+    );
+  }
+
+  static Widget buildDropdown<T>(
+    String label,
+    T value,
+    List<T> options,
+    TextStyle textStyle,
+    Color dropdownColor,
+    ValueChanged<T?> onChanged,
+  ) {
+    return DropdownButtonFormField<T>(
+      dropdownColor: dropdownColor,
+      value: value,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: textStyle,
+      ),
+      items: options
+          .map((e) => DropdownMenuItem<T>(
+        value: e,
+        child: Text(e.toString(), style: textStyle),
+      ))
+          .toList(),
+      style: textStyle,
+      onChanged: onChanged,
+    );
+  }
+
+  static Widget buildTextFormField(
+    TextEditingController? controller,
+    String? label,
+    TextStyle? textStyle,
+    Color? fillColor,
+    bool filled,
+    String? Function(String?)? validator, {
+    TextInputType? keyboardType, }
+  ) {
+    keyboardType ??= TextInputType.text;
+    return TextFormField(
+      controller: controller,
+      style: textStyle,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: textStyle,
+        filled: filled,
+        fillColor: fillColor,
+        border: const OutlineInputBorder(),
+      ),
+      validator: validator,
+    );
+  }
+
 
 
 

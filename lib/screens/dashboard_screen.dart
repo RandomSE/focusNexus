@@ -101,7 +101,7 @@ class _DashboardScreenState extends BaseState<DashboardScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: Text(
-            'FocusNexus Dashboard',
+            'Dashboard',
             style: _textStyle,
             textAlign: TextAlign.center,
           ),
