@@ -27,7 +27,7 @@ void main() async {
 
 Future<String> _getRewardTitle() async {
   final storage = FlutterSecureStorage();
-  final reward = await storage.read(key: 'rewardType') ?? 'Avatar';
+  final reward = await storage.read(key: 'rewardType') ?? 'Mini-games';
   return reward;
 }
 

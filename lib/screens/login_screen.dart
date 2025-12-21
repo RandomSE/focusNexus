@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:focusNexus/screens/registration_screen.dart';
 import '../utils/BaseState.dart';
+import '../utils/common_utils.dart';
 import 'dashboard_screen.dart';
 import 'onboarding_screen.dart';
 
@@ -20,11 +21,13 @@ class _LoginScreenState extends BaseState<LoginScreen> {
   final _storage = const FlutterSecureStorage();
   String showPasswordText = 'Show Password';
   bool hidePassword = true;
+  final primaryColor = CommonUtils.getDefaultPrimaryColor();
+  final secondaryColor = CommonUtils.getDefaultSecondaryColor();
+  final textStyle = CommonUtils.getDefaultTextStyle();
 
   Future<void> _login() async {
     final storedUser = await _storage.read(key: 'username');
     final storedPass = await _storage.read(key: 'password');
-    debugPrint('storedUser: $storedUser, storedPass: $storedPass');
 
     if (_userController.text == storedUser &&
         _passController.text == storedPass) {
@@ -47,15 +50,9 @@ class _LoginScreenState extends BaseState<LoginScreen> {
         );
       }
     } else if (storedUser == null || storedPass == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('You have not registered yet. Register an account.'),
-        ),
-      );
+      CommonUtils.showSnackBar(context, 'You have not registered yet. Register an account.', textStyle, 1000, 5);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid username or password')),
-      );
+      CommonUtils.showSnackBar(context, 'Invalid username or password', textStyle, 1500, 5);
     }
   }
 
@@ -67,44 +64,31 @@ class _LoginScreenState extends BaseState<LoginScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            TextField(
-              controller: _userController,
-              decoration: const InputDecoration(labelText: 'Username'),
-            ),
-            TextField(
-              controller: _passController,
-              decoration: const InputDecoration(labelText: 'Password'),
-              obscureText: hidePassword,
-            ),
+
+            CommonUtils.buildTextField(_userController, 'Username', textStyle),
+            CommonUtils.buildTextField(_passController, 'Password', textStyle, hideText: hidePassword),
             Row(
               children: [
-                Checkbox(
-                  value: _rememberMe,
-                  onChanged:
-                      (val) => setState(() => _rememberMe = val ?? false),
-                ),
-                const Text('Remember me'),
+                CommonUtils.buildSwitch(_rememberMe, (val) => setState(() => _rememberMe = val), primaryColor),
+                CommonUtils.buildText('Remember Me', textStyle),
               ],
             ),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  hidePassword = !hidePassword;
-                  showPasswordText = hidePassword ? 'Show Password' : 'Hide Password';
-                });
-              },
-              child: Text(showPasswordText),
+            CommonUtils.buildElevatedButton(showPasswordText, primaryColor, secondaryColor, textStyle, 0, 0,  () {
+              setState(() {
+                hidePassword = !hidePassword;
+                showPasswordText = hidePassword ? 'Show Password' : 'Hide Password';
+              });
+            },
             ),
             const SizedBox(height: 20),
-            ElevatedButton(onPressed: _login, child: const Text('Login')),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const RegistrationScreen()),
-                );
-              },
-              child: const Text('Register'),
+            CommonUtils.buildElevatedButton('Login', primaryColor, secondaryColor, textStyle, 1, 1, _login),
+            //ElevatedButton(onPressed: _login, child: const Text('Login')),
+            CommonUtils.buildElevatedButton('Register', primaryColor, secondaryColor, textStyle, 1, 1, () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const RegistrationScreen()),
+              );
+            },
             ),
           ],
         ),

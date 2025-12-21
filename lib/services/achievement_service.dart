@@ -139,6 +139,9 @@ class AchievementService {
   Future<void> initializeAchievements() async {
     debugPrint('Achievements not initialized — creating.');
 
+    final List<String> achievementVariables = achievementVariableMap.values.toList();
+    await bulkSetAchievementVariablesInStorage(achievementVariables);
+
     const int numBasicAchievements = 3;
     const int numHighAchievements = 9;
     List<int> pointRewardsCreationAndCompletion = [100, 250, 1000];
@@ -202,6 +205,12 @@ class AchievementService {
 
     // Special achievement for 100? TODO
 
+  }
+
+  Future<void> bulkSetAchievementVariablesInStorage(List<String> variables) async {
+    variables.forEach(
+        (variable) async => await _storage.write(key: variable, value: '0') // update progress throws errors when these haven't been set as they are then null. 0 means zero here, so it's fine to directly set it upon creation.
+    );
   }
 
   /// Mark an achievement as completed

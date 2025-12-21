@@ -15,7 +15,7 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
   // Common user preferences with defaults
   double _userFontSize = 14.0;
   String _userTheme = 'light';
-  String _rewardType = 'Avatar';
+  String _rewardType = 'Mini-games';
   String _notificationStyle = 'Minimal';
   String _notificationFrequency = 'Low';
   bool _rememberMe = false;
@@ -190,7 +190,7 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
   Future<String> get rewardType async {
     String extractedString = await readFromStorage('rewardType');
     if (extractedString == '') {
-      return 'Avatar';
+      return 'Mini-games';
     }
     else {
       _rewardType = extractedString;
@@ -244,14 +244,22 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
   }
 
   Color getPrimaryColor(bool isDark, bool contrastMode) {
-    if (contrastMode) return Colors.cyan;
-    if (isDark) return Colors.white;
+    if (contrastMode) {
+      if (isDark) {
+        return Colors.cyan;
+      }
+      return const Color(0xFF004F52);
+    }
     return Colors.black87;
   }
 
   Color getSecondaryColor(bool isDark, bool contrastMode) {
-    if (contrastMode) return Colors.black;
-    if (isDark) return Colors.black;
+    if (contrastMode) {
+      if (isDark) {
+        return Colors.black;
+      }
+      return const Color(0xFFF2EFE6);
+    }
     return const Color(0xFFF5F5F5);
   }
 
@@ -457,11 +465,8 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     } catch (e) {
       final isFontSizeError = e.toString().contains('fontSize != null');
 
-      if (isFontSizeError) {
-        debugPrint('Font size scaling failed, ignoring: $e'); // This happens when you change the font size due to flutter's... eccentricities. Doesn't prevent font size from being changed, so it will be ignored here.
-      } else {
+      if (!isFontSizeError) { // No need to throw error for Font size error. it doesn't effect project function.
         debugPrint('Theme application failed: $e');
-        // Apply a safe fallback theme
         _themeData = ThemeData.light();
       }
     }
@@ -534,7 +539,7 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     setState(() {
       _userFontSize = 14.0;
       _userTheme = 'light';
-      _rewardType = 'Avatar';
+      _rewardType = 'Mini-games';
       _notificationStyle = 'Minimal';
       _notificationFrequency = 'Medium';
       _rememberMe = false;
@@ -550,7 +555,7 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
 
     await setUserFontSize(14.0);
     await setUserTheme('light');
-    await setRewardType('Avatar');
+    await setRewardType('Mini-games');
     await setNotificationStyle('Minimal');
     await setNotificationFrequency('Medium');
     await setRememberMe(false);

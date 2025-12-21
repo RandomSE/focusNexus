@@ -5,6 +5,8 @@ import 'package:focusNexus/utils/BaseState.dart';
 import 'package:focusNexus/utils/notifier.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
+import '../utils/common_utils.dart';
+
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -19,29 +21,31 @@ class _OnboardingScreenState extends BaseState<OnboardingScreen> {
   bool _notificationsEnabled = false;
   int totalImages = 0;
   List<String> onboardingImages = [];
+  final primaryColor = CommonUtils.getDefaultPrimaryColor();
+  final secondaryColor = CommonUtils.getDefaultSecondaryColor();
+  final textStyle = CommonUtils.getDefaultTextStyle();
 
   @override
-  void initState(){
+  void initState() {
     super.initState();
     _loadImageData();
   }
 
-
   Future<List<String>> get imagePaths async =>
-      (json.decode(await rootBundle.loadString('AssetManifest.json')) as Map<
-          String,
-          dynamic>)
+      (json.decode(await rootBundle.loadString('AssetManifest.json'))
+              as Map<String, dynamic>)
           .keys
-          .where((path) =>
-      path.startsWith('assets/images/onboarding_images/') &&
-          path.endsWith('.jpg'))
+          .where(
+            (path) =>
+                path.startsWith('assets/images/onboarding_images/') &&
+                path.endsWith('.jpg'),
+          )
           .toList();
 
   void _loadImageData() async {
     onboardingImages = await imagePaths;
     totalImages = onboardingImages.length;
   }
-
 
   void _goToNextPage() {
     if (_currentPage < totalImages - 1) {
@@ -62,29 +66,25 @@ class _OnboardingScreenState extends BaseState<OnboardingScreen> {
   }
 
   Future<void> _finishOnboarding() async {
-    final notificationsGranted = await GoalNotifier.checkNotificationsPermissionsGranted();
+    final notificationsGranted =
+        await GoalNotifier.checkNotificationsPermissionsGranted();
     debugPrint('Notifications enabled: $notificationsGranted');
     _notificationsEnabled = getNotificationsEnabled();
 
     if (_notificationsEnabled && !notificationsGranted) {
-      final shouldEnable = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Enable Notifications'),
-          content: const Text(
-            'To stay on track with your goals, FocusNexus can send reminders and updates. Would you like to enable notifications?',
+      final shouldEnable = await CommonUtils.showInteractableAlertDialog(
+        context,
+        'Enable Notifications',
+        'To stay on track with your goals, FocusNexus can send reminders and updates. Would you like to enable notifications?',
+        textStyle,
+        secondaryColor,
+        actions: [
+          CommonUtils.buildElevatedButton(
+            'Not Now', primaryColor, secondaryColor, textStyle, 0, 0, () => Navigator.pop(context, false),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Not Now'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Enable'),
-            ),
-          ],
-        ),
+          CommonUtils.buildElevatedButton('Enable', primaryColor, secondaryColor, textStyle, 0, 0, () => Navigator.pop(context, true),
+          ),
+        ],
       );
 
       if (shouldEnable == true) {
@@ -92,13 +92,14 @@ class _OnboardingScreenState extends BaseState<OnboardingScreen> {
       }
     }
 
-    setOnboardingCompleted(true); // To ensure user only has to endure onboarding once per account made.
+    setOnboardingCompleted(
+      true,
+    ); // To ensure user only has to endure onboarding once per account made.
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const DashboardScreen()),
     );
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -115,40 +116,32 @@ class _OnboardingScreenState extends BaseState<OnboardingScreen> {
                 });
               },
               itemBuilder: (context, index) {
-                return Center(
-                  child: Image.asset(onboardingImages[index]),
-                );
+                return Center(child: Image.asset(onboardingImages[index]));
               },
             ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 24.0),
+            padding: const EdgeInsets.symmetric(
+              vertical: 16.0,
+              horizontal: 24.0,
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 if (_currentPage > 0)
-                  ElevatedButton(
-                    onPressed: _goToPreviousPage,
-                    child: const Text('Go Back'),
-                  )
+                  CommonUtils.buildElevatedButton('Go to previous image', primaryColor, secondaryColor, textStyle, 0, 0, _goToPreviousPage)
+                  //ElevatedButton(
+                    //onPressed: _goToPreviousPage,
+                    //child: const Text('Go Back'),
+                  //),
                 else
                   const SizedBox(width: 100), // Placeholder to balance layout
 
                 if (_currentPage < totalImages - 1)
-                  ElevatedButton(
-                    onPressed: _goToNextPage,
-                    child: const Text('Next'),
-                  )
+                  CommonUtils.buildElevatedButton('Next', primaryColor, secondaryColor, textStyle, 0, 0, _goToNextPage)
                 else
-                  ElevatedButton(
-                    onPressed: _finishOnboarding,
-                    child: const Text('Finish'),
-                  ),
-
-                ElevatedButton(
-                  onPressed: _finishOnboarding,
-                  child: const Text('Skip'),
-                ),
+                  CommonUtils.buildElevatedButton('Finish', primaryColor, secondaryColor, textStyle, 0, 0, _finishOnboarding),
+                CommonUtils.buildElevatedButton('Skip', primaryColor, secondaryColor, textStyle, 0, 0, _finishOnboarding),
               ],
             ),
           ),

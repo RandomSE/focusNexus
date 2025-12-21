@@ -72,27 +72,27 @@ class _AchievementScreenState extends BaseState<AchievementScreen> {
               children: [
                 Text(
                   'In-progress achievements',
-                  style: _textStyle,
+                  style: _textStyle.copyWith(color: Colors.deepPurple),
                 ),
                 ...inProgressAchievements.map((achievement) {
-                  final buttonColor = achievement.progress >= 100 ? Colors.deepPurple : _primaryColor;
+                  final buttonColor = achievement.progress >= 100 ? Colors.deepPurple : _secondaryColor;
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 6),
                     child: CommonUtils.buildElevatedButton(
-                      achievement.title, buttonColor, _secondaryColor, 14, 10,
+                      achievement.title, _primaryColor, buttonColor,  _textStyle, 14, 10,
                           () => AchievementService.viewAchievement(achievement.id, _themeData, _primaryColor, _secondaryColor, _textStyle, _buttonStyle, context)
                     ),
                   );
                 }),
                 Text(
                   'Completed achievements',
-                  style: _textStyle,
+                  style: _textStyle.copyWith(color: Colors.deepPurple),
                 ),
                 ...completedAchievements.map((achievement) {
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 6),
                     child: CommonUtils.buildElevatedButton(
-                        achievement.title, _primaryColor, _secondaryColor, 14, 10,
+                        achievement.title, _primaryColor, _secondaryColor, _textStyle, 14, 10,
                             () => AchievementService.viewAchievement(achievement.id, _themeData, _primaryColor, _secondaryColor, _textStyle, _buttonStyle, context)
                     ),
                   );

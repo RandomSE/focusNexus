@@ -3,6 +3,24 @@ import 'package:flutter/material.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 class CommonUtils {
+
+  static Color getDefaultPrimaryColor() {
+    return Colors.black87;
+
+  }
+
+  static Color getDefaultSecondaryColor() {
+    return Colors.white70;
+  }
+
+  static TextStyle getDefaultTextStyle() {
+      return TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: getDefaultPrimaryColor()
+      );
+  }
+
   static Future<void> waitForMilliseconds(int milliseconds) async {
     // Mostly use seconds, but this is more dynamic (as there are areas I use < 1 second)
     await Future.delayed(Duration(milliseconds: milliseconds));
@@ -71,113 +89,158 @@ class CommonUtils {
     return 0;
   }
 
-  static Text buildText(String text, TextStyle style) {
-    return Text(text, style: style);
-  }
-
-  static ElevatedButton buildElevatedButton(
-    String text,
-    Color primaryColor,
-    Color secondaryColor,
-    double paddingPixels,
-    double radius,
-    VoidCallback? onPressed, //  nullable, for conditional buttons.
-  ) {
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: primaryColor,
-        foregroundColor: secondaryColor,
-        padding: EdgeInsets.symmetric(vertical: paddingPixels),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(radius),
+  static Widget buildCenteredButton(
+      BuildContext context,
+        String label,
+        VoidCallback onPressed,
+        TextStyle style,
+        Color backgroundColor,
+      ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Center(
+        child: SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: onPressed,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: backgroundColor,
+              padding: const EdgeInsets.symmetric(vertical: 16.0),
+              alignment: Alignment.center,
+            ),
+            child: Text(label, style: style, textAlign: TextAlign.center),
+          ),
         ),
       ),
-      child: Text(text),
     );
   }
 
-  static void showSnackBar(
-    BuildContext context,
-    String text,
+  static Widget buildContainer (
+      Color secondaryColor,
+      EdgeInsetsGeometry padding,
+      Widget? child,
+      ) {
+
+    return  Container(
+      padding: const EdgeInsets.all(8),
+      color: secondaryColor,
+      child: child,
+    );
+
+  }
+
+  static Widget buildDropdownButton<T>(
+    T value,
+    List<T> options,
     TextStyle textStyle,
-    int durationMilliseconds,
-    int margin,
-  ) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(text, style: textStyle),
-        duration: Duration(milliseconds: durationMilliseconds),
-        behavior: SnackBarBehavior.floating,
-        margin: EdgeInsets.all(margin.toDouble()),
-      ),
+    Color dropdownColor,
+    ValueChanged<T?> onChanged, {
+    String Function(T)? displayText,
+  }) {
+    return DropdownButton<T>(
+      value: value,
+      dropdownColor: dropdownColor,
+      isExpanded: true,
+      onChanged: onChanged,
+      items:
+          options.map((e) {
+            final text = displayText != null ? displayText(e) : e.toString();
+            return DropdownMenuItem<T>(
+              value: e,
+              child: Text(
+                text,
+                style: textStyle,
+                overflow: TextOverflow.ellipsis,
+              ),
+            );
+          }).toList(),
     );
   }
 
-  static void showAlertDialog(
-      BuildContext context,
-      String titleText,
-      String bodyText,
-      TextStyle textStyle,
-      Color backgroundColor,
-      ) {
-    showDialog(
-      context: context,
-      builder: (ctx) =>
-          AlertDialog(
-            backgroundColor: backgroundColor,
-            title: Text(titleText, style: textStyle),
-            content: Text(
-                bodyText,
-                style: textStyle),
-            actions: [
-              TextButton(onPressed: () => Navigator.of(ctx).pop(),
-                  child: Text('OK', style: textStyle
-                  ))
-            ],
-          ),
-    );
-  }
-
-  static void showDialogWidget(
-      BuildContext context,
-      String titleText,
-      TextStyle textStyle,
-      Color backgroundColor,
-      ) {
-    showDialog(
-      context: context,
-      builder: (ctx) =>
-          Dialog(
-            backgroundColor: backgroundColor,
-            child: Text('$titleText Click anywhere to close this pop-up.', style: textStyle),
-          ),
-    );
-  }
-
-  static Widget buildDropdown<T>(
+  static Widget buildDropdownButtonFormField<T>(
     String label,
     T value,
     List<T> options,
     TextStyle textStyle,
     Color dropdownColor,
-    ValueChanged<T?> onChanged,
+    ValueChanged<T?> onChanged, {
+    String? Function(String?)? validator,
+  }
   ) {
     return DropdownButtonFormField<T>(
+      isExpanded: true,
       dropdownColor: dropdownColor,
       value: value,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: textStyle,
-      ),
-      items: options
-          .map((e) => DropdownMenuItem<T>(
-        value: e,
-        child: Text(e.toString(), style: textStyle),
-      ))
-          .toList(),
+      decoration: InputDecoration(labelText: label, labelStyle: textStyle),
+      items:
+          options
+              .map(
+                (e) => DropdownMenuItem<T>(
+                  value: e,
+                  child: Text(e.toString(), style: textStyle),
+                ),
+              )
+              .toList(),
       style: textStyle,
       onChanged: onChanged,
+    );
+  }
+
+  static ElevatedButton buildElevatedButton(
+      String text,
+      Color primaryColor,
+      Color secondaryColor,
+      TextStyle textStyle,
+      double paddingPixels,
+      double radius,
+      VoidCallback? onPressed, //  nullable, for conditional buttons.
+      ) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: secondaryColor,
+        foregroundColor: primaryColor,
+        padding: EdgeInsets.symmetric(vertical: paddingPixels),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radius),
+        ),
+      ),
+      child: Text(text, style: textStyle),
+    );
+  }
+
+  static Widget buildSwitch(
+      bool value,
+      void Function(bool)? onChanged,
+      Color color
+      ) {
+    return Switch(value: value, onChanged: onChanged, activeColor: color);
+  }
+
+  static Widget buildSwitchListTile(
+      String text,
+      TextStyle textStyle,
+      bool value,
+      void Function(bool)? onChanged,
+      Color tileColor
+  ) {
+    return SwitchListTile(title: Text(text, style: textStyle), value: value, onChanged:onChanged,  tileColor: tileColor);
+  }
+
+  static Text buildText(String text, TextStyle style) {
+    return Text(text, style: style);
+  }
+
+  static Widget buildTextField(
+      TextEditingController? controller,
+      String text,
+      TextStyle textStyle, {
+      bool hideText = false,
+  }) {
+    return TextField(
+      controller: controller,
+      decoration: InputDecoration(labelText: text, labelStyle: textStyle),
+      obscureText: hideText
     );
   }
 
@@ -188,8 +251,9 @@ class CommonUtils {
     Color? fillColor,
     bool filled,
     String? Function(String?)? validator, {
-    TextInputType? keyboardType, }
-  ) {
+    bool hideText = false,
+    TextInputType? keyboardType,
+  }) {
     keyboardType ??= TextInputType.text;
     return TextFormField(
       controller: controller,
@@ -203,10 +267,114 @@ class CommonUtils {
         border: const OutlineInputBorder(),
       ),
       validator: validator,
+      obscureText: hideText,
+    );
+  }
+
+  static Widget buildTextButton(
+    VoidCallback? onPressed,
+    String text,
+    TextStyle textStyle,
+  ) {
+    return TextButton(
+      onPressed: onPressed,
+      child: Text(text, style: textStyle),
+    );
+  }
+
+  static Widget buildIconButton(
+      String tooltipText,
+      IconData icon,
+      Color color,
+      VoidCallback? onPressed,
+      ) {
+    return IconButton(
+      onPressed: onPressed,
+      icon: Icon(icon, color: color), tooltip: tooltipText,
     );
   }
 
 
 
+  static void showBasicAlertDialog(
+      BuildContext context,
+      String titleText,
+      String bodyText,
+      TextStyle textStyle,
+      Color backgroundColor,
+      ) {
+    showDialog(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+        backgroundColor: backgroundColor,
+        title: Text(titleText, style: textStyle),
+        content: Text(bodyText, style: textStyle),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('OK', style: textStyle),
+          ),
+
+        ],
+      ),
+    );
+  }
+
+  static Future<bool?> showInteractableAlertDialog(
+      BuildContext context,
+      String titleText,
+      String bodyText,
+      TextStyle textStyle,
+      Color backgroundColor, {
+        List<Widget>? actions,
+      }) {
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: backgroundColor,
+        title: Text(titleText, style: textStyle),
+        content: Text(bodyText, style: textStyle),
+        actions: actions,
+      ),
+    );
+  }
+
+
+  static void showDialogWidget(
+      BuildContext context,
+      String titleText,
+      TextStyle textStyle,
+      Color backgroundColor,
+      ) {
+    showDialog(
+      context: context,
+      builder:
+          (ctx) => Dialog(
+        backgroundColor: backgroundColor,
+        child: Text(
+          '$titleText Click anywhere to close this pop-up.',
+          style: textStyle,
+        ),
+      ),
+    );
+  }
+
+  static void showSnackBar(
+      BuildContext context,
+      String text,
+      TextStyle textStyle,
+      int durationMilliseconds,
+      int margin,
+      ) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(text, style: textStyle),
+        duration: Duration(milliseconds: durationMilliseconds),
+        behavior: SnackBarBehavior.floating,
+        margin: EdgeInsets.all(margin.toDouble()),
+      ),
+    );
+  }
 
 }

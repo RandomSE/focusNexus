@@ -694,10 +694,10 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                         return null;
                         },
                     ),
-                    CommonUtils.buildDropdown('Category', templateCategory, _categories, _textStyle, _secondaryColor, (v) => setState(() => templateCategory = v!)),
-                    CommonUtils.buildDropdown('Complexity', templateComplexity, _levels, _textStyle, _secondaryColor, (v) => setState(() => templateComplexity = v!)),
-                    CommonUtils.buildDropdown('Effort', templateEffort, _levels, _textStyle, _secondaryColor, (v) => setState(() => templateEffort = v!)),
-                    CommonUtils.buildDropdown('Motivation', templateMotivation, _levels, _textStyle, _secondaryColor, (v) => setState(() => templateMotivation = v!)),
+                    CommonUtils.buildDropdownButtonFormField('Category', templateCategory, _categories, _textStyle, _secondaryColor, (v) => setState(() => templateCategory = v!)),
+                    CommonUtils.buildDropdownButtonFormField('Complexity', templateComplexity, _levels, _textStyle, _secondaryColor, (v) => setState(() => templateComplexity = v!)),
+                    CommonUtils.buildDropdownButtonFormField('Effort', templateEffort, _levels, _textStyle, _secondaryColor, (v) => setState(() => templateEffort = v!)),
+                    CommonUtils.buildDropdownButtonFormField('Motivation', templateMotivation, _levels, _textStyle, _secondaryColor, (v) => setState(() => templateMotivation = v!)),
                     CommonUtils.buildTextFormField(_templateTime, 'Time (minutes, required)', _textStyle, _secondaryColor, true, (v) {
                       final parsed = int.tryParse(v?.trim() ?? '');
                       if (parsed == null || parsed < 1 || parsed > 999) {
@@ -731,7 +731,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                       return null;
                       },
                     ),
-                    CommonUtils.buildElevatedButton('Save Template', _primaryColor, _secondaryColor, 14, 10, () => _preSaveTemplate(templateCategory, templateComplexity, templateEffort, templateMotivation, templateFormKey)),
+                    CommonUtils.buildElevatedButton('Save Template', _primaryColor, _secondaryColor, _textStyle, 14, 10, () => _preSaveTemplate(templateCategory, templateComplexity, templateEffort, templateMotivation, templateFormKey)),
                     const Divider(),
                     Text('Templates:', style: _textStyle),
                     ...[
@@ -813,11 +813,11 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
 
       if (validTemplates.isEmpty) {
         debugPrint('Group "$groupName" only contained deleted templates. Removing group.');
-        CommonUtils.showAlertDialog(context, 'Multi-template using deleted template(s)', '$groupName contained only deleted templates. Removing group.', _textStyle, _secondaryColor);
+        CommonUtils.showBasicAlertDialog(context, 'Multi-template using deleted template(s)', '$groupName contained only deleted templates. Removing group.', _textStyle, _secondaryColor);
         // skip this group entirely
       } else if (validTemplates.length < templates.length) {
         debugPrint('Group "$groupName" had some deleted templates. Rebuilding with valid ones: $validTemplates');
-        CommonUtils.showAlertDialog(context, 'Multi-template using deleted template(s)', 'Group "$groupName" had some deleted templates. Rebuilding with valid ones: $validTemplates', _textStyle, _secondaryColor);
+        CommonUtils.showBasicAlertDialog(context, 'Multi-template using deleted template(s)', 'Group "$groupName" had some deleted templates. Rebuilding with valid ones: $validTemplates', _textStyle, _secondaryColor);
         updatedGroups[groupName] = validTemplates;
       } else {
         // all templates still valid
@@ -869,33 +869,20 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  DropdownButton<String>(
-                    value: selectedGroup,
-                    hint: Text('Load Saved Group', style: _textStyle),
-                    dropdownColor: _secondaryColor,
-                    items: _templateGroups.keys.map((groupName) {
-                      return DropdownMenuItem(
-                        value: groupName,
-                        child: Text(groupName, style: _textStyle),
-                      );
-                    }).toList(),
-                    onChanged: (groupName) async {
-                      setState(() {
-                        selectedGroup = groupName;
-                        selectedTemplates = List.from(_templateGroups[groupName!] ?? []);
-                        groupNameController.text = groupName; // auto-fill name when loading group
-                      });
-                    },
-                  ),
+                  CommonUtils.buildDropdownButtonFormField('Load Saved Group', selectedGroup, _templateGroups.keys.toList(), _textStyle, _secondaryColor, (groupName){
+                    setState(() {
+                      selectedGroup = groupName;
+                      selectedTemplates = List.from(_templateGroups[groupName!] ?? []);
+                      groupNameController.text = groupName; // auto-fill name when loading group
+                    });
+                  }),
                   const SizedBox(height: 10),
-                  TextField(
-                    controller: groupNameController,
-                    style: _textStyle,
-                    decoration: InputDecoration(
-                      labelText: 'Group Name (required to save/update)',
-                      labelStyle: _textStyle,
-                    ),
-                  ),
+                  CommonUtils.buildTextFormField(groupNameController, 'Group Name (required to save/update)', _textStyle, _secondaryColor, false, (v) {
+                    if (v == null || v.trim().isEmpty) {
+                      return 'Group name is required';
+                    }
+                    return null;
+                  }),
                   const SizedBox(height: 10),
                   Text('Select Templates to Create Goals:', style: _textStyle),
                   ...[..._templateDetails.keys, ..._userTemplates.keys].map((templateName) {
@@ -944,12 +931,8 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
               ),
             ),
             actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text('Cancel', style: _textStyle),
-              ),
-              TextButton(
-                onPressed: () {
+              CommonUtils.buildTextButton( () => Navigator.pop(context), 'Cancel', _textStyle),
+              CommonUtils.buildTextButton( () {
                   final groupName = groupNameController.text.trim();
                   if (groupName.isEmpty || selectedTemplates.isEmpty) {
                     setState(() {
@@ -964,30 +947,23 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                   });
                   _saveTemplateGroups();
                   CommonUtils.showDialogWidget(context, '$groupName has been updated.', _textStyle, _secondaryColor);
-                  },
-                  child: Text('Save/Update Group', style: _textStyle),
-                ),
-                if (validationMessage != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: Text(
-                      validationMessage!,
-                      style: _textStyle.copyWith(color: Colors.purple),
-                    ),
+              }, 'Save/Update Group', _textStyle ),
+              if (validationMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Text(
+                    validationMessage!,
+                    style: _textStyle.copyWith(color: Colors.purple),
                   ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _secondaryColor,
-                  foregroundColor: _primaryColor,
                 ),
-                onPressed: () async {
-                  if (selectedTemplates.isEmpty) {
-                    CommonUtils.showAlertDialog(context, 'No templates Selected', 'Please select at least one template to create goals from.', _textStyle, _secondaryColor);
-                    return;
-                  }
-                  for (final templateName in selectedTemplates) {
-                    final data = _templateDetails[templateName] ?? _userTemplates[templateName]!;
-                    await _createGoalFromTemplates(
+              CommonUtils.buildElevatedButton('Create Goals', _primaryColor, _secondaryColor, _textStyle, 0, 0, () async {
+                if (selectedTemplates.isEmpty) {
+                  CommonUtils.showBasicAlertDialog(context, 'No templates Selected', 'Please select at least one template to create goals from.', _textStyle, _secondaryColor);
+                  return;
+                }
+                for (final templateName in selectedTemplates) {
+                  final data = _templateDetails[templateName] ?? _userTemplates[templateName]!;
+                  await _createGoalFromTemplates(
                     title: templateName,
                     category: data['category'],
                     complexity: data['complexity'],
@@ -996,12 +972,10 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                     time: data['time'],
                     steps: data['steps'],
                     deadlineHours: data['Hours to complete'],
-                    );
-                  }
-                  CommonUtils.showDialogWidget(context, 'Goals created from selected templates.', _textStyle, _secondaryColor);
-                },
-                child: Text('Create Goals', style: _textStyle),
-              ),
+                  );
+                }
+                CommonUtils.showDialogWidget(context, 'Goals created from selected templates.', _textStyle, _secondaryColor);
+              }, ),
             ],
           );
         },
@@ -1029,10 +1003,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
         appBar: AppBar(
           title: Text(
             'Goals',
-            style: TextStyle(
-              backgroundColor: _secondaryColor,
-              color: _primaryColor,
-            ),
+            style: _textStyle,
           ),
           backgroundColor: _secondaryColor,
           iconTheme: IconThemeData(color: _primaryColor),
@@ -1057,334 +1028,79 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                             key: _formKey,
                             child: Column(
                               children: [
-                                DropdownButtonFormField<String>(
-                                  dropdownColor: _secondaryColor,
-                                  isExpanded: true,
-                                  hint: Text(
-                                    'Template (optional)',
-                                    style: _textStyle,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  items:
-                                      [
-                                            ..._templateDetails.keys,
-                                            ..._userTemplates.keys,
-                                          ]
-                                          .map(
-                                            (e) => DropdownMenuItem(
-                                              value: e,
-                                              child: Text(
-                                                e,
-                                                style: _textStyle,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                          )
-                                          .toList(),
-                                  onChanged: (val) {
-                                    if (val == null) return;
-                                    _titleController.text = val;
-                                    final data =
-                                        _templateDetails[val] ??
-                                        _userTemplates[val]!;
-                                    setState(() {
-                                      _category = data['category'];
-                                      _complexity = data['complexity'];
-                                      _effort = data['effort'];
-                                      _time = data['time'];
-                                      _steps = data['steps'];
-                                      _motivation = data['motivation'];
-                                    });
-                                    _timeController.text = data['time'];
-                                    _deadlineController.text = data['Hours to complete'];
-                                    _stepsController.text = data['steps'];
-                                  },
-                                ),
-                                DropdownButtonFormField(
-                                  dropdownColor: _secondaryColor,
-                                  value: _category,
-                                  items:
-                                  _categories
-                                      .map(
-                                        (e) => DropdownMenuItem(
-                                      value: e,
-                                      child: Text(e, style: _textStyle),
-                                    ),
-                                  )
-                                      .toList(),
-                                  onChanged:
-                                      (val) => setState(
-                                        () => _category= val ?? 'Productivity',
-                                  ),
-                                  decoration: InputDecoration(
-                                    labelText: 'Category',
-                                    labelStyle: _textStyle,
-                                  ),
-                                ),
-                                DropdownButtonFormField(
-                                  dropdownColor: _secondaryColor,
-                                  value: _complexity,
-                                  items:
-                                      _levels
-                                          .map(
-                                            (e) => DropdownMenuItem(
-                                              value: e,
-                                              child: Text(e, style: _textStyle),
-                                            ),
-                                          )
-                                          .toList(),
-                                  onChanged:
-                                      (val) => setState(
-                                        () => _complexity = val ?? 'Low',
-                                      ),
-                                  decoration: InputDecoration(
-                                    labelText: 'Complexity',
-                                    labelStyle: _textStyle,
-                                  ),
-                                ),
-                                DropdownButtonFormField(
-                                  dropdownColor: _secondaryColor,
-                                  value: _effort,
-                                  items:
-                                      _levels
-                                          .map(
-                                            (e) => DropdownMenuItem(
-                                              value: e,
-                                              child: Text(e, style: _textStyle),
-                                            ),
-                                          )
-                                          .toList(),
-                                  onChanged:
-                                      (val) => setState(
-                                        () => _effort = val ?? 'Low',
-                                      ),
-                                  decoration: InputDecoration(
-                                    labelText: 'Effort Required',
-                                    labelStyle: _textStyle,
-                                  ),
-                                ),
-                                DropdownButtonFormField(
-                                  dropdownColor: _secondaryColor,
-                                  value: _motivation,
-                                  items:
-                                      _levels
-                                          .map(
-                                            (e) => DropdownMenuItem(
-                                              value: e,
-                                              child: Text(e, style: _textStyle),
-                                            ),
-                                          )
-                                          .toList(),
-                                  onChanged:
-                                      (val) => setState(
-                                        () => _motivation = val ?? 'Low',
-                                      ),
-                                  decoration: InputDecoration(
-                                    labelText: 'Motivation Needed',
-                                    labelStyle: _textStyle,
-                                  ),
-                                ),
-                                TextFormField(
-                                  style: _textStyle,
-                                  controller: _titleController,
-                                  decoration: InputDecoration(
-                                    labelText: 'Goal Title',
-                                    labelStyle: _textStyle,
-                                  ),
-                                  validator:
-                                      (v) =>
-                                          v == null || v.isEmpty
-                                              ? 'Title required'
-                                              : null,
-                                ),
-                                TextFormField(
-                                  style: _textStyle,
-                                  controller: _timeController,
-                                  decoration: InputDecoration(
-                                    labelText: 'Time Required in minutes',
-                                    labelStyle: _textStyle,
-                                  ),
-                                  validator: (v) {
-                                    final parsed = int.tryParse(v?.trim() ?? '');
-                                    if (parsed == null || parsed < 1) {
-                                      return 'Please enter a valid whole number';
-                                    }
-                                    minutesRequired = parsed;
-                                    return null; // ✅ Valid input
-                                  },
-                                ),
-                                TextFormField(
-                                  style: _textStyle,
-                                  controller: _deadlineController,
-                                  decoration: InputDecoration(
-                                    labelText: 'Hours to complete (optional)',
-                                    labelStyle: _textStyle,
-                                  ),
-                                  validator: (v) {
-                                    if (v == null || v.trim().isEmpty) return null; // ✅ Accepts no deadline
-                                    final parsed = int.tryParse(v);
-                                    if (parsed == null || parsed <= 0 || parsed > 9999) {
-                                      return 'Must be a whole number > 0 and < 10000';
-                                    }
-                                    minutesToDeadline = parsed * 60;
-                                    if (minutesRequired > minutesToDeadline) {
-                                      return 'Deadline must be greater than time required.';
-                                    }
-                                    return null;
-                                  },
-                                ),
-                                TextFormField(
-                                  style: _textStyle,
-                                  controller: _stepsController,
-                                  decoration: InputDecoration(
-                                    labelText: 'Steps',
-                                    labelStyle: _textStyle,
-                                  ),
-                                  validator: (v) {
-                                    final trimmed = v?.trim();
-                                    final parsed = int.tryParse(trimmed?.isEmpty ?? true ? '1' : trimmed!);
-                                    if (parsed == null || parsed < 1) {
-                                      return 'Please enter a valid whole number above 0';
-                                    }
-                                    return null;
-                                  },
-                                ),
+                                CommonUtils.buildDropdownButtonFormField(
+                                'Template (optional)', null, [..._templateDetails.keys, ..._userTemplates.keys], _textStyle, _secondaryColor,
+                                (val) {
+                                  if (val == null) return;
+                                  _titleController.text = val;
+                                  final data = _templateDetails[val] ?? _userTemplates[val]!;
+                                  setState(() {
+                                  _category = data['category'];
+                                  _complexity = data['complexity'];
+                                  _effort = data['effort'];
+                                  _time = data['time'];
+                                  _steps = data['steps'];
+                                  _motivation = data['motivation'];
+                                  });
+                                  _timeController.text = data['time'];
+                                  _deadlineController.text = data['Hours to complete'];
+                                  _stepsController.text = data['steps'];
+                                  }),
+                                CommonUtils.buildDropdownButtonFormField('Category', _category, _categories, _textStyle, _secondaryColor, (val) => setState(() => _category = val ?? 'Productivity')),
+                                CommonUtils.buildDropdownButtonFormField('Complexity', _complexity, _levels, _textStyle, _secondaryColor, (val) => setState(() => _complexity = val ?? 'Low')),
+                                CommonUtils.buildDropdownButtonFormField('Effort Required', _effort, _levels, _textStyle, _secondaryColor, (val) => setState(() => _effort = val ?? 'Low')),
+                                CommonUtils.buildDropdownButtonFormField('Motivation Needed', _motivation, _levels, _textStyle, _secondaryColor, (val) => setState(() => _motivation = val ?? 'Low')),
+                                CommonUtils.buildTextFormField(_titleController, 'Goal Title', _textStyle, _secondaryColor, true, (v) =>
+                                v == null || v.isEmpty
+                                    ? 'Title required'
+                                    : null),
+                                CommonUtils.buildTextFormField(_timeController, 'Time Required in minutes', _textStyle, _secondaryColor, true, (v) {
+                                  final parsed = int.tryParse(v?.trim() ?? '');
+                                  if (parsed == null || parsed < 1) {
+                                    return 'Please enter a valid whole number';
+                                  }
+                                  minutesRequired = parsed;
+                                  return null;
+                                }, ),
+                                CommonUtils.buildTextFormField(_deadlineController, 'Hours to complete (optional)', _textStyle, _secondaryColor, true, (v) {
+                                  if (v == null || v.trim().isEmpty) return null;
+                                  final parsed = int.tryParse(v);
+                                  if (parsed == null || parsed <= 0 || parsed > 9999) {
+                                    return 'Must be a whole number > 0 and < 10000';
+                                  }
+                                  minutesToDeadline = parsed * 60;
+                                  if (minutesRequired > minutesToDeadline) {
+                                    return 'Deadline must be greater than time required.';
+                                  }
+                                  return null;
+                                },),
+                                CommonUtils.buildTextFormField(_stepsController, 'Steps (Required)', _textStyle, _secondaryColor, true, (v) {
+                                  final trimmed = v?.trim();
+                                  final parsed = int.tryParse(trimmed?.isEmpty ?? true ? '1' : trimmed!);
+                                  if (parsed == null || parsed < 1) {
+                                    return 'Please enter a valid whole number above 0';
+                                  }
+                                  return null;
+                                },),
                                 const SizedBox(height: 10),
-                                ElevatedButton(
-                                  style: _buttonStyle,
-                                  onPressed: _createGoal,
-                                  child: Text('Add Goal', style: _textStyle),
-                                ),
-                                ElevatedButton(
-                                  style: _buttonStyle,
-                                  onPressed: _clearGoals,
-                                  child: Text('Clear Active Goals', style: _textStyle),
-                                ),
-                                ElevatedButton(
-                                  style: _buttonStyle,
-                                  onPressed: _clearCompleteGoals,
-                                  child: Text('Clear Completed Goals', style: _textStyle),
-                                ),
-                                ElevatedButton(
-                                  style: _buttonStyle,
-                                  onPressed: _openMultiTemplateManager,
-                                  child: Text('Manage Multi-templates', style: _textStyle),
-                                ),
-                                ElevatedButton(
-                                  style: _buttonStyle,
-                                  onPressed: _openTemplateManager,
-                                  child: Text('Manage Templates', style: _textStyle,
-                                  ),
-                                ),
+                                CommonUtils.buildElevatedButton('Add Goal', _primaryColor, _secondaryColor, _textStyle, 5, 5, _createGoal),
+                                CommonUtils.buildElevatedButton('Clear Active Goals', _primaryColor, _secondaryColor, _textStyle, 5, 5, _clearGoals),
+                                CommonUtils.buildElevatedButton('Clear Completed Goals', _primaryColor, _secondaryColor, _textStyle, 5, 5, _clearCompleteGoals),
+                                CommonUtils.buildElevatedButton('Manage Multi-templates', _primaryColor, _secondaryColor, _textStyle, 5, 5, _openMultiTemplateManager),
+                                CommonUtils.buildElevatedButton('Manage Templates', _primaryColor, _secondaryColor, _textStyle, 5, 5, _openTemplateManager),
                               ],
                             ),
                           ),
-
                           const SizedBox(height: 20),
-
-                          // 🔎 Sort and Filter Controls
+                          // Sort and Filter Controls
                           Wrap(
                             spacing: 8,
                             runSpacing: 8,
                             children: [
-                              DropdownButton<String>(
-                                dropdownColor: _secondaryColor,
-                                isExpanded: true,
-                                value: _selectedCategoryFilter,
-                                onChanged:
-                                    (val) => setState(
-                                      () =>
-                                          _selectedCategoryFilter =
-                                              val ?? 'All',
-                                    ),
-                                items:
-                                    ['All', ..._categories]
-                                        .map(
-                                          (e) => DropdownMenuItem(
-                                            value: e,
-                                            child: Text(
-                                              'Category: $e',
-                                              style: _textStyle,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                        )
-                                        .toList(),
-                              ),
-                              DropdownButton<String>(
-                                dropdownColor: _secondaryColor,
-                                isExpanded: true,
-                                value: _selectedComplexityFilter,
-                                onChanged:
-                                    (val) => setState(
-                                      () =>
-                                          _selectedComplexityFilter =
-                                              val ?? 'All',
-                                    ),
-                                items:
-                                    ['All', ..._levels]
-                                        .map(
-                                          (e) => DropdownMenuItem(
-                                            value: e,
-                                            child: Text(
-                                              'Complexity: $e',
-                                              style: _textStyle,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                        )
-                                        .toList(),
-                              ),
-                              DropdownButton<String>(
-                                dropdownColor: _secondaryColor,
-                                value: _selectedStatusFilter,
-                                onChanged:
-                                    (val) => setState(
-                                      () =>
-                                          _selectedStatusFilter =
-                                              val ?? 'Active',
-                                    ),
-                                items:
-                                    ['Active', 'Completed']
-                                        .map(
-                                          (e) => DropdownMenuItem(
-                                            value: e,
-                                            child: Text(
-                                              'Status: $e',
-                                              style: _textStyle,
-                                            ),
-                                          ),
-                                        )
-                                        .toList(),
-                              ),
-                              DropdownButton<String>(
-                                dropdownColor: _secondaryColor,
-                                value: _sortBy,
-                                onChanged:
-                                    (val) =>
-                                        setState(() => _sortBy = val ?? 'None'),
-                                items:
-                                    [
-                                          'None',
-                                          'Title A-Z',
-                                          'Title Z-A',
-                                          'Time ↑',
-                                          'Time ↓',
-                                          'Steps ↑',
-                                          'Steps ↓',
-                                          'Closest deadline',
-                                        ]
-                                        .map(
-                                          (e) => DropdownMenuItem(
-                                            value: e,
-                                            child: Text(
-                                              'Sort: $e',
-                                              style: _textStyle,
-                                            ),
-                                          ),
-                                        )
-                                        .toList(),
-                              ),
+                              CommonUtils.buildDropdownButton(_selectedCategoryFilter, ['All', ..._categories], _textStyle, _secondaryColor, (val) => setState(() => _selectedCategoryFilter = val ?? 'All'), displayText: (v) => 'Category: $v',),
+                              CommonUtils.buildDropdownButton(_selectedComplexityFilter, ['All', ..._levels], _textStyle, _secondaryColor, (val) => setState(() => _selectedComplexityFilter = val ?? 'All'), displayText: (v) => 'Complexity: $v',),
+                              CommonUtils.buildDropdownButton(_selectedStatusFilter, ['Active', 'Completed'], _textStyle, _secondaryColor, (val) => setState(() => _selectedStatusFilter = val ?? 'Active'), displayText: (v) => 'Status: $v',),
+                              CommonUtils.buildDropdownButton(_sortBy, [ 'None', 'Title A-Z', 'Title Z-A', 'Time ↑', 'Time ↓', 'Steps ↑', 'Steps ↓', 'Closest deadline',], _textStyle, _secondaryColor, (val) => setState(() => _sortBy = val ?? 'None'), displayText: (v) => 'Sort: $v',),
                             ],
                           ),
 
@@ -1420,43 +1136,12 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                                       _selectedStatusFilter == 'Active'
                                           ? Wrap(
                                             children: [
-                                              IconButton(
-                                                color: _primaryColor,
-                                                icon: const Icon(
-                                                  Icons.add_circle_outline,
-                                                ),
-                                                onPressed:
-                                                    () =>
-                                                        _incrementStepProgress(
-                                                          _activeGoals.indexOf(
-                                                            g,
-                                                          ),
-                                                        ),
-                                                tooltip: 'Add Step Progress',
-                                              ),
-                                              IconButton(
-                                                color: _primaryColor,
-                                                icon: const Icon(
-                                                  Icons.add_task,
-                                                ),
-                                                onPressed:
-                                                    () =>
-                                                    _completeGoal(
-                                                      _activeGoals.indexOf(
-                                                        g,
-                                                      ),
-                                                    ),
-                                                tooltip: 'Complete Goal',
-                                              ),
-                                              IconButton(
-                                                color: _primaryColor,
-                                                icon: const Icon(Icons.delete),
-                                                onPressed:
-                                                    () => _removeGoal(
-                                                      _activeGoals.indexOf(g),
-                                                    ),
-                                                tooltip: 'Remove Goal',
-                                              ),
+                                              CommonUtils.buildIconButton('Add Step Progress', Icons.add_circle_outline, _primaryColor, () =>
+                                                  _incrementStepProgress( _activeGoals.indexOf(g))),
+                                              CommonUtils.buildIconButton('Complete Goal', Icons.add_task, _primaryColor, () =>
+                                                  _completeGoal(_activeGoals.indexOf(g))),
+                                              CommonUtils.buildIconButton('Remove Goal', Icons.delete, _primaryColor, () => _removeGoal(
+                                                _activeGoals.indexOf(g))),
                                             ],
                                           )
                                           : null,
@@ -1499,5 +1184,3 @@ Widget buildStepDisplay(Map<String, dynamic> g, double userFontSize) {
     ),
   );
 }
-
-

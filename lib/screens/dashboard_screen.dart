@@ -5,6 +5,7 @@ import 'package:focusNexus/utils/BaseState.dart';
 
 import '../models/classes/achievement_tracking_variables.dart';
 import '../models/classes/theme_bundle.dart';
+import '../utils/common_utils.dart';
 import '../utils/notifier.dart';
 import '../services/achievement_service.dart';
 
@@ -21,10 +22,8 @@ class _DashboardScreenState extends BaseState<DashboardScreen> {
   int _points = 0;
   bool _themeLoaded = false;
   late ThemeData _themeData;
-  late Color _primaryColor;
   late Color _secondaryColor;
   late TextStyle _textStyle;
-  late ButtonStyle _buttonStyle;
   late String _rewardType;
 
   @override
@@ -46,7 +45,6 @@ class _DashboardScreenState extends BaseState<DashboardScreen> {
   Future<void> setThemeDataScreen (ThemeBundle themeBundle, String storedType)  async {
     setState(() {
       _themeData = themeBundle.themeData;
-      _primaryColor = themeBundle.primaryColor;
       _secondaryColor = themeBundle.secondaryColor;
       _textStyle = themeBundle.textStyle;
       _themeLoaded = true;
@@ -62,31 +60,7 @@ class _DashboardScreenState extends BaseState<DashboardScreen> {
   }
 
 
-  Widget _buildCenteredButton(
-      BuildContext context, {
-        required String label,
-        required VoidCallback onPressed,
-        required TextStyle style,
-        required Color backgroundColor,
-      }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Center(
-        child: SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: onPressed,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: backgroundColor,
-              padding: const EdgeInsets.symmetric(vertical: 16.0),
-              alignment: Alignment.center,
-            ),
-            child: Text(label, style: style, textAlign: TextAlign.center),
-          ),
-        ),
-      ),
-    );
-  }
+
 
 
   @override
@@ -119,48 +93,30 @@ class _DashboardScreenState extends BaseState<DashboardScreen> {
               ),
               const SizedBox(height: 60),
 
-              _buildCenteredButton(
-                context,
-                label: 'Settings',
-                onPressed: () =>
-                    Navigator.pushNamed(context, 'settings', arguments: context)
-                        .then((_) => _themeLoaded = false),
-                style: _textStyle,
-                backgroundColor: _secondaryColor,
+              CommonUtils.buildCenteredButton(
+                context, 'Settings', () => Navigator.pushNamed(context, 'settings', arguments: context).then((_) => _themeLoaded = false),
+                _textStyle, _secondaryColor,
               ),
 
-              _buildCenteredButton(
-                context,
-                label: 'Reward: $_rewardType',
-                onPressed: () => Navigator.pushNamed(context, 'reward'),
-                style: _textStyle,
-                backgroundColor: _secondaryColor,
+              CommonUtils.buildCenteredButton(
+                context, 'Reward: $_rewardType', () => Navigator.pushNamed(context, 'reward'),
+                _textStyle, _secondaryColor,
               ),
 
-              _buildCenteredButton(
-                context,
-                label: 'AI Chat / Therapist Space',
-                onPressed: () => Navigator.pushNamed(context, 'chat'),
-                style: _textStyle,
-                backgroundColor: _secondaryColor,
+              CommonUtils.buildCenteredButton(
+                context, 'AI Chat / Therapist Space', () => Navigator.pushNamed(context, 'chat'),
+                _textStyle, _secondaryColor,
               ),
 
-              _buildCenteredButton(
-                context,
-                label: 'Achievements',
-                onPressed: () => Navigator.pushNamed(context, 'achievements'),
-                style: _textStyle,
-                backgroundColor: _secondaryColor,
+              CommonUtils.buildCenteredButton(
+                context, 'Achievements', () => Navigator.pushNamed(context, 'achievements'), _textStyle, _secondaryColor,
               ),
 
-              _buildCenteredButton(
-                context,
-                label: 'Goal Setting',
-                onPressed: () =>
+              CommonUtils.buildCenteredButton(
+                context, 'Goal Setting', () =>
                     Navigator.pushNamed(context, 'goals').then((_) =>
                         _loadPoints()),
-                style: _textStyle,
-                backgroundColor: _secondaryColor,
+                _textStyle, _secondaryColor,
               ),
             ],
           ),
