@@ -30,6 +30,8 @@ class _SettingsScreenState extends BaseState<SettingsScreen>
   ];
   List<String> notificationStyles = ['Minimal', 'Vibrant', 'Animated'];
   final rewardTypes = ['Mini-games', 'Progressive visuals', 'Customization'];
+  late bool _soundEnabled;
+  late double _soundVolume;
 
   @override
   void initState() {
@@ -57,6 +59,8 @@ class _SettingsScreenState extends BaseState<SettingsScreen>
   }
 
   Future<void> _loadSettings() async {
+    final storedSoundEnabled = await getBoolFromStorage('soundEnabled');
+    final storedSoundVolume = await getStringFromStorage('soundVolume');
     final storedFrequency = await notificationFrequency;
     final storedStyle = await notificationStyle;
     final storedType = await rewardType;
@@ -74,6 +78,8 @@ class _SettingsScreenState extends BaseState<SettingsScreen>
         _themeData = themeBundle.themeData;
         _themeLoaded = true;
         _dailyAffirmationsTime = storedTime;
+        _soundEnabled = storedSoundEnabled;
+        _soundVolume = double.parse(storedSoundVolume);
       });
     }
   }
@@ -116,6 +122,14 @@ class _SettingsScreenState extends BaseState<SettingsScreen>
       setState(() {
         _notificationFrequency = newFrequency;
       });
+    }
+  }
+
+  Future<void> setPauseGoalsScreen(bool value) async {
+    setPauseGoals(value);
+
+    if (value == true) {
+      await GoalNotifier.cancelAllGoalNotifications(); // pause - no need for notifications reminding them of deadlines.
     }
   }
 
@@ -162,6 +176,18 @@ class _SettingsScreenState extends BaseState<SettingsScreen>
         hourMinuteTextStyle: textStyle,
       ),
     );
+  }
+
+  Future<void>setSoundVolumeLocal(double double) async {
+    await setSoundVolume(double);
+    setState(() => _soundVolume = double);
+    debugPrint('Sound volume: $_soundVolume');
+  }
+
+  Future<void>setSoundEnabledLocal(bool enabled) async {
+    await setSoundEnabled(enabled);
+    setState(() => _soundEnabled = enabled);
+    debugPrint('Sound enabled: $enabled');
   }
 
   @override
@@ -407,9 +433,24 @@ class _SettingsScreenState extends BaseState<SettingsScreen>
                   'Pause Goals',
                   textStyle,
                   pauseGoals,
-                  setPauseGoals,
+                  setPauseGoalsScreen,
                   primaryColor,
                 ),
+                CommonUtils.buildSwitchListTile (
+                  'Sound',
+                  textStyle,
+                  _soundEnabled,
+                  setSoundEnabledLocal,
+                  primaryColor,
+                ),
+
+                if (_soundEnabled) ... [
+                  Slider(
+                      value: _soundVolume,
+                      min: 0, max: 100, divisions: 100,
+                      label: _soundVolume.toString(),
+                      onChanged: (val) => setSoundVolumeLocal(val.toDouble()))
+                ],
 
                 const Divider(),
                 CommonUtils.buildElevatedButton(
@@ -507,4 +548,6 @@ class _SettingsScreenState extends BaseState<SettingsScreen>
       ),
     );
   }
+
+
 }

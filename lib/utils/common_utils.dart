@@ -115,20 +115,6 @@ class CommonUtils {
     );
   }
 
-  static Widget buildContainer (
-      Color secondaryColor,
-      EdgeInsetsGeometry padding,
-      Widget? child,
-      ) {
-
-    return  Container(
-      padding: const EdgeInsets.all(8),
-      color: secondaryColor,
-      child: child,
-    );
-
-  }
-
   static Widget buildDropdownButton<T>(
     T value,
     List<T> options,

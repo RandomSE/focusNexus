@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
+import 'package:confetti/confetti.dart';
 
+import '../services/sound_service.dart';
 import '../utils/BaseState.dart';
 import '../models/classes/theme_bundle.dart';
 import '../models/classes/goal_set.dart';
@@ -38,6 +40,8 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
   String _effort = 'Low';
   String _time = '1';
   String _steps = '1';
+  final String today = DateFormat('dd MM yyyy').format(DateTime.now());
+  int goalsCompletedToday = 0;
   String _motivation = 'Low';
   final _categories = ['Productivity', 'Health', 'Learning', 'Social', 'Self-care', 'Work', 'Relationships', 'Other'];
   final _levels = ['Low', 'Medium', 'High'];
@@ -110,11 +114,18 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
   bool _notificationsEnabled = false;
   String _notificationStyle = 'Minimal';
   String _notificationFrequency = 'Low';
+  late ConfettiController _confettiController;
 
   @override
   void initState() {
     super.initState();
     _loadGoalsPage();
+    _confettiController = ConfettiController(duration: const Duration(seconds: 1));
+  }
+
+  @override void dispose() {
+    _confettiController.dispose();
+    super.dispose();
   }
 
   Future<void> loadNotificationStyleAndFrequency() async {
@@ -148,8 +159,6 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
 
 
   Future<int> getTotalAmount(int amount) async {
-    final String today = DateFormat('dd MM yyyy').format(DateTime.now());
-
     final String? stored = await _storage.read(key: 'completedToday');
     int count = 1;
 
@@ -165,6 +174,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
 
     await _storage.write(key: 'completedToday', value: '$today|$count');
     debugPrint('today: $today, count: $count');
+    goalsCompletedToday = count;
 
     double reward = amount.toDouble();
 
@@ -216,7 +226,12 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
               ? List<Map<String, dynamic>>.from(json.decode(complete))
               : [];
     });
-    _checkForExpiredGoals();
+
+    final deadlinesInactive = await _storage.read(key: 'pauseGoals');
+
+    if (deadlinesInactive != 'True') {
+      _checkForExpiredGoals();
+    }
   }
 
   List<Map<String, dynamic>> get _filteredSortedGoals {
@@ -447,7 +462,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
         goalId: goalId.toString(),
       );
 
-      if (_notificationsEnabled && hours > 0) {
+      if (_notificationsEnabled && hours > 0 && pauseGoals != true) {
         final goalSet = GoalSet.fromMap(goal);
         GoalNotifier.startGoalCheck(goalSet, _notificationStyle, _notificationFrequency, hours);
       } else {
@@ -455,8 +470,10 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
       }
       _resetControllers();
       await incrementStoredInt('totalGoalsCreated');
-      await incrementStoredInt('totalGoalsActive'); // decrease this when a goal expires, is deleted, or completed.
+      await incrementStoredInt('totalGoalsActive');
     }
+
+    SoundService.playGoalCreated();
   }
 
   void _resetControllers() {
@@ -509,7 +526,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
       goalId: goalId.toString(),
     );
 
-    if (_notificationsEnabled && hours > 0) {
+    if (_notificationsEnabled && hours > 0 && pauseGoals != true) {
       final goalSet = GoalSet.fromMap(goal);
       GoalNotifier.startGoalCheck(goalSet, _notificationStyle, _notificationFrequency, hours);
     } else {
@@ -518,6 +535,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
 
     await incrementStoredInt('totalGoalsCreated');
     await incrementStoredInt('totalGoalsActive'); // decrease this when a goal expires, is deleted, or completed.
+    SoundService.playGoalCreated();
   }
 
   Future<void> _checkGoalCompletionAchievementVariables(GoalSet goalSet) async {
@@ -526,6 +544,59 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
     await checkOrAddDate();
     await checkAndUpdateGoalAchievementStats(goalSet);
   }
+
+  Future<void> _createGoalsFromTemplatesBulk(List<String> templateNames) async {
+    if (templateNames.isEmpty) {
+      CommonUtils.showBasicAlertDialog(
+        context,
+        'No templates Selected',
+        'Please select at least one template to create goals from.',
+        _textStyle,
+        _secondaryColor,
+      );
+      return;
+    }
+
+    CommonUtils.showDialogWidget(
+      context,
+      'Goals are being created.',
+      _textStyle,
+      _secondaryColor,
+    );
+
+    // Collect all futures
+    final futures = <Future<void>>[];
+
+    for (final templateName in templateNames) {
+      final data = _templateDetails[templateName] ?? _userTemplates[templateName]!;
+
+      futures.add(_createGoalFromTemplates(
+        title: templateName,
+        category: data['category'],
+        complexity: data['complexity'],
+        effort: data['effort'],
+        motivation: data['motivation'],
+        time: data['time'],
+        steps: data['steps'],
+        deadlineHours: data['Hours to complete'],
+      ));
+    }
+
+    // Run them in parallel
+    await Future.wait(futures);
+
+    // Play sound once at the end
+    SoundService.playGoalCreated();
+
+    // Show confirmation dialog
+    CommonUtils.showDialogWidget(
+      context,
+      'Goals created from selected templates.',
+      _textStyle,
+      _secondaryColor,
+    );
+  }
+
 
 
   void _completeGoal(int index) {
@@ -537,6 +608,9 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
     _saveGoals();
     setState(() {});
     _checkGoalCompletionAchievementVariables(goalSet);
+    SoundService.playGoalCompleted();
+    _confettiController.play();
+    CommonUtils.showSnackBar(context, '${goal['title']} completed! +${goal['points']} points. ' 'Goals completed today: $goalsCompletedToday', _textStyle, 2000, 5);
   }
 
   void _removeGoal(int index) {
@@ -961,21 +1035,8 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                   CommonUtils.showBasicAlertDialog(context, 'No templates Selected', 'Please select at least one template to create goals from.', _textStyle, _secondaryColor);
                   return;
                 }
-                for (final templateName in selectedTemplates) {
-                  final data = _templateDetails[templateName] ?? _userTemplates[templateName]!;
-                  await _createGoalFromTemplates(
-                    title: templateName,
-                    category: data['category'],
-                    complexity: data['complexity'],
-                    effort: data['effort'],
-                    motivation: data['motivation'],
-                    time: data['time'],
-                    steps: data['steps'],
-                    deadlineHours: data['Hours to complete'],
-                  );
-                }
-                CommonUtils.showDialogWidget(context, 'Goals created from selected templates.', _textStyle, _secondaryColor);
-              }, ),
+                await _createGoalsFromTemplatesBulk(selectedTemplates);
+              }),
             ],
           );
         },
@@ -1088,6 +1149,10 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
                                 CommonUtils.buildElevatedButton('Clear Completed Goals', _primaryColor, _secondaryColor, _textStyle, 5, 5, _clearCompleteGoals),
                                 CommonUtils.buildElevatedButton('Manage Multi-templates', _primaryColor, _secondaryColor, _textStyle, 5, 5, _openMultiTemplateManager),
                                 CommonUtils.buildElevatedButton('Manage Templates', _primaryColor, _secondaryColor, _textStyle, 5, 5, _openTemplateManager),
+                                ConfettiWidget(
+                                  confettiController: _confettiController,
+                                  blastDirectionality: BlastDirectionality.explosive,
+                                  shouldLoop: false),
                               ],
                             ),
                           ),

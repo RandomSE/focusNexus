@@ -14,7 +14,6 @@ class RegistrationScreen extends StatefulWidget {
 class _RegistrationScreenState extends State<RegistrationScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _ageController = TextEditingController();
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -39,8 +38,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   Future<void> _saveUserPreferences() async {
     debugPrint('Saving user preferences...');
-    await _storage.write(key: 'name', value: _nameController.text); // TODO: use this on email for personalization.
-    await _storage.write(key: 'email', value: _emailController.text); // TODO: use this to validate email.  change registration flow slightly to ask if they would like to receive emails, and a setting in settings to change this.
+    await _storage.write(key: 'name', value: _nameController.text); // TODO: use this for personalization
     await _storage.write(key: 'age', value: _ageController.text);
     await _storage.write(key: 'notificationStyle', value: _notificationStyle);
     await _storage.write(key: 'notificationFrequency', value: _frequency);
@@ -49,10 +47,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     await _storage.write(key: 'username', value: _usernameController.text);
     await _storage.write(key: 'password', value: _passwordController.text);
     await _storage.write(key: 'onboardingCompleted', value: 'false');
-  }
-
-  bool _isEmailValid(String email) {
-    return RegExp(r'^[^@]+@[^@]+\.(com)$').hasMatch(email);
   }
 
   bool _isNumeric(String input) => int.tryParse(input) != null;
@@ -71,11 +65,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               value == null || value.isEmpty
                   ? 'Enter your name'
                   : null,
-              ),
-              CommonUtils.buildTextFormField(_emailController, 'Email', textStyle, secondaryColor, true, (value) =>
-              value != null && _isEmailValid(value)
-                  ? null
-                  : 'Enter a valid .com email',
               ),
               CommonUtils.buildTextFormField(_ageController, 'Age in years', textStyle, secondaryColor, true, (value) {
                 if (value == null || !_isNumeric(value)) {

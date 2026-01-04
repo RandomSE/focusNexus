@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:focusNexus/services/sound_service.dart';
 import '../models/classes/achievement.dart';
 import '../models/classes/achievement_tracking_variables.dart';
 import '../views/AchievementDetailView.dart';
@@ -344,6 +345,7 @@ class AchievementService {
       debugPrint('Special reward spotted. ID: $id reward: $reward');
     }
     await _saveToStorage();
+    await SoundService.playAchievementCompleted();
     debugPrint('Achievement successfully saved. title: ${_cachedAchievements[index].title}, progress: ${_cachedAchievements[index].progress}%');
   }
 

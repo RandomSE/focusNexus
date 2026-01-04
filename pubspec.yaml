@@ -35,6 +35,8 @@ dependencies:
   flutter_local_notifications: ^17.2.1
   timezone: ^0.9.0
   permission_handler: ^11.0.0
+  audioplayers: ^6.5.1
+  confetti: ^0.7.0
 
 
 
@@ -62,6 +64,7 @@ dev_dependencies:
 flutter:
   assets:
     - assets/images/onboarding_images/
+    - assets/sounds/
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

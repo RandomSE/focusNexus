@@ -34,6 +34,8 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
   bool _themeLoaded = false;
   bool _notificationsEnabled = false;
   bool _onboardingCompleted = false;
+  bool _soundEnabled = false;
+  double _soundVolume = 0.0;
   String _dailyAffirmationsTime = '06:00';
 
   @override
@@ -158,23 +160,9 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
   bool get pauseGoals => _pauseGoals;
   bool get loggedIn => _loggedIn;
   bool get onboardingCompleted => _onboardingCompleted;
+  bool get soundEnabled => _soundEnabled;
+  double get soundVolume => _soundVolume;
   ThemeData get themeData => _themeData;
-
-  // TODO: Change most of these to explicitly check from storage.
-  /*
-  Future<String> get variable async {
-    String extractedString = await readFromStorage('variable');
-    if (extractedString == '') {
-      return 'Something';
-    }
-    else {
-      _variable = extractedString;
-      return _variable;
-    }
-  }
-
-
-   */
 
   Future<String> get dailyAffirmationsTime async {
     String extractedString = await readFromStorage('dailyAffirmationsTime');
@@ -296,6 +284,15 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     );
   }
 
+  Future<double> getSoundVolume() async {
+    final soundVolume = await _storage.read(key: 'soundVolume');
+    if (soundVolume != null) {
+      return double.parse(soundVolume);
+    } else {
+      return 0.0;
+    }
+  }
+
   // Setters
   Future<void> setUserFontSize(double value) async {
     setState(() => _userFontSize = value);
@@ -387,8 +384,20 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
       debugPrint('Key: $key, Value: $value');
       await _storage.write(key: key, value: value.toString());
     }
+    onThemeUpdated();
   }
 
+  Future<void> setSoundEnabled(bool value) async {
+    setState(() => _soundEnabled = value);
+    await _storage.write(key: 'soundEnabled', value: value.toString());
+    onThemeUpdated();
+  }
+
+  Future<void> setSoundVolume(double value) async {
+    setState(() => _soundVolume = value);
+    await _storage.write(key: 'soundVolume', value: value.toString());
+    onThemeUpdated();
+  }
 
   Future<void> setBoolVariable(String key, bool value) async { // TODO: Replace all calls to set bool variables with THIS instead, once all bool variables are added here.
     final Map<String, void Function()> localSetters = {
@@ -396,6 +405,7 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
       'rememberMe': () => setState(() => _rememberMe = value),
       'aiEncouragement': () => setState(() => _aiEncouragement = value),
       'dailyAffirmations': () => setState(() => _dailyAffirmations = value),
+      'soundEnabled': () => setState(() => _soundEnabled = value),
     };
 
     final setter = localSetters[key];
@@ -415,6 +425,7 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     } else {
       debugPrint('Key or value is empty. Key: $key, Value: $value');
     }
+    onThemeUpdated();
   }
 
   Future<void> setThemeData({
@@ -551,6 +562,8 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
       _pauseGoals = false;
       _loggedIn = false;
       _onboardingCompleted = false;
+      _soundEnabled = false;
+      _soundVolume = 0.0;
     });
 
     await setUserFontSize(14.0);
@@ -567,6 +580,8 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     await setPauseGoals(false);
     await setLoggedIn(false);
     await setOnboardingCompleted(false);
+    await setStringVariableStorageOnly('soundEnabled', 'false');
+    await setStringVariableStorageOnly('soundVolume', '0.0');
   }
 
   final ThemeData defaultThemeData = ThemeData(
