@@ -103,12 +103,40 @@ class _DashboardScreenState extends BaseState<DashboardScreen> {
                 _textStyle, _secondaryColor,
               ),
 
-              CommonUtils.buildCenteredButton(
-                context, 'AI Chat / Therapist Space', () => Navigator.pushNamed(context, 'chat'),
-                _textStyle, _secondaryColor,
-              ),
+          CommonUtils.buildCenteredButton(
+            context,
+            'AI Assistant',
+                () async {
+                  final proceed = await CommonUtils.showInteractableAlertDialog(
+                    context,
+                    'AI Chat Screen',
+                    '',
+                    _textStyle,
+                    _secondaryColor,
+                    actions: [
+                      CommonUtils.buildTextButton(() => Navigator.pop(context, false), 'Cancel', _textStyle),
+                      CommonUtils.buildTextButton(() => Navigator.pop(context, true), 'OK', _textStyle),
+                    ],
+                    content: SingleChildScrollView(
+                      child: Text(
+                        'By continuing, you acknowledge that you use this AI chat at your own discretion and responsibility. '
+                            'It is for general informational and supportive purposes only, and not a substitute for professional medical, psychological, or therapeutic advice. '
+                            'Do not rely on it for decisions regarding your health, safety, or wellbeing.',
+                        style: _textStyle,
+                      ),
+                    ),
+                  );
 
-              CommonUtils.buildCenteredButton(
+                  if (proceed == true) {
+                Navigator.pushNamed(context, 'chat');
+              }
+            },
+            _textStyle,
+            _secondaryColor,
+          ),
+
+
+          CommonUtils.buildCenteredButton(
                 context, 'Achievements', () => Navigator.pushNamed(context, 'achievements'), _textStyle, _secondaryColor,
               ),
 

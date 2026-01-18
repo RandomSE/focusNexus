@@ -41,12 +41,14 @@ class _NewScreenState extends BaseState<NewScreen> {
     return Theme(
           data: _themeData,
           child: Scaffold(
+          backgroundColor: _secondaryColor,
             appBar: AppBar(
               title: Text(
                 'New',
                 style: TextStyle(
                   backgroundColor: _secondaryColor,
                   color: _primaryColor,
+                  iconTheme: IconThemeData(color: _primaryColor),
                 ),
               ),
               backgroundColor: _secondaryColor,

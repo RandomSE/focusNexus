@@ -224,6 +224,7 @@ class CommonUtils {
       bool hideText = false,
   }) {
     return TextField(
+      style: textStyle,
       controller: controller,
       decoration: InputDecoration(labelText: text, labelStyle: textStyle),
       obscureText: hideText
@@ -314,13 +315,16 @@ class CommonUtils {
       TextStyle textStyle,
       Color backgroundColor, {
         List<Widget>? actions,
+        SingleChildScrollView? content,
       }) {
+    content ??= Text(bodyText, style: textStyle) as SingleChildScrollView?;
     return showDialog<bool>(
+      // TODO: Cont here
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: backgroundColor,
         title: Text(titleText, style: textStyle),
-        content: Text(bodyText, style: textStyle),
+        content: content,
         actions: actions,
       ),
     );

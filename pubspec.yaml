@@ -37,6 +37,8 @@ dependencies:
   permission_handler: ^11.0.0
   audioplayers: ^6.5.1
   confetti: ^0.7.0
+  http: ^1.1.0
+  flutter_dotenv: ^5.1.0
 
 
 
@@ -63,6 +65,7 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
   assets:
+    - .env
     - assets/images/onboarding_images/
     - assets/sounds/
 

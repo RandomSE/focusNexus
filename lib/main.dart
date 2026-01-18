@@ -2,11 +2,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:focusNexus/screens/achievements_screen.dart';
+import 'package:focusNexus/screens/ai_chat_screen.dart';
 import 'package:focusNexus/screens/goals_screen.dart';
 import 'package:focusNexus/screens/onboarding_screen.dart';
 import 'package:focusNexus/screens/settings_screen.dart';
 import 'screens/auth_start_screen.dart';
 import 'screens/dashboard_screen.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,6 +16,8 @@ void main() async {
   final loggedIn = await storage.read(key: 'loggedIn');
   final rememberMe = await storage.read(key: 'rememberMe');
   bool currentlyLoggedIn = false;
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
 
   // TODO: Privacy policy, terms & conditions.
   if (rememberMe == 'true' && loggedIn == 'true') { // If someone has both remember me and valid credentials, they can stay logged in. No remember me - not automatically logged back in.
@@ -63,7 +67,7 @@ class FocusNexusApp extends StatelessWidget {
                 return PlaceholderScreen(snapshot.data!);
               },
             ),
-        'chat': (_) => PlaceholderScreen('AI Chat / Therapist Space'),
+        'chat': (_) => const AiChatScreen(),
         'achievements': (_) => const AchievementScreen(),
         'goals': (_) => const GoalsScreen(),
       },
