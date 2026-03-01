@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:ffi';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -37,6 +36,12 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
   bool _soundEnabled = false;
   double _soundVolume = 0.0;
   String _dailyAffirmationsTime = '06:00';
+  bool _customizationEnabled = false;
+  late Color _customizedPrimary;
+  late Color _customizedSecondary;
+  late String _customizedFont;
+  List<Color> _allowedColors = [];
+
 
   @override
   void initState() {
@@ -123,7 +128,7 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     return value == 'true';
   }
 
-  Future<void> _loadUserPreferences() async { // TODO: Refactor to remove the need for this.
+  Future<void> _loadUserPreferences() async {
     final theme = await readFromStorage('theme') ?? 'light';
     final fontSize = double.tryParse(await readFromStorage('fontSize') ?? '') ?? 14.0;
     final useDyslexiaFont = (await readFromStorage('dyslexiaFont')) == 'true';
@@ -133,6 +138,29 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     final rememberMe = (await readFromStorage('rememberMe')) == 'true';
     final notificationFrequency = (await readFromStorage('notificationFrequency')) ?? 'Low';
     final notificationStyle = (await readFromStorage('notificationStyle')) ?? 'Minimal';
+    final customizationEnabled = (bool.tryParse(await readFromStorage('customizationEnabled')) ?? false);
+    final storedColors = await readFromStorage('allowedColours');
+    debugPrint('Stored colors: $storedColors');
+    final customizedFont = await readFromStorage('customizedFont');
+    List<Color> allowedColors;
+    if (storedColors != null && storedColors.isNotEmpty) {
+      try {
+        final List<dynamic> decoded = jsonDecode(storedColors);
+        debugPrint('decoded: $decoded');
+        // Convert the list of integers back into Color objects
+        allowedColors = decoded.map((value) => Color(value as int)).toList();
+        debugPrint('allowedColors (BaseState) $allowedColors');
+      } catch (e) {
+        debugPrint("Error decoding colors: $e");
+        allowedColors = [];
+        setAllowedColors(Colors.black); // delete
+      }
+    } else {
+      allowedColors = [];
+      setAllowedColors(Colors.black); // delete
+    }
+
+
 
     if (!mounted) return;
     setState(() {
@@ -145,6 +173,9 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
       _rememberMe = rememberMe;
       _notificationFrequency = notificationFrequency;
       _notificationStyle = notificationStyle;
+      _customizationEnabled = customizationEnabled;
+      _allowedColors = allowedColors;
+      _customizedFont = customizedFont;
     });
   }
 
@@ -163,6 +194,9 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
   bool get soundEnabled => _soundEnabled;
   double get soundVolume => _soundVolume;
   ThemeData get themeData => _themeData;
+  bool get customizationEnabled => _customizationEnabled;
+  List<Color> get allowedColors => _allowedColors;
+  String get customizedFont => _customizedFont;
 
   Future<String> get dailyAffirmationsTime async {
     String extractedString = await readFromStorage('dailyAffirmationsTime');
@@ -232,6 +266,10 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
   }
 
   Color getPrimaryColor(bool isDark, bool contrastMode) {
+    debugPrint("customization enabled? : $customizationEnabled");
+    if (customizationEnabled) {
+      return Colors.greenAccent;
+    }
     if (contrastMode) {
       if (isDark) {
         return Colors.cyan;
@@ -307,8 +345,20 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
   }
 
   Future<void> setRewardType(String value) async {
+    String currentType = _rewardType;
     setState(() => _rewardType = value);
+    if (currentType == 'Customization' && value != 'Customization') {
+      await setCustomizationEnabled(false);
+    } else if (currentType != 'Customization' && value == 'Customization') {
+      await setCustomizationEnabled(true);
+    }
     await _storage.write(key: 'rewardType', value: value);
+    onThemeUpdated();
+  }
+
+  Future<void> setCustomizationEnabled(bool value) async {
+    setState(() => _customizationEnabled = value);
+    await _storage.write(key: 'customizationEnabled', value: value.toString());
     onThemeUpdated();
   }
 
@@ -424,6 +474,32 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
       await _storage.write(key: key, value: value);
     } else {
       debugPrint('Key or value is empty. Key: $key, Value: $value');
+    }
+    onThemeUpdated();
+  }
+
+  Future<void> setAllowedColors(Color value) async {
+    final currentAllowedColors = await _storage.read(key: 'allowedColors');
+    debugPrint('BaseState current allowed Colors: $currentAllowedColors');
+    debugPrint('Adding allowed color: $value');
+    if (value == Colors.black) {
+      setState(() {
+        _allowedColors = [];
+      });
+      // Save an empty list as JSON
+      await _storage.write(key: 'allowedColors', value: jsonEncode([]));
+      return;
+    }
+
+    if (!_allowedColors.contains(value)) {
+      setState(() {
+        // Ensure it's a growable list and add the new color
+        _allowedColors = List.from(_allowedColors)..add(value);
+      });
+
+      // Map the List<Color> to a List<int> (hex values) and encode to JSON String
+      final List<int> colorValues = _allowedColors.map((c) => c.value).toList();
+      await _storage.write(key: 'allowedColors', value: jsonEncode(colorValues));
     }
     onThemeUpdated();
   }
@@ -564,6 +640,9 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
       _onboardingCompleted = false;
       _soundEnabled = false;
       _soundVolume = 0.0;
+      _customizationEnabled = false;
+      _allowedColors = List.empty();
+      _customizedFont = "";
     });
 
     await setUserFontSize(14.0);
@@ -582,6 +661,9 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     await setOnboardingCompleted(false);
     await setStringVariableStorageOnly('soundEnabled', 'false');
     await setStringVariableStorageOnly('soundVolume', '0.0');
+    await setCustomizationEnabled(false);
+    await setAllowedColors(Colors.black);
+    await setStringVariableStorageOnly("customizedFont", "");
   }
 
   final ThemeData defaultThemeData = ThemeData(

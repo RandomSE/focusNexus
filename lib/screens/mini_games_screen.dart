@@ -5,15 +5,15 @@ import '../utils/common_utils.dart';
 
 import '../models/classes/theme_bundle.dart';
 
-class NewScreen extends StatefulWidget {
-  const NewScreen({super.key});
+class MiniGamesScreen extends StatefulWidget {
+  const MiniGamesScreen({super.key});
 
 
   @override
-  State<NewScreen> createState() => _NewScreenState();
+  State<MiniGamesScreen> createState() => _MiniGamesScreenState();
 }
 
-class _NewScreenState extends BaseState<NewScreen> {
+class _MiniGamesScreenState extends BaseState<MiniGamesScreen> {
   late ThemeData _themeData;
   late Color _primaryColor;
   late Color _secondaryColor;
@@ -44,7 +44,7 @@ class _NewScreenState extends BaseState<NewScreen> {
         backgroundColor: _secondaryColor,
         appBar: AppBar(
           title: Text(
-            'New',
+            'Mini-games',
             style: TextStyle(
               backgroundColor: _secondaryColor,
               color: _primaryColor,

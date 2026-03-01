@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:focusNexus/screens/achievements_screen.dart';
 import 'package:focusNexus/screens/ai_chat_screen.dart';
+import 'package:focusNexus/screens/customization_screen.dart';
 import 'package:focusNexus/screens/goals_screen.dart';
+import 'package:focusNexus/screens/mini_games_screen.dart';
 import 'package:focusNexus/screens/onboarding_screen.dart';
+import 'package:focusNexus/screens/progressive_visuals.dart';
 import 'package:focusNexus/screens/settings_screen.dart';
 import 'screens/auth_start_screen.dart';
 import 'screens/dashboard_screen.dart';
@@ -64,7 +67,17 @@ class FocusNexusApp extends StatelessWidget {
                     body: Center(child: CircularProgressIndicator()),
                   );
                 }
-                return PlaceholderScreen(snapshot.data!);
+                switch(snapshot.data){
+                  case 'Mini-games':
+                    return const MiniGamesScreen();
+                  case 'Progressive visuals':
+                    return const ProgressiveVisualsScreen();
+                  case 'Customization':
+                    return const CustomizationScreen();
+                  default:
+                    return PlaceholderScreen(snapshot.data!);
+
+                }
               },
             ),
         'chat': (_) => const AiChatScreen(),
