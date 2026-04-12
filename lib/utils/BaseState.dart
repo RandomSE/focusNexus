@@ -254,8 +254,12 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
   }
 
   Future<String> getStringFromStorage (String key) async {
-    String extractedString = await readFromStorage(key);
-    return extractedString; // no real validation needed here. If specific values are warranted, simply validate there or make a wrapper method that calls this and validates that way.
+    String? extractedString = await readFromStorage(key);
+
+    if (extractedString == null || extractedString.isEmpty) {
+      return ""; // Return empty string to avoid null pointer errors
+    }
+    return extractedString;
   }
 
   Future<int> getIntFromStorage(String key) async {
@@ -271,22 +275,16 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
       return Colors.greenAccent;
     }
     if (contrastMode) {
-      if (isDark) {
-        return Colors.cyan;
-      }
-      return const Color(0xFF004F52);
+      return isDark ? Colors.cyan : const Color(0xFF004F52);
     }
-    return Colors.black87;
+    return isDark ? Colors.white70 : Colors.black87;
   }
 
   Color getSecondaryColor(bool isDark, bool contrastMode) {
     if (contrastMode) {
-      if (isDark) {
-        return Colors.black;
-      }
-      return const Color(0xFFF2EFE6);
+      return isDark ? Colors.black : const Color(0xFFF2EFE6);
     }
-    return const Color(0xFFF5F5F5);
+    return isDark ? Colors.black : const Color(0xFFF2EFE6);
   }
 
   Future<String> getNotificationStyle() async { // TODO: update references

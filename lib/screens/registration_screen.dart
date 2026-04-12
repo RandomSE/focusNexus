@@ -47,6 +47,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     await _storage.write(key: 'username', value: _usernameController.text);
     await _storage.write(key: 'password', value: _passwordController.text);
     await _storage.write(key: 'onboardingCompleted', value: 'false');
+    await _storage.write(key: 'theme', value: 'light');
   }
 
   bool _isNumeric(String input) => int.tryParse(input) != null;

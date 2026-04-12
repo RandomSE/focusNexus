@@ -315,9 +315,11 @@ class CommonUtils {
       TextStyle textStyle,
       Color backgroundColor, {
         List<Widget>? actions,
-        SingleChildScrollView? content,
+        Widget? content,
       }) {
-    content ??= Text(bodyText, style: textStyle) as SingleChildScrollView?;
+    content ??= SingleChildScrollView(
+      child: Text(bodyText, style: textStyle),
+    );
     return showDialog<bool>(
       // TODO: Cont here
       context: context,

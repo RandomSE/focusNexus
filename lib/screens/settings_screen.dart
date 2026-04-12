@@ -79,7 +79,9 @@ class _SettingsScreenState extends BaseState<SettingsScreen>
         _themeLoaded = true;
         _dailyAffirmationsTime = storedTime;
         _soundEnabled = storedSoundEnabled;
-        _soundVolume = double.parse(storedSoundVolume);
+        _soundVolume = storedSoundVolume.isNotEmpty
+            ? double.parse(storedSoundVolume)
+            : 0.0;
       });
     }
   }
