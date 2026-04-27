@@ -139,11 +139,13 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     final notificationFrequency = (await readFromStorage('notificationFrequency')) ?? 'Low';
     final notificationStyle = (await readFromStorage('notificationStyle')) ?? 'Minimal';
     final customizationEnabled = (bool.tryParse(await readFromStorage('customizationEnabled')) ?? false);
-    final storedColors = await readFromStorage('allowedColours');
+    final storedColors = await readFromStorage('allowedColors');
     debugPrint('Stored colors: $storedColors');
     final customizedFont = await readFromStorage('customizedFont');
+    final storedCustomPrimary = await readFromStorage('customizedPrimaryColor');
+    final storedCustomSecondary = await readFromStorage('customizedSecondaryColor');
     List<Color> allowedColors;
-    if (storedColors != null && storedColors.isNotEmpty) {
+    if (storedColors.isNotEmpty) {
       try {
         final List<dynamic> decoded = jsonDecode(storedColors);
         debugPrint('decoded: $decoded');
@@ -153,13 +155,19 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
       } catch (e) {
         debugPrint("Error decoding colors: $e");
         allowedColors = [];
-        setAllowedColors(Colors.black); // delete
+        await _storage.write(key: 'allowedColors', value: jsonEncode([]));
       }
     } else {
       allowedColors = [];
-      setAllowedColors(Colors.black); // delete
+      await _storage.write(key: 'allowedColors', value: jsonEncode([]));
     }
 
+    final Color parsedPrimary = Color(
+      int.tryParse(storedCustomPrimary) ?? getPrimaryColor(theme == 'dark', highContrastMode).value,
+    );
+    final Color parsedSecondary = Color(
+      int.tryParse(storedCustomSecondary) ?? getSecondaryColor(theme == 'dark', highContrastMode).value,
+    );
 
 
     if (!mounted) return;
@@ -176,6 +184,8 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
       _customizationEnabled = customizationEnabled;
       _allowedColors = allowedColors;
       _customizedFont = customizedFont;
+      _customizedPrimary = parsedPrimary;
+      _customizedSecondary = parsedSecondary;
     });
   }
 
@@ -272,7 +282,7 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
   Color getPrimaryColor(bool isDark, bool contrastMode) {
     debugPrint("customization enabled? : $customizationEnabled");
     if (customizationEnabled) {
-      return Colors.greenAccent;
+      return _customizedPrimary;
     }
     if (contrastMode) {
       return isDark ? Colors.cyan : const Color(0xFF004F52);
@@ -281,10 +291,21 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
   }
 
   Color getSecondaryColor(bool isDark, bool contrastMode) {
+    if (customizationEnabled) {
+      return _customizedSecondary;
+    }
     if (contrastMode) {
       return isDark ? Colors.black : const Color(0xFFF2EFE6);
     }
     return isDark ? Colors.black : const Color(0xFFF2EFE6);
+  }
+
+  Color getCustomizedPrimaryColor() {
+    return _customizedPrimary;
+  }
+
+  Color getCustomizedSecondaryColor() {
+    return _customizedSecondary;
   }
 
   Future<String> getNotificationStyle() async { // TODO: update references
@@ -357,6 +378,35 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
   Future<void> setCustomizationEnabled(bool value) async {
     setState(() => _customizationEnabled = value);
     await _storage.write(key: 'customizationEnabled', value: value.toString());
+    onThemeUpdated();
+  }
+
+  Future<void> setCustomizedColors({
+    required Color primaryColor,
+    required Color secondaryColor,
+  }) async {
+    setState(() {
+      _customizedPrimary = primaryColor;
+      _customizedSecondary = secondaryColor;
+    });
+
+    await _storage.write(
+      key: 'customizedPrimaryColor',
+      value: primaryColor.value.toString(),
+    );
+    await _storage.write(
+      key: 'customizedSecondaryColor',
+      value: secondaryColor.value.toString(),
+    );
+
+    await setThemeData(
+      isDark: userTheme == 'dark',
+      highContrastMode: highContrastMode,
+      primaryColor: primaryColor,
+      secondaryColor: secondaryColor,
+      userFontSize: userFontSize,
+      useDyslexiaFont: useDyslexiaFont,
+    );
     onThemeUpdated();
   }
 
@@ -477,17 +527,7 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
   }
 
   Future<void> setAllowedColors(Color value) async {
-    final currentAllowedColors = await _storage.read(key: 'allowedColors');
-    debugPrint('BaseState current allowed Colors: $currentAllowedColors');
     debugPrint('Adding allowed color: $value');
-    if (value == Colors.black) {
-      setState(() {
-        _allowedColors = [];
-      });
-      // Save an empty list as JSON
-      await _storage.write(key: 'allowedColors', value: jsonEncode([]));
-      return;
-    }
 
     if (!_allowedColors.contains(value)) {
       setState(() {
@@ -512,37 +552,39 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     bool? useDyslexiaFont,
   }) async {
     try {
+      final bool darkMode = isDark ?? false;
+      final bool contrastMode = highContrastMode ?? false;
+      final Color resolvedPrimary = primaryColor ??
+          (customizationEnabled
+              ? _customizedPrimary
+              : (contrastMode ? Colors.cyan : (darkMode ? Colors.white : Colors.black)));
+      final Color resolvedSecondary = secondaryColor ??
+          (customizationEnabled
+              ? _customizedSecondary
+              : (contrastMode ? Colors.black : (darkMode ? Colors.black : Colors.white)));
+
       setState(() {
-        // Determine primary and secondary colors
-        final bool darkMode = isDark ?? false;
-        final bool contrastMode = highContrastMode ?? false;
-
-        primaryColor =
-        contrastMode ? Colors.cyan : (darkMode ? Colors.white : Colors.black);
-        secondaryColor =
-        contrastMode ? Colors.black : (darkMode ? Colors.black : Colors.white);
-
         _themeData = themeData ??
             ThemeData(
               brightness: darkMode ? Brightness.dark : Brightness.light,
-              primaryColor: primaryColor,
-              scaffoldBackgroundColor: secondaryColor,
+              primaryColor: resolvedPrimary,
+              scaffoldBackgroundColor: resolvedSecondary,
               textTheme: ThemeData
                   .light()
                   .textTheme
                   .apply(
                 fontSizeFactor: (userFontSize ?? 14.0) / 14.0,
                 fontFamily: useDyslexiaFont ?? false ? 'OpenDyslexic' : null,
-                bodyColor: primaryColor,
-                displayColor: primaryColor,
+                bodyColor: resolvedPrimary,
+                displayColor: resolvedPrimary,
               ),
             );
       });
 
       await _storage.write(key: 'themeData', value: jsonEncode({
-        'isDark': isDark,
-        'primaryColor': primaryColor!.value,
-        'secondaryColor': secondaryColor!.value,
+        'isDark': darkMode,
+        'primaryColor': resolvedPrimary.value,
+        'secondaryColor': resolvedSecondary.value,
         'userFontSize': userFontSize ?? 14.0,
         'useDyslexiaFont': useDyslexiaFont ?? false,
       }));
@@ -639,8 +681,10 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
       _soundEnabled = false;
       _soundVolume = 0.0;
       _customizationEnabled = false;
-      _allowedColors = List.empty();
+      _allowedColors = List.empty(growable: true);
       _customizedFont = "";
+      _customizedPrimary = Colors.black87;
+      _customizedSecondary = const Color(0xFFF2EFE6);
     });
 
     await setUserFontSize(14.0);
@@ -660,7 +704,7 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     await setStringVariableStorageOnly('soundEnabled', 'false');
     await setStringVariableStorageOnly('soundVolume', '0.0');
     await setCustomizationEnabled(false);
-    await setAllowedColors(Colors.black);
+    await _storage.write(key: 'allowedColors', value: jsonEncode([]));
     await setStringVariableStorageOnly("customizedFont", "");
   }
 
