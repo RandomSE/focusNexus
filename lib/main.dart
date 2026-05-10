@@ -7,7 +7,9 @@ import 'package:focusNexus/screens/customization_screen.dart';
 import 'package:focusNexus/screens/goals_screen.dart';
 import 'package:focusNexus/screens/mini_games_screen.dart';
 import 'package:focusNexus/screens/onboarding_screen.dart';
-import 'package:focusNexus/screens/progressive_visuals.dart';
+import 'package:focusNexus/screens/progressive_visual.dart';
+import 'package:focusNexus/screens/progressive_visual_section.dart';
+import 'package:focusNexus/progressive_visuals/visual_theme_id.dart';
 import 'package:focusNexus/screens/settings_screen.dart';
 import 'screens/auth_start_screen.dart';
 import 'screens/dashboard_screen.dart';
@@ -71,7 +73,7 @@ class FocusNexusApp extends StatelessWidget {
                   case 'Mini-games':
                     return const MiniGamesScreen();
                   case 'Progressive visuals':
-                    return const ProgressiveVisualsScreen();
+                    return const ProgressiveVisualScreen();
                   case 'Customization':
                     return const CustomizationScreen();
                   default:
@@ -83,6 +85,12 @@ class FocusNexusApp extends StatelessWidget {
         'chat': (_) => const AiChatScreen(),
         'achievements': (_) => const AchievementScreen(),
         'goals': (_) => const GoalsScreen(),
+        'progressive_visual': (_) => const ProgressiveVisualScreen(),
+        'progressive_visual_section': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          final themeId = args is VisualThemeId ? args : VisualThemeId.zenGarden;
+          return ProgressiveVisualSectionScreen(themeId: themeId);
+        },
       },
     );
   }
