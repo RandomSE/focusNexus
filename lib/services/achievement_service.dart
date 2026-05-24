@@ -1,15 +1,17 @@
 // lib/services/achievement_service.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:focusNexus/services/achievement_progress.dart';
 import 'package:focusNexus/services/sound_service.dart';
+import 'package:focusNexus/services/storage/flutter_secure_key_value_storage.dart';
+import 'package:focusNexus/services/storage/key_value_storage.dart';
 import '../models/classes/achievement.dart';
 import '../models/classes/achievement_tracking_variables.dart';
 import '../views/AchievementDetailView.dart';
 
 class AchievementService {
   static const _key = 'achievements';
-  static final _storage = const FlutterSecureStorage();
+  static KeyValueStorage storage = const FlutterSecureKeyValueStorage();
   static const _numOfAchievements = 99;
 
   static List<Achievement> _cachedAchievements = [];
@@ -28,10 +30,25 @@ class AchievementService {
   List<int> dailyStreakRepetitions = [2, 3, 7, 14, 30];
   List<int> weeklyStreakRepetitions = [2, 4, 8, 12, 16, 20];
 
+  /// Test-only: inject storage and optional in-memory cache.
+  static void configureForTesting({
+    KeyValueStorage? keyValueStorage,
+    List<Achievement>? cachedAchievements,
+  }) {
+    if (keyValueStorage != null) storage = keyValueStorage;
+    if (cachedAchievements != null) _cachedAchievements = List.of(cachedAchievements);
+  }
+
+  /// Test-only: restore default dependencies.
+  static void resetForTesting() {
+    storage = const FlutterSecureKeyValueStorage();
+    _cachedAchievements = [];
+  }
+
   /// Initialize cache from storage
   Future<void> initialize() async {
     await setInitializationPrerequisites();
-    final jsonStr = await _storage.read(key: _key);
+    final jsonStr = await storage.read(key: _key);
     if (jsonStr == null || jsonStr == '') { // no achievements in storage. It can be assumed that the user would have no achievement progress at this point.
       debugPrint("No achievements. creating");
       _cachedAchievements = [];
@@ -50,7 +67,7 @@ class AchievementService {
   /// Save all cached achievements back to storage
   static Future<void> _saveToStorage() async {
     final encoded = jsonEncode(_cachedAchievements.map((a) => a.toJson()).toList());
-    await _storage.write(key: _key, value: encoded);
+    await storage.write(key: _key, value: encoded);
   }
 
   /// sets pre-requisites needed during initialization
@@ -210,7 +227,7 @@ class AchievementService {
 
   Future<void> bulkSetAchievementVariablesInStorage(List<String> variables) async {
     variables.forEach(
-        (variable) async => await _storage.write(key: variable, value: '0') // update progress throws errors when these haven't been set as they are then null. 0 means zero here, so it's fine to directly set it upon creation.
+        (variable) async => await storage.write(key: variable, value: '0') // update progress throws errors when these haven't been set as they are then null. 0 means zero here, so it's fine to directly set it upon creation.
     );
   }
 
@@ -281,12 +298,18 @@ class AchievementService {
 
       final repetitionsNeeded = achievementRepetitions[index];
       final currentRepetitions = int.parse(await getAchievementTrackingVariable(variableName));
-      final achievementProgress = double.parse(((currentRepetitions / repetitionsNeeded) * 100).toStringAsFixed(1));
+      final achievementProgress = AchievementProgress.percentComplete(
+        currentRepetitions,
+        repetitionsNeeded,
+      );
 
       // Update the cached achievement
       final currentAchievement = _cachedAchievements[index];
       final currentProgress = currentAchievement.progress;
-      if (_cachedAchievements[index].progress >= 100 && achievementProgress <=_cachedAchievements[index].progress) { // For any streak / time based ones that reset. This is so if you fulfilled requirements of an achievement but didn't complete it it doesn't reset.
+      if (AchievementProgress.shouldBlockProgressDecrease(
+        _cachedAchievements[index].progress,
+        achievementProgress,
+      )) {
         debugPrint('Achievement progress will not decrease here for id: $id.');
         return;
       }
@@ -338,7 +361,7 @@ class AchievementService {
     );
     String reward = currentAchievement.reward;
     if (reward.contains('points')) {
-      final pointsToAdd = int.tryParse(reward.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+      final pointsToAdd = AchievementProgress.parsePointsFromReward(reward);
       await _addPoints(pointsToAdd);
     } else {
       // TODO: special rewards
@@ -352,15 +375,15 @@ class AchievementService {
   /// Safely adds points to the user's total in storage. Separate to goal's addition of points.
   static Future<void> _addPoints(int pointsToAdd) async {
     if (pointsToAdd <= 0) return;
-    final currentPointsString = await _storage.read(key: 'points');
+    final currentPointsString = await storage.read(key: 'points');
     final currentPoints = int.tryParse(currentPointsString ?? '0') ?? 0;
-    await _storage.write(key: 'points', value: (currentPoints + pointsToAdd).toString());
+    await storage.write(key: 'points', value: (currentPoints + pointsToAdd).toString());
   }
 
   /// Clear all achievements (for testing / reset)
   Future<void> clearAll() async {
     _cachedAchievements.clear();
-    await _storage.delete(key: _key);
+    await storage.delete(key: _key);
   }
 
   /// Retrieve one achievement by ID
@@ -375,7 +398,7 @@ class AchievementService {
 
 
   static Future<String> getAchievementTrackingVariable(String key) async {
-    final String? storedValue = await _storage.read(key: key);
+    final String? storedValue = await storage.read(key: key);
     if (storedValue == null || storedValue == '') {
       debugPrint('getAchievementTrackingVariable: no value found for key $key');
       return '';

@@ -1,19 +1,38 @@
 // lib/services/achievement_tracking_service.dart
 import 'dart:convert';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:focusNexus/services/storage/flutter_secure_key_value_storage.dart';
+import 'package:focusNexus/services/storage/key_value_storage.dart';
+import 'package:focusNexus/utils/achievement_tracking_codec.dart';
 
 /// Global tracking service for goal-related achievement progress.
 class AchievementTrackingVariables {
   /// singleton setup
   static final AchievementTrackingVariables _instance =
-  AchievementTrackingVariables._internal();
-  factory AchievementTrackingVariables() => _instance;
-  AchievementTrackingVariables._internal();
+      AchievementTrackingVariables._internal();
+  static AchievementTrackingVariables? _testOverride;
+
+  factory AchievementTrackingVariables() => _testOverride ?? _instance;
+
+  AchievementTrackingVariables._internal({KeyValueStorage? storage})
+      : _storage = storage ?? const FlutterSecureKeyValueStorage();
+
+  /// Test-only constructor with injected storage.
+  AchievementTrackingVariables.test(KeyValueStorage storage) : _storage = storage;
+
+  /// Test-only: route [AchievementTrackingVariables()] to [instance].
+  static void useTestInstance(AchievementTrackingVariables instance) {
+    _testOverride = instance;
+  }
+
+  /// Test-only: restore production singleton.
+  static void resetTestInstance() {
+    _testOverride = null;
+  }
 
   /// secure storage
   static const _key = 'achievementTrackingData';
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  final KeyValueStorage _storage;
 
   /// tracked variables
   int totalGoalsCreated = 0;
@@ -137,48 +156,57 @@ class AchievementTrackingVariables {
     await save();
   }
 
+  /// Exposed for unit tests and serialization roundtrips.
+  AchievementTrackingSnapshot toSnapshot() {
+    return AchievementTrackingSnapshot(
+      totalGoalsCreated: totalGoalsCreated,
+      totalGoalsActive: totalGoalsActive,
+      totalGoalsCompleted: totalGoalsCompleted,
+      goalsCompletedToday: goalsCompletedToday,
+      goalsCompletedThisWeek: goalsCompletedThisWeek,
+      goalsCompletedThisMonth: goalsCompletedThisMonth,
+      goalsCompletedWithHighPoints: goalsCompletedWithHighPoints,
+      goalsCompletedWithHighComplexity: goalsCompletedWithHighComplexity,
+      goalsCompletedWithHighEffort: goalsCompletedWithHighEffort,
+      goalsCompletedWithHighMotivation: goalsCompletedWithHighMotivation,
+      goalsCompletedWithAllHigh: goalsCompletedWithAllHigh,
+      goalsCompletedWithHighTimeRequirement: goalsCompletedWithHighTimeRequirement,
+      goalsCompletedWithManySteps: goalsCompletedWithManySteps,
+      goalsCompletedEarly: goalsCompletedEarly,
+      datesGoalsCompleted: datesGoalsCompleted,
+      lastWeekGoalWasCompleted: lastWeekGoalWasCompleted,
+      lastMonthGoalWasCompleted: lastMonthGoalWasCompleted,
+      consecutiveDaysWithGoalsCompleted: consecutiveDaysWithGoalsCompleted,
+      consecutiveWeeksWithGoalsCompleted: consecutiveWeeksWithGoalsCompleted,
+    );
+  }
+
+  void applySnapshot(AchievementTrackingSnapshot snapshot) {
+    totalGoalsCreated = snapshot.totalGoalsCreated;
+    totalGoalsActive = snapshot.totalGoalsActive;
+    totalGoalsCompleted = snapshot.totalGoalsCompleted;
+    goalsCompletedToday = snapshot.goalsCompletedToday;
+    goalsCompletedThisWeek = snapshot.goalsCompletedThisWeek;
+    goalsCompletedThisMonth = snapshot.goalsCompletedThisMonth;
+    goalsCompletedWithHighPoints = snapshot.goalsCompletedWithHighPoints;
+    goalsCompletedWithHighComplexity = snapshot.goalsCompletedWithHighComplexity;
+    goalsCompletedWithHighEffort = snapshot.goalsCompletedWithHighEffort;
+    goalsCompletedWithHighMotivation = snapshot.goalsCompletedWithHighMotivation;
+    goalsCompletedWithAllHigh = snapshot.goalsCompletedWithAllHigh;
+    goalsCompletedWithHighTimeRequirement = snapshot.goalsCompletedWithHighTimeRequirement;
+    goalsCompletedWithManySteps = snapshot.goalsCompletedWithManySteps;
+    goalsCompletedEarly = snapshot.goalsCompletedEarly;
+    datesGoalsCompleted = snapshot.datesGoalsCompleted;
+    lastWeekGoalWasCompleted = snapshot.lastWeekGoalWasCompleted;
+    lastMonthGoalWasCompleted = snapshot.lastMonthGoalWasCompleted;
+    consecutiveDaysWithGoalsCompleted = snapshot.consecutiveDaysWithGoalsCompleted;
+    consecutiveWeeksWithGoalsCompleted = snapshot.consecutiveWeeksWithGoalsCompleted;
+  }
+
   /// internal serialization
-  Map<String, dynamic> _toJson() => {
-    'totalGoalsCreated': totalGoalsCreated,
-    'totalGoalsActive': totalGoalsActive,
-    'totalGoalsCompleted': totalGoalsCompleted,
-    'goalsCompletedToday': goalsCompletedToday,
-    'goalsCompletedThisWeek': goalsCompletedThisWeek,
-    'goalsCompletedThisMonth': goalsCompletedThisMonth,
-    'goalsCompletedWithHighPoints': goalsCompletedWithHighPoints,
-    'goalsCompletedWithHighComplexity': goalsCompletedWithHighComplexity,
-    'goalsCompletedWithHighEffort': goalsCompletedWithHighEffort,
-    'goalsCompletedWithHighMotivation': goalsCompletedWithHighMotivation,
-    'goalsCompletedWithAllHigh': goalsCompletedWithAllHigh,
-    'goalsCompletedWithHighTimeRequirement': goalsCompletedWithHighTimeRequirement,
-    'goalsCompletedWithManySteps': goalsCompletedWithManySteps,
-    'goalsCompletedEarly': goalsCompletedEarly,
-    'datesGoalsCompleted': datesGoalsCompleted,
-    'lastWeekGoalWasCompleted': lastWeekGoalWasCompleted,
-    'lastMonthGoalWasCompleted': lastMonthGoalWasCompleted,
-    'consecutiveDaysWithGoalsCompleted': consecutiveDaysWithGoalsCompleted,
-    'consecutiveWeeksWithGoalsCompleted': consecutiveWeeksWithGoalsCompleted,
-  };
+  Map<String, dynamic> _toJson() => toSnapshot().toJson();
 
   void _fromJson(Map<String, dynamic> json) {
-    totalGoalsCreated =  json['totalGoalsCreated'];
-    totalGoalsActive = json['totalGoalsActive'] ?? 0;
-    totalGoalsCompleted = json['totalGoalsCompleted'] ?? 0;
-    goalsCompletedToday = json['goalsCompletedToday'] ?? 0;
-    goalsCompletedThisWeek = json['goalsCompletedThisWeek'] ?? 0;
-    goalsCompletedThisMonth = json['goalsCompletedThisMonth'] ?? 0;
-    goalsCompletedWithHighPoints = json['goalsCompletedWithHighPoints'] ?? 0;
-    goalsCompletedWithHighComplexity = json['goalsCompletedWithHighComplexity'] ?? 0;
-    goalsCompletedWithHighEffort = json['goalsCompletedWithHighEffort'] ?? 0;
-    goalsCompletedWithHighMotivation = json['goalsCompletedWithHighMotivation'] ?? 0;
-    goalsCompletedWithAllHigh = json['goalsCompletedWithAllHigh'] ?? 0;
-    goalsCompletedWithHighTimeRequirement = json['goalsCompletedWithHighTimeRequirement'] ?? 0;
-    goalsCompletedWithManySteps = json['goalsCompletedWithManySteps'] ?? 0;
-    goalsCompletedEarly = json['goalsCompletedEarly'] ?? 0;
-    datesGoalsCompleted = json['datesGoalsCompleted'] ?? '';
-    lastWeekGoalWasCompleted = json ['lastMonthGoalWasCompleted'] ?? '';
-    lastMonthGoalWasCompleted = json['lastMonthGoalWasCompleted'] ?? '';
-    consecutiveDaysWithGoalsCompleted = json['consecutiveDaysWithGoalsCompleted'] ?? 0;
-    consecutiveWeeksWithGoalsCompleted = json['consecutiveWeeksWithGoalsCompleted'] ?? 0;
+    applySnapshot(AchievementTrackingSnapshot.fromJson(json));
   }
 }

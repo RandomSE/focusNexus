@@ -1,21 +1,27 @@
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:focusNexus/services/storage/flutter_secure_key_value_storage.dart';
+import 'package:focusNexus/services/storage/key_value_storage.dart';
+import 'package:focusNexus/utils/sound_volume.dart';
 
 class SoundService {
   static final AudioPlayer _player = AudioPlayer();
-  static final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  static KeyValueStorage storage = const FlutterSecureKeyValueStorage();
 
+  /// Test-only: inject storage between tests.
+  static void resetForTesting() {
+    storage = const FlutterSecureKeyValueStorage();
+  }
 
   static Future<bool> checkSoundEnabled() async {
-    final soundEnabled = await _storage.read(key: 'soundEnabled');
+    final soundEnabled = await storage.read(key: 'soundEnabled');
     return bool.parse(soundEnabled ?? 'false');
   }
 
   static Future<double> getSoundVolume() async {
-    final soundVolume = await _storage.read(key: 'soundVolume');
+    final soundVolume = await storage.read(key: 'soundVolume');
     final parsed = double.tryParse(soundVolume ?? '0.0') ?? 0.0;
-    final normalized = (parsed.clamp(0.0, 100.0)) / 100.0;
+    final normalized = normalizeSoundVolume(parsed);
     debugPrint('played volume: $parsed (normalized: $normalized)');
     return normalized;
   }
