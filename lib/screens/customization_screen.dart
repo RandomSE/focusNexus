@@ -4,7 +4,6 @@ import '../repositories/app_repositories.dart';
 import '../utils/common_utils.dart';
 import '../utils/screen_theme.dart';
 import '../models/classes/theme_bundle.dart';
-
 class CustomizationScreen extends StatefulWidget {
   const CustomizationScreen({super.key});
 
@@ -15,7 +14,6 @@ class CustomizationScreen extends StatefulWidget {
 class _CustomizationScreenState extends State<CustomizationScreen> {
   final _settings = AppRepositories.instance.settings;
   bool _hasUnsavedChanges = false;
-  bool _colorsInitialized = false;
   late Color _previewPrimaryColor;
   late Color _previewSecondaryColor;
 
@@ -76,22 +74,19 @@ class _CustomizationScreenState extends State<CustomizationScreen> {
   @override
   void initState() {
     super.initState();
-    _initializePreviewColors();
+    final bundle = currentThemeBundle();
+    _previewPrimaryColor = bundle.primaryColor;
+    _previewSecondaryColor = bundle.secondaryColor;
+    _ensureDefaultColorsAllowed();
   }
 
-  Future<void> _initializePreviewColors() async {
+  Future<void> _ensureDefaultColorsAllowed() async {
     final bundle = currentThemeBundle();
     for (final c in [bundle.primaryColor, bundle.secondaryColor]) {
       if (!_settings.allowedColors.contains(c)) {
         await _settings.setAllowedColors(c);
       }
     }
-    if (!mounted) return;
-    setState(() {
-      _previewPrimaryColor = bundle.primaryColor;
-      _previewSecondaryColor = bundle.secondaryColor;
-      _colorsInitialized = true;
-    });
   }
 
   Future<void> _purchaseColor(String name, int price, Color color) async {
@@ -303,15 +298,13 @@ class _CustomizationScreenState extends State<CustomizationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_colorsInitialized) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
     return SettingsThemedBuilder(
       builder: (context, bundle) {
-        final primary =
-            _hasUnsavedChanges ? _previewPrimaryColor : bundle.primaryColor;
-        final secondary = _hasUnsavedChanges
+        final useCustom = _settings.customizationEnabled;
+        final primary = useCustom && _hasUnsavedChanges
+            ? _previewPrimaryColor
+            : bundle.primaryColor;
+        final secondary = useCustom && _hasUnsavedChanges
             ? _previewSecondaryColor
             : bundle.secondaryColor;
         final textStyle = _textStyleFor(primary);
@@ -346,6 +339,37 @@ class _CustomizationScreenState extends State<CustomizationScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                CommonUtils.buildSwitchListTile(
+                  'Customized colours',
+                  textStyle,
+                  _settings.customizationEnabled,
+                  (value) async {
+                    await _settings.setCustomizationEnabled(value);
+                    if (!mounted) return;
+                    setState(() {
+                      if (!value) {
+                        _hasUnsavedChanges = false;
+                      } else {
+                        _previewPrimaryColor = bundle.primaryColor;
+                        _previewSecondaryColor = bundle.secondaryColor;
+                      }
+                    });
+                  },
+                  primary,
+                ),
+                if (!_settings.customizationEnabled)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: CommonUtils.buildText(
+                      'Theme and high contrast from Settings apply while this is off. '
+                      'Turn on to pick custom text and background colours here.',
+                      textStyle.copyWith(
+                        fontWeight: FontWeight.normal,
+                        fontSize: (textStyle.fontSize ?? 14) - 2,
+                      ),
+                    ),
+                  ),
+                if (_settings.customizationEnabled) ...[
                 CommonUtils.buildText("Color Shop", textStyle),
                 const SizedBox(height: 8),
                 CommonUtils.buildText(
@@ -557,6 +581,7 @@ class _CustomizationScreenState extends State<CustomizationScreen> {
                     ),
                   ],
                 ),
+                ],
               ],
             ),
           ),

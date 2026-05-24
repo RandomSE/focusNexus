@@ -151,8 +151,8 @@ class CommonUtils {
     Color dropdownColor,
     ValueChanged<T?> onChanged, {
     String? Function(String?)? validator,
-  }
-  ) {
+    String Function(T)? displayText,
+  }) {
     return DropdownButtonFormField<T>(
       isExpanded: true,
       dropdownColor: dropdownColor,
@@ -163,7 +163,10 @@ class CommonUtils {
               .map(
                 (e) => DropdownMenuItem<T>(
                   value: e,
-                  child: Text(e.toString(), style: textStyle),
+                  child: Text(
+                    displayText != null ? displayText(e) : e.toString(),
+                    style: textStyle,
+                  ),
                 ),
               )
               .toList(),
@@ -204,13 +207,27 @@ class CommonUtils {
   }
 
   static Widget buildSwitchListTile(
-      String text,
-      TextStyle textStyle,
-      bool value,
-      void Function(bool)? onChanged,
-      Color tileColor
-  ) {
-    return SwitchListTile(title: Text(text, style: textStyle), value: value, onChanged:onChanged,  tileColor: tileColor);
+    String text,
+    TextStyle textStyle,
+    bool value,
+    void Function(bool)? onChanged,
+    Color tileColor, {
+    bool dense = false,
+    int titleMaxLines = 1,
+  }) {
+    return SwitchListTile(
+      dense: dense,
+      contentPadding: dense ? EdgeInsets.zero : null,
+      title: Text(
+        text,
+        style: textStyle,
+        maxLines: titleMaxLines,
+        overflow: TextOverflow.ellipsis,
+      ),
+      value: value,
+      onChanged: onChanged,
+      activeColor: tileColor,
+    );
   }
 
   static Text buildText(String text, TextStyle style) {
@@ -316,18 +333,22 @@ class CommonUtils {
       Color backgroundColor, {
         List<Widget>? actions,
         Widget? content,
+        bool barrierDismissible = true,
       }) {
     content ??= SingleChildScrollView(
       child: Text(bodyText, style: textStyle),
     );
     return showDialog<bool>(
-      // TODO: Cont here
       context: context,
-      builder: (ctx) => AlertDialog(
+      barrierDismissible: barrierDismissible,
+      builder: (ctx) => PopScope(
+        canPop: barrierDismissible,
+        child: AlertDialog(
         backgroundColor: backgroundColor,
         title: Text(titleText, style: textStyle),
         content: content,
         actions: actions,
+        ),
       ),
     );
   }

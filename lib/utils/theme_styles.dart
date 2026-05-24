@@ -6,12 +6,17 @@ import 'package:focusNexus/utils/user_prefs_codec.dart';
 class ThemeStyles {
   ThemeStyles._();
 
+  /// Custom palette only on the Customization reward screen when enabled there.
+  static bool usesCustomPalette(UserPrefsSnapshot prefs) {
+    return prefs.rewardType == 'Customization' && prefs.customizationEnabled;
+  }
+
   static Color resolvePrimaryColor({
     required bool isDark,
     required bool highContrast,
     required UserPrefsSnapshot prefs,
   }) {
-    if (prefs.customizationEnabled) return prefs.customizedPrimary;
+    if (usesCustomPalette(prefs)) return prefs.customizedPrimary;
     if (highContrast) return isDark ? Colors.cyan : const Color(0xFF004F52);
     return isDark ? Colors.white70 : Colors.black87;
   }
@@ -21,7 +26,7 @@ class ThemeStyles {
     required bool highContrast,
     required UserPrefsSnapshot prefs,
   }) {
-    if (prefs.customizationEnabled) return prefs.customizedSecondary;
+    if (usesCustomPalette(prefs)) return prefs.customizedSecondary;
     if (highContrast) return isDark ? Colors.black : const Color(0xFFF2EFE6);
     return isDark ? Colors.black : const Color(0xFFF2EFE6);
   }
