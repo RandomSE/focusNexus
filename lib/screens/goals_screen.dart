@@ -13,6 +13,8 @@ import '../models/classes/theme_bundle.dart';
 import '../models/classes/goal_set.dart';
 import '../utils/common_utils.dart';
 import '../utils/screen_theme.dart';
+import '../widgets/skeleton_loaders.dart';
+import '../widgets/settings_themed_builder.dart';
 import '../utils/goal_points.dart';
 import '../utils/notifier.dart';
 
@@ -981,12 +983,17 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_pageReady) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
     return SettingsThemedBuilder(
-      builder: (context, bundle) => _buildGoalsScaffold(context, bundle),
+      builder: (context, bundle) {
+        if (!_pageReady) {
+          return themedLoadingShell(
+            bundle,
+            title: 'Goals',
+            body: GoalsSkeleton(bundle: bundle),
+          );
+        }
+        return _buildGoalsScaffold(context, bundle);
+      },
     );
   }
 

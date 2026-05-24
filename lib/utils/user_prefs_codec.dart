@@ -11,10 +11,10 @@ class UserPrefsSnapshot {
     this.highContrastMode = false,
     this.dailyAffirmations = false,
     this.aiEncouragement = false,
-    this.rememberMe = false,
     this.notificationFrequency = 'Low',
     this.notificationStyle = 'Minimal',
     this.customizationEnabled = false,
+    this.useCustomColorPalette = false,
     this.allowedColors = const [],
     this.customizedFont = '',
     this.customizedPrimary = Colors.black87,
@@ -22,7 +22,7 @@ class UserPrefsSnapshot {
     this.rewardType = 'Mini-games',
     this.skipToday = false,
     this.pauseGoals = false,
-    this.loggedIn = false,
+    this.registrationComplete = false,
     this.onboardingCompleted = false,
     this.soundEnabled = false,
     this.soundVolume = 0.0,
@@ -35,10 +35,10 @@ class UserPrefsSnapshot {
   final bool highContrastMode;
   final bool dailyAffirmations;
   final bool aiEncouragement;
-  final bool rememberMe;
   final String notificationFrequency;
   final String notificationStyle;
   final bool customizationEnabled;
+  final bool useCustomColorPalette;
   final List<Color> allowedColors;
   final String customizedFont;
   final Color customizedPrimary;
@@ -46,7 +46,7 @@ class UserPrefsSnapshot {
   final String rewardType;
   final bool skipToday;
   final bool pauseGoals;
-  final bool loggedIn;
+  final bool registrationComplete;
   final bool onboardingCompleted;
   final bool soundEnabled;
   final double soundVolume;
@@ -61,10 +61,10 @@ class UserPrefsSnapshot {
     bool? highContrastMode,
     bool? dailyAffirmations,
     bool? aiEncouragement,
-    bool? rememberMe,
     String? notificationFrequency,
     String? notificationStyle,
     bool? customizationEnabled,
+    bool? useCustomColorPalette,
     List<Color>? allowedColors,
     String? customizedFont,
     Color? customizedPrimary,
@@ -72,7 +72,7 @@ class UserPrefsSnapshot {
     String? rewardType,
     bool? skipToday,
     bool? pauseGoals,
-    bool? loggedIn,
+    bool? registrationComplete,
     bool? onboardingCompleted,
     bool? soundEnabled,
     double? soundVolume,
@@ -85,12 +85,13 @@ class UserPrefsSnapshot {
       highContrastMode: highContrastMode ?? this.highContrastMode,
       dailyAffirmations: dailyAffirmations ?? this.dailyAffirmations,
       aiEncouragement: aiEncouragement ?? this.aiEncouragement,
-      rememberMe: rememberMe ?? this.rememberMe,
       notificationFrequency:
           notificationFrequency ?? this.notificationFrequency,
       notificationStyle: notificationStyle ?? this.notificationStyle,
       customizationEnabled:
           customizationEnabled ?? this.customizationEnabled,
+      useCustomColorPalette:
+          useCustomColorPalette ?? this.useCustomColorPalette,
       allowedColors: allowedColors ?? this.allowedColors,
       customizedFont: customizedFont ?? this.customizedFont,
       customizedPrimary: customizedPrimary ?? this.customizedPrimary,
@@ -98,7 +99,8 @@ class UserPrefsSnapshot {
       rewardType: rewardType ?? this.rewardType,
       skipToday: skipToday ?? this.skipToday,
       pauseGoals: pauseGoals ?? this.pauseGoals,
-      loggedIn: loggedIn ?? this.loggedIn,
+      registrationComplete:
+          registrationComplete ?? this.registrationComplete,
       onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
       soundEnabled: soundEnabled ?? this.soundEnabled,
       soundVolume: soundVolume ?? this.soundVolume,

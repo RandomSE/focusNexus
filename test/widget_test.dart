@@ -8,8 +8,9 @@ void main() {
 
     expect(find.text('Welcome to FocusNexus'), findsOneWidget);
     expect(find.text('Get started with FocusNexus'), findsOneWidget);
-    expect(find.text('Register'), findsOneWidget);
-    expect(find.text('Login'), findsOneWidget);
+    expect(find.text('Get started'), findsOneWidget);
+    expect(find.text('Login'), findsNothing);
+    expect(find.text('Register'), findsNothing);
     expect(find.text('0'), findsNothing);
   });
 }

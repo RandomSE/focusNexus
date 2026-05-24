@@ -22,18 +22,20 @@ class AppSettings extends ChangeNotifier {
 
   double get userFontSize => _snapshot.fontSize;
   String get userTheme => _snapshot.theme;
-  bool get rememberMe => _snapshot.rememberMe;
   bool get highContrastMode => _snapshot.highContrastMode;
   bool get useDyslexiaFont => _snapshot.useDyslexiaFont;
   bool get dailyAffirmations => _snapshot.dailyAffirmations;
   bool get aiEncouragement => _snapshot.aiEncouragement;
   bool get skipToday => _snapshot.skipToday;
   bool get pauseGoals => _snapshot.pauseGoals;
-  bool get loggedIn => _snapshot.loggedIn;
+  bool get registrationComplete => _snapshot.registrationComplete;
   bool get onboardingCompleted => _snapshot.onboardingCompleted;
   bool get soundEnabled => _snapshot.soundEnabled;
   double get soundVolume => _snapshot.soundVolume;
   bool get customizationEnabled => _snapshot.customizationEnabled;
+  bool get useCustomColorPalette => _snapshot.useCustomColorPalette;
+  bool get usesCustomizedColours => ThemeStyles.usesCustomPalette(_snapshot);
+  bool get isCustomizationReward => _snapshot.rewardType == 'Customization';
   List<Color> get allowedColors => _snapshot.allowedColors;
   String get customizedFont => _snapshot.customizedFont;
   String get rewardType => _snapshot.rewardType;
@@ -90,33 +92,46 @@ class AppSettings extends ChangeNotifier {
 
   Future<void> setUserFontSize(double value) async {
     await _prefs.writeString(StorageKeys.fontSize, value.toString());
-    _apply(_snapshot.copyWith(fontSize: value));
+    final next = _snapshot.copyWith(fontSize: value);
+    _apply(next);
+    await _persistThemeFromSnapshot(next);
   }
 
   Future<void> setUserTheme(String value) async {
     await _prefs.writeString(StorageKeys.theme, value);
-    _apply(_snapshot.copyWith(theme: value));
+    final next = _snapshot.copyWith(theme: value);
+    _apply(next);
+    await _persistThemeFromSnapshot(next);
   }
 
   Future<void> setRewardType(String value) async {
-    final previous = _snapshot.rewardType;
-    if (previous == 'Customization' && value != 'Customization') {
+    if (value != 'Customization' && _snapshot.customizationEnabled) {
       await setCustomizationEnabled(false);
-    } else if (previous != 'Customization' && value == 'Customization') {
-      await setCustomizationEnabled(true);
     }
     await _prefs.writeString(StorageKeys.rewardType, value);
-    _apply(_snapshot.copyWith(rewardType: value));
+    final next = _snapshot.copyWith(rewardType: value);
+    _apply(next);
+    await _persistThemeFromSnapshot(next);
   }
 
   Future<void> setCustomizationEnabled(bool value) async {
     await _prefs.writeBool(StorageKeys.customizationEnabled, value);
-    _apply(_snapshot.copyWith(customizationEnabled: value));
+    final next = _snapshot.copyWith(customizationEnabled: value);
+    _apply(next);
+    await _persistThemeFromSnapshot(next);
+  }
+
+  Future<void> setUseCustomColorPalette(bool value) async {
+    await _prefs.writeBool(StorageKeys.useCustomColorPalette, value);
+    final next = _snapshot.copyWith(useCustomColorPalette: value);
+    _apply(next);
+    await _persistThemeFromSnapshot(next);
   }
 
   Future<void> setCustomizedColors({
     required Color primaryColor,
     required Color secondaryColor,
+    bool persistPalette = true,
   }) async {
     await _prefs.writeString(
       StorageKeys.customizedPrimaryColor,
@@ -126,7 +141,7 @@ class AppSettings extends ChangeNotifier {
       StorageKeys.customizedSecondaryColor,
       secondaryColor.value.toString(),
     );
-    final next = _snapshot.copyWith(
+    var next = _snapshot.copyWith(
       customizedPrimary: primaryColor,
       customizedSecondary: secondaryColor,
     );
@@ -144,14 +159,23 @@ class AppSettings extends ChangeNotifier {
     _apply(_snapshot.copyWith(notificationFrequency: value));
   }
 
-  Future<void> setRememberMe(bool value) async {
-    await _prefs.writeBool(StorageKeys.rememberMe, value);
-    _apply(_snapshot.copyWith(rememberMe: value));
+  Future<void> setRegistrationComplete(bool value) async {
+    await _prefs.writeBool(StorageKeys.registrationComplete, value);
+    _apply(_snapshot.copyWith(registrationComplete: value));
   }
 
-  Future<void> setLoggedIn(bool value) async {
-    await _prefs.writeBool(StorageKeys.loggedIn, value);
-    _apply(_snapshot.copyWith(loggedIn: value));
+  /// Persists notification/reward choices from the setup form and marks registration done.
+  Future<void> completeRegistration({
+    required String notificationFrequency,
+    required String notificationStyle,
+    required String rewardType,
+  }) async {
+    await _prefs.writeString(StorageKeys.theme, 'light');
+    await setNotificationFrequency(notificationFrequency);
+    await setNotificationStyle(notificationStyle);
+    await setRewardType(rewardType);
+    await setRegistrationComplete(true);
+    await setOnboardingCompleted(false);
   }
 
   Future<void> setHighContrastMode(bool value) async {
@@ -249,18 +273,18 @@ class AppSettings extends ChangeNotifier {
     await setRewardType('Mini-games');
     await setNotificationStyle('Minimal');
     await setNotificationFrequency('Medium');
-    await setRememberMe(false);
     await setHighContrastMode(false);
     await setUseDyslexiaFont(false);
     await setAiEncouragement(false);
     await setDailyAffirmations(false);
     await setSkipToday(false);
     await setPauseGoals(false);
-    await setLoggedIn(false);
+    await setRegistrationComplete(false);
     await setOnboardingCompleted(false);
     await setSoundEnabled(false);
     await setSoundVolume(0.0);
     await setCustomizationEnabled(false);
+    await setUseCustomColorPalette(false);
     await _prefs.writeAllowedColors([]);
     await _prefs.writeString(StorageKeys.customizedFont, '');
   }
@@ -276,16 +300,18 @@ class AppSettings extends ChangeNotifier {
     Color? secondaryOverride,
   }) async {
     final isDark = snap.isDark;
+    final highContrast =
+        ThemeStyles.usesCustomPalette(snap) ? false : snap.highContrastMode;
     final primary = primaryOverride ??
         ThemeStyles.resolvePrimaryColor(
           isDark: isDark,
-          highContrast: snap.highContrastMode,
+          highContrast: highContrast,
           prefs: snap,
         );
     final secondary = secondaryOverride ??
         ThemeStyles.resolveSecondaryColor(
           isDark: isDark,
-          highContrast: snap.highContrastMode,
+          highContrast: highContrast,
           prefs: snap,
         );
     await _theme.persistTheme(

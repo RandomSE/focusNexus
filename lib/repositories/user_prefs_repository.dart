@@ -46,12 +46,12 @@ class UserPrefsRepository {
       highContrastMode: await readBool(StorageKeys.highContrast),
       dailyAffirmations: await readBool(StorageKeys.dailyAffirmations),
       aiEncouragement: await readBool(StorageKeys.aiEncouragement),
-      rememberMe: await readBool(StorageKeys.rememberMe),
       notificationFrequency:
           await _storage.read(key: StorageKeys.notificationFrequency) ?? 'Low',
       notificationStyle:
           await _storage.read(key: StorageKeys.notificationStyle) ?? 'Minimal',
       customizationEnabled: await readBool(StorageKeys.customizationEnabled),
+      useCustomColorPalette: await readBool(StorageKeys.useCustomColorPalette),
       allowedColors: UserPrefsSnapshot.decodeAllowedColors(allowedRaw),
       customizedFont:
           await _storage.read(key: StorageKeys.customizedFont) ?? '',
@@ -67,7 +67,9 @@ class UserPrefsRepository {
       pauseGoals: _parseTriStateBool(
         await _storage.read(key: StorageKeys.pauseGoals),
       ),
-      loggedIn: await readBool(StorageKeys.loggedIn),
+      registrationComplete:
+          await readBool(StorageKeys.registrationComplete) ||
+              await readBool(StorageKeys.loggedIn),
       onboardingCompleted: await readBool(StorageKeys.onboardingCompleted),
       soundEnabled: await readBool(StorageKeys.soundEnabled),
       soundVolume: double.tryParse(soundVolumeRaw ?? '0') ?? 0.0,

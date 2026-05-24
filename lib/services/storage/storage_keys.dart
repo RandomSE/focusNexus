@@ -24,7 +24,9 @@ abstract final class StorageKeys {
   static const highContrast = 'highContrast';
   static const dailyAffirmations = 'dailyAffirmations';
   static const aiEncouragement = 'aiEncouragement';
-  static const rememberMe = 'rememberMe';
+  /// Initial setup form (notification/reward prefs) completed; onboarding may remain.
+  static const registrationComplete = 'registrationComplete';
+  /// Legacy key; still read on load for upgrades from login-based builds.
   static const loggedIn = 'loggedIn';
   static const onboardingCompleted = 'onboardingCompleted';
   static const skipToday = 'skipToday';
@@ -32,6 +34,7 @@ abstract final class StorageKeys {
   static const notificationFrequency = 'notificationFrequency';
   static const rewardType = 'rewardType';
   static const customizationEnabled = 'customizationEnabled';
+  static const useCustomColorPalette = 'useCustomColorPalette';
   static const allowedColors = 'allowedColors';
   static const customizedPrimaryColor = 'customizedPrimaryColor';
   static const customizedSecondaryColor = 'customizedSecondaryColor';

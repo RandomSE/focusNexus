@@ -3,6 +3,8 @@ import '../models/classes/achievement.dart';
 import '../services/achievement_service.dart';
 import '../utils/common_utils.dart';
 import '../utils/screen_theme.dart';
+import '../widgets/skeleton_loaders.dart';
+import '../widgets/settings_themed_builder.dart';
 
 class AchievementScreen extends StatefulWidget {
   const AchievementScreen({super.key});
@@ -40,10 +42,32 @@ class _AchievementScreenState extends State<AchievementScreen> {
   @override
   Widget build(BuildContext context) {
     return SettingsThemedBuilder(
-      startupDelay: const Duration(milliseconds: 500),
       builder: (context, bundle) {
         if (!_dataReady) {
-          return const Center(child: CircularProgressIndicator());
+          return themedLoadingShell(
+            bundle,
+            title: 'Achievements',
+            body: ListView(
+              padding: const EdgeInsets.all(12),
+              children: [
+                  SkeletonBlock(
+                    background: bundle.secondaryColor,
+                    foreground: bundle.primaryColor.withValues(alpha: 0.25),
+                    height: 24,
+                    width: 200,
+                  ),
+                  const SizedBox(height: 16),
+                  for (var i = 0; i < 5; i++) ...[
+                    SkeletonBlock(
+                      background: bundle.secondaryColor,
+                      foreground: bundle.primaryColor.withValues(alpha: 0.25),
+                      height: 52,
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+              ],
+            ),
+          );
         }
         return PopScope<Object?>(
           canPop: true,

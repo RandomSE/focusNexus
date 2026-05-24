@@ -7,6 +7,8 @@ import '../utils/common_utils.dart';
 import '../utils/notifier.dart';
 import '../services/achievement_service.dart';
 import '../utils/screen_theme.dart';
+import '../widgets/skeleton_loaders.dart';
+import '../widgets/settings_themed_builder.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -41,13 +43,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_servicesReady) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
     return SettingsThemedBuilder(
-      startupDelay: const Duration(milliseconds: 500),
       builder: (context, bundle) {
+        if (!_servicesReady) {
+          return themedLoadingShell(
+            bundle,
+            title: 'Dashboard',
+            body: DashboardSkeleton(bundle: bundle),
+          );
+        }
         final rewardType = _settings.rewardType;
 
         return Theme(

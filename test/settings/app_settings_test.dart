@@ -10,8 +10,9 @@ import '../helpers/in_memory_key_value_storage.dart';
 
 void main() {
   group('ThemeStyles', () {
-    test('resolvePrimaryColor uses customization when enabled', () {
+    test('resolvePrimaryColor uses customization when enabled for reward', () {
       const prefs = UserPrefsSnapshot(
+        rewardType: 'Customization',
         customizationEnabled: true,
         customizedPrimary: Colors.red,
       );
@@ -22,6 +23,23 @@ void main() {
           prefs: prefs,
         ),
         Colors.red,
+      );
+    });
+
+    test('resolvePrimaryColor ignores stored custom colours when toggle off', () {
+      const prefs = UserPrefsSnapshot(
+        rewardType: 'Customization',
+        customizationEnabled: false,
+        customizedPrimary: Colors.red,
+        theme: 'light',
+      );
+      expect(
+        ThemeStyles.resolvePrimaryColor(
+          isDark: false,
+          highContrast: false,
+          prefs: prefs,
+        ),
+        Colors.black87,
       );
     });
 
@@ -62,6 +80,31 @@ void main() {
       await storage.write(key: 'pauseGoals', value: 'True');
       await settings.load();
       expect(settings.pauseGoals, isTrue);
+    });
+
+    test('completeRegistration marks setup and routes before onboarding', () async {
+      await settings.load();
+      await settings.completeRegistration(
+        notificationFrequency: 'High',
+        notificationStyle: 'Vibrant',
+        rewardType: 'Mini-games',
+      );
+      expect(settings.registrationComplete, isTrue);
+      expect(settings.onboardingCompleted, isFalse);
+      expect(settings.notificationFrequency, 'High');
+      expect(settings.notificationStyle, 'Vibrant');
+    });
+
+    test('load maps legacy loggedIn to registrationComplete', () async {
+      await storage.write(key: 'loggedIn', value: 'true');
+      await settings.load();
+      expect(settings.registrationComplete, isTrue);
+    });
+
+    test('setRewardType does not auto-enable customized colours', () async {
+      await settings.load();
+      await settings.setRewardType('Customization');
+      expect(settings.customizationEnabled, isFalse);
     });
   });
 }

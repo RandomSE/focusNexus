@@ -48,7 +48,7 @@ class ThemeRepository {
 
   Future<ThemeBundle> loadScreenBundle({
     UserPrefsSnapshot? prefs,
-    Duration startupDelay = const Duration(milliseconds: 500),
+    Duration startupDelay = Duration.zero,
   }) async {
     await CommonUtils.waitForMilliseconds(startupDelay.inMilliseconds);
     final snap = prefs ?? await _prefs.loadSnapshot();

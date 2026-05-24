@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:focusNexus/repositories/app_repositories.dart';
-import 'package:focusNexus/settings/app_settings.dart';
 import '../utils/common_utils.dart';
 import '../utils/notifier.dart';
 import '../utils/screen_theme.dart';
+import '../widgets/appearance_settings_section.dart';
+import '../widgets/settings_themed_builder.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -15,10 +16,9 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen>
     with WidgetsBindingObserver {
   final _settings = AppRepositories.instance.settings;
-  bool _permissionsChecked = false;
   bool _notificationsAllowed = false;
+  bool _isDeletingAccount = false;
 
-  static const _userThemes = ['light', 'dark'];
   static const _notificationFrequencies = [
     'Low',
     'Medium',
@@ -34,8 +34,9 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   @override
   void initState() {
+    super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _loadPermissions();
+    _refreshNotificationPermission();
   }
 
   @override
@@ -52,14 +53,9 @@ class _SettingsScreenState extends State<SettingsScreen>
     }
   }
 
-  Future<void> _loadPermissions() async {
+  Future<void> _refreshNotificationPermission() async {
     final allowed = await GoalNotifier.checkNotificationsPermissionsGranted();
-    if (mounted) {
-      setState(() {
-        _notificationsAllowed = allowed;
-        _permissionsChecked = true;
-      });
-    }
+    if (mounted) setState(() => _notificationsAllowed = allowed);
   }
 
   Future<void> setAndCheckDailyAffirmations(bool value) async {
@@ -138,27 +134,25 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   @override
   Widget build(BuildContext context) {
-    if (!_permissionsChecked) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
     return SettingsThemedBuilder(
-      startupDelay: const Duration(milliseconds: 500),
       builder: (context, bundle) {
         final primaryColor = bundle.primaryColor;
         final secondaryColor = bundle.secondaryColor;
         final textStyle = bundle.textStyle;
 
         return PopScope<Object?>(
-          canPop: true,
+          canPop: !_isDeletingAccount,
           onPopInvokedWithResult: (bool didPop, Object? result) async {
+            if (_isDeletingAccount) return;
             if (didPop) {
               Future.microtask(() {
                 Navigator.of(context).pushReplacementNamed('dashboard');
               });
             }
           },
-          child: Theme(
+          child: Stack(
+            children: [
+              Theme(
             data: bundle.themeData,
             child: Scaffold(
               appBar: AppBar(
@@ -179,72 +173,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   padding: const EdgeInsets.all(16.0),
                   children: [
                     const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      color: secondaryColor,
-                      child: CommonUtils.buildText(
-                        'This is a live preview of your visual settings.',
-                        textStyle,
-                      ),
-                    ),
-                    const Divider(),
-                    Container(
-                      color: secondaryColor,
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 8,
-                        horizontal: 12,
-                      ),
-                      child: Wrap(
-                        spacing: 8,
-                        alignment: WrapAlignment.spaceBetween,
-                        children: [
-                          CommonUtils.buildText(
-                            'Font Size: ${_settings.userFontSize}',
-                            textStyle,
-                          ),
-                          CommonUtils.buildIconButton(
-                            '',
-                            Icons.remove,
-                            primaryColor,
-                            () async {
-                              if (_settings.userFontSize > 10) {
-                                final next = _settings.userFontSize - 1;
-                                await _settings.setUserFontSize(next);
-                                await _settings.setThemeData(
-                                  userFontSize: next,
-                                );
-                              }
-                            },
-                          ),
-                          Text(
-                            '${_settings.userFontSize.toInt()}',
-                            style: textStyle,
-                          ),
-                          CommonUtils.buildIconButton(
-                            '',
-                            Icons.add,
-                            primaryColor,
-                            () async {
-                              if (_settings.userFontSize < 24) {
-                                final next = _settings.userFontSize + 1;
-                                await _settings.setUserFontSize(next);
-                                await _settings.setThemeData(
-                                  userFontSize: next,
-                                );
-                              }
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                    CommonUtils.buildDropdownButtonFormField(
-                      'Theme',
-                      _settings.userTheme,
-                      _userThemes,
-                      textStyle,
-                      secondaryColor,
-                      (val) => _settings.setUserTheme(val ?? 'light'),
-                    ),
+                    AppearanceSettingsSection(bundle: bundle),
                     CommonUtils.buildDropdownButtonFormField(
                       'Reward Type',
                       _settings.rewardType,
@@ -265,7 +194,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       ),
                     ),
                     if (_settings.notificationFrequency !=
-                        'No notifications') ...[
+                        'No notifications')
                       CommonUtils.buildDropdownButtonFormField(
                         'Notification Style',
                         _settings.notificationStyle,
@@ -275,7 +204,29 @@ class _SettingsScreenState extends State<SettingsScreen>
                         (val) => _settings.setNotificationStyle(
                           val ?? 'Minimal',
                         ),
+                      )
+                    else
+                      CommonUtils.buildText(
+                        'Notifications are disabled. Settings related to them will not be shown unless re-enabled.',
+                        textStyle,
                       ),
+                    const Divider(),
+                    CommonUtils.buildSwitchListTile(
+                      'Dyslexia-friendly Font',
+                      textStyle,
+                      _settings.useDyslexiaFont,
+                      _settings.setUseDyslexiaFont,
+                      primaryColor,
+                    ),
+                    CommonUtils.buildSwitchListTile(
+                      'High Contrast Mode',
+                      textStyle,
+                      _settings.highContrastMode,
+                      _settings.setHighContrastMode,
+                      primaryColor,
+                    ),
+                    if (_settings.notificationFrequency !=
+                        'No notifications') ...[
                       CommonUtils.buildSwitchListTile(
                         'Daily Affirmations',
                         textStyle,
@@ -330,7 +281,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         _settings.setAiEncouragement,
                         primaryColor,
                       ),
-                      if (!_notificationsAllowed) ...[
+                      if (!_notificationsAllowed)
                         CommonUtils.buildSwitchListTile(
                           'Would you like to enable notifications?',
                           textStyle,
@@ -345,34 +296,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                           },
                           primaryColor,
                         ),
-                      ],
-                    ] else ...[
-                      CommonUtils.buildText(
-                        'Notifications are disabled. Settings related to them will not be shown unless re-enabled.',
-                        textStyle,
-                      ),
                     ],
-                    CommonUtils.buildSwitchListTile(
-                      'Remember Me',
-                      textStyle,
-                      _settings.rememberMe,
-                      _settings.setRememberMe,
-                      primaryColor,
-                    ),
-                    CommonUtils.buildSwitchListTile(
-                      'High Contrast Mode',
-                      textStyle,
-                      _settings.highContrastMode,
-                      _settings.setHighContrastMode,
-                      primaryColor,
-                    ),
-                    CommonUtils.buildSwitchListTile(
-                      'Dyslexia-friendly Font',
-                      textStyle,
-                      _settings.useDyslexiaFont,
-                      _settings.setUseDyslexiaFont,
-                      primaryColor,
-                    ),
                     CommonUtils.buildSwitchListTile(
                       'Pause Goals',
                       textStyle,
@@ -406,93 +330,137 @@ class _SettingsScreenState extends State<SettingsScreen>
                       textStyle,
                       0,
                       0,
-                      () async {
-                        final firstConfirmation =
-                            await CommonUtils.showInteractableAlertDialog(
-                          context,
-                          'Delete Account?',
-                          'Would you like to delete your account and reset all settings?',
-                          textStyle,
-                          secondaryColor,
-                          actions: [
-                            CommonUtils.buildElevatedButton(
-                              'No',
-                              primaryColor,
-                              secondaryColor,
-                              textStyle,
-                              0,
-                              0,
-                              () => Navigator.pop(context, false),
-                            ),
-                            CommonUtils.buildElevatedButton(
-                              'Yes',
-                              primaryColor,
-                              secondaryColor,
-                              textStyle,
-                              0,
-                              0,
-                              () => Navigator.pop(context, true),
-                            ),
-                          ],
-                        );
-                        if (firstConfirmation == true) {
-                          final finalConfirmation =
-                              await CommonUtils.showInteractableAlertDialog(
-                            context,
-                            'Delete Account?',
-                            'Would you like to delete your account and reset all settings? This is permanent and cannot be reversed once done.',
-                            textStyle,
-                            secondaryColor,
-                            actions: [
-                              CommonUtils.buildElevatedButton(
-                                'No',
+                      _isDeletingAccount
+                          ? null
+                          : () => _confirmAndDeleteAccount(
+                                context,
                                 primaryColor,
                                 secondaryColor,
                                 textStyle,
-                                0,
-                                0,
-                                () => Navigator.pop(context, false),
                               ),
-                              CommonUtils.buildElevatedButton(
-                                'Yes, I would like to permanently delete my account.',
-                                primaryColor,
-                                secondaryColor,
-                                textStyle,
-                                0,
-                                0,
-                                () => Navigator.pop(context, true),
-                              ),
-                            ],
-                          );
-                          if (finalConfirmation == true) {
-                            await _settings.clearAll();
-                            if (!mounted) return;
-                            Navigator.pushReplacementNamed(context, 'auth');
-                          }
-                        }
-                      },
-                    ),
-                    CommonUtils.buildElevatedButton(
-                      'Log Out',
-                      primaryColor,
-                      secondaryColor,
-                      textStyle,
-                      0,
-                      0,
-                      () async {
-                        await _settings.setRememberMe(false);
-                        await _settings.setLoggedIn(false);
-                        if (!mounted) return;
-                        Navigator.pushReplacementNamed(context, 'auth');
-                      },
                     ),
                   ],
                 ),
               ),
             ),
+              ),
+              if (_isDeletingAccount)
+                ModalBarrier(
+                  color: Colors.black.withValues(alpha: 0.45),
+                  dismissible: false,
+                ),
+              if (_isDeletingAccount)
+                Center(
+                  child: Material(
+                    color: secondaryColor,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 28,
+                        vertical: 24,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Deleting account…',
+                            style: textStyle,
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            width: 28,
+                            height: 28,
+                            child: CircularProgressIndicator(
+                              color: primaryColor,
+                              strokeWidth: 2.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
         );
       },
     );
+  }
+
+  Future<void> _confirmAndDeleteAccount(
+    BuildContext context,
+    Color primaryColor,
+    Color secondaryColor,
+    TextStyle textStyle,
+  ) async {
+    final firstConfirmation = await CommonUtils.showInteractableAlertDialog(
+      context,
+      'Delete Account?',
+      'Would you like to delete your account and reset all settings?',
+      textStyle,
+      secondaryColor,
+      barrierDismissible: false,
+      actions: [
+        CommonUtils.buildElevatedButton(
+          'No',
+          primaryColor,
+          secondaryColor,
+          textStyle,
+          0,
+          0,
+          () => Navigator.pop(context, false),
+        ),
+        CommonUtils.buildElevatedButton(
+          'Yes',
+          primaryColor,
+          secondaryColor,
+          textStyle,
+          0,
+          0,
+          () => Navigator.pop(context, true),
+        ),
+      ],
+    );
+    if (firstConfirmation != true || !mounted) return;
+
+    final finalConfirmation = await CommonUtils.showInteractableAlertDialog(
+      context,
+      'Delete Account?',
+      'Would you like to delete your account and reset all settings? This is permanent and cannot be reversed once done.',
+      textStyle,
+      secondaryColor,
+      barrierDismissible: false,
+      actions: [
+        CommonUtils.buildElevatedButton(
+          'No',
+          primaryColor,
+          secondaryColor,
+          textStyle,
+          0,
+          0,
+          () => Navigator.pop(context, false),
+        ),
+        CommonUtils.buildElevatedButton(
+          'Yes, I would like to permanently delete my account.',
+          primaryColor,
+          secondaryColor,
+          textStyle,
+          0,
+          0,
+          () => Navigator.pop(context, true),
+        ),
+      ],
+    );
+    if (finalConfirmation != true || !mounted) return;
+
+    setState(() => _isDeletingAccount = true);
+    try {
+      await _settings.clearAll();
+      if (!mounted) return;
+      Navigator.pushNamedAndRemoveUntil(context, 'auth', (_) => false);
+    } finally {
+      if (mounted) setState(() => _isDeletingAccount = false);
+    }
   }
 }
