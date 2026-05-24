@@ -12,6 +12,7 @@ import '../utils/BaseState.dart';
 import '../models/classes/theme_bundle.dart';
 import '../models/classes/goal_set.dart';
 import '../utils/common_utils.dart';
+import '../utils/goal_points.dart';
 import '../utils/notifier.dart';
 
 class GoalsScreen extends StatefulWidget {
@@ -190,7 +191,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
     }
 
     // Round up to nearest multiple of 5
-    final int rounded = ((reward + 4) ~/ 5) * 5;
+    final int rounded = GoalPoints.roundUpToNearestFive(reward);
     return rounded;
   }
 
@@ -339,40 +340,14 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
     required String steps,
     required String deadline,
   }) {
-    const int base = 5;
-
-    // Parse inputs
-    final int timeVal = int.tryParse(time) ?? 0;
-    final int stepsVal = int.tryParse(steps) ?? 0;
-
-    // Score components
-    final int complexityScore = CommonUtils.scoreFromLevel(complexity);
-    final int effortScore = CommonUtils.scoreFromLevel(effort);
-    final int motivationScore = CommonUtils.scoreFromLevel(motivation);
-    final int timeScore = CommonUtils.scoreFromTime(timeVal);
-    final int stepScore = CommonUtils.scoreFromSteps(stepsVal);
-    final int deadlineBonus = (deadline.isNotEmpty && deadline != 'no deadline') ? 2 : 0;
-
-    // Additive multiplier
-    final int additive = 1 + complexityScore + effortScore + motivationScore + timeScore + stepScore + deadlineBonus;
-    int rawScore = base * additive;
-
-    // Final multiplier based on "high" levels
-    final List<String> levels = [complexity, effort, motivation];
-    final int highCount = levels.where((l) => l.toLowerCase() == 'high').length;
-
-    double multiplier = switch (highCount) {
-      3 => 2.0,
-      2 => 1.5,
-      1 => 1.25,
-      _ => 1.0,
-    };
-
-    // Apply multiplier and round up to nearest 5
-    final double adjusted = rawScore * multiplier;
-    final int rounded = ((adjusted + 4) ~/ 5) * 5;
-
-    return rounded;
+    return GoalPoints.calculatePointsFromTemplate(
+      complexity: complexity,
+      effort: effort,
+      motivation: motivation,
+      time: time,
+      steps: steps,
+      deadline: deadline,
+    );
   }
 
 
@@ -506,7 +481,7 @@ class _GoalsScreenState extends BaseState<GoalsScreen> {
     required String steps,
     required String deadlineHours,
   }) async {
-    final goalId = generateGoalId(title);
+    final goalId = GoalNotifier.generateGoalId(title);
     final int hours = int.tryParse(deadlineHours) ?? 0;
     final String deadline = deadlineHours.isEmpty
         ? 'no deadline'

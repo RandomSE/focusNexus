@@ -10,7 +10,8 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/foundation.dart';
 import 'package:timezone/data/latest.dart';
 import 'package:timezone/timezone.dart' as tz;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:focusNexus/services/storage/flutter_secure_key_value_storage.dart';
+import 'package:focusNexus/services/storage/key_value_storage.dart';
 
 import '../models/classes/goal_set.dart';
 import '../utils/text_utils.dart';
@@ -21,7 +22,16 @@ class GoalNotifier {
   FlutterLocalNotificationsPlugin();
   static bool _initialized = false;
   static const _platform = MethodChannel('flutter_native_timezone');
-  static final _storage = const FlutterSecureStorage();
+  static KeyValueStorage storage = const FlutterSecureKeyValueStorage();
+
+  /// Test-only: restore defaults between tests.
+  static void resetForTesting() {
+    storage = const FlutterSecureKeyValueStorage();
+    _initialized = false;
+    _aiEncouragement = false;
+    _dailyAffirmations = false;
+    _activeTimers.clear();
+  }
 
   // Track active timers per goal
   static final _encouragementThreshold = 6;
@@ -37,6 +47,10 @@ class GoalNotifier {
   static bool _aiEncouragement = false;
   static bool _dailyAffirmations = false;
   static AndroidScheduleMode _scheduleMode = AndroidScheduleMode.inexactAllowWhileIdle; // Fallback
+
+  /// Readable flags for unit tests (settings loaded from [storage]).
+  static bool get isAiEncouragementEnabled => _aiEncouragement;
+  static bool get isDailyAffirmationsEnabled => _dailyAffirmations;
 
   /// Initialize notifications plugin
   static Future<void> initialize() async {
@@ -77,13 +91,13 @@ class GoalNotifier {
   }
 
   static Future<void> checkAiEncouragement () async {
-    String? aiEncouragementString = await _storage.read(key: 'aiEncouragement');
+    String? aiEncouragementString = await storage.read(key: 'aiEncouragement');
     _aiEncouragement = aiEncouragementString == 'true';
 
   }
 
   static Future<void> checkDailyAffirmations () async {
-    String? dailyAffirmationsString = await _storage.read(key: 'dailyAffirmations');
+    String? dailyAffirmationsString = await storage.read(key: 'dailyAffirmations');
     _dailyAffirmations = dailyAffirmationsString == 'true';
   }
 
@@ -231,7 +245,7 @@ class GoalNotifier {
     _activeTimers.clear();
 
     if(_dailyAffirmations) {
-      final timeToTrigger = await _storage.read(key: 'dailyAffirmationsTime');
+      final timeToTrigger = await storage.read(key: 'dailyAffirmationsTime');
       await startDailyAffirmations(timeToTrigger!);
     }
 
@@ -497,21 +511,13 @@ class GoalNotifier {
 
 
   static int getScoreByTypeAndString(String type, String value) {
-    int score = 0;
-
     if (type == 'Steps') {
-      score = CommonUtils.scoreFromSteps(int.parse(value));
+      return CommonUtils.scoreFromSteps(int.parse(value));
     }
-
     if (type == 'Time') {
-      score = CommonUtils.scoreFromTime(int.parse(value));
+      return CommonUtils.scoreFromTime(int.parse(value));
     }
-
-    else {
-      score = CommonUtils.scoreFromLevel(value);
-    }
-
-    return score;
+    return CommonUtils.scoreFromLevel(value);
   }
 
   static (int, List<String>, int) getEncouragementValue(GoalSet goalSet) {

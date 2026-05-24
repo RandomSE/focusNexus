@@ -6,7 +6,10 @@ import 'package:intl/intl.dart';
 
 import '../models/classes/goal_set.dart';
 import '../models/classes/theme_bundle.dart';
-import '../utils/common_utils.dart';
+import 'common_utils.dart';
+import 'goal_achievement_eval.dart';
+import 'streak_logic.dart';
+import 'theme_codec.dart';
 
 abstract class BaseState<T extends StatefulWidget> extends State<T> {
   final _storage = const FlutterSecureStorage();
@@ -720,27 +723,7 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
     ),
   );
 
-  ThemeData parseThemeData(String storedTheme) {
-    final Map<String, dynamic> themeMap = jsonDecode(storedTheme);
-
-    final bool isDark = themeMap['isDark'] ?? false;
-    final int primaryColorValue = themeMap['primaryColor'] ?? 0xFF000000;
-    final int secondaryColorValue = themeMap['secondaryColor'] ?? 0xFFFFFFFF;
-    final double fontSize = (themeMap['userFontSize'] ?? 14).toDouble();
-    final bool useDyslexiaFont = themeMap['useDyslexiaFont'] ?? false;
-
-    return ThemeData(
-      brightness: isDark ? Brightness.dark : Brightness.light,
-      primaryColor: Color(primaryColorValue),
-      scaffoldBackgroundColor: Color(secondaryColorValue),
-      textTheme: ThemeData.light().textTheme.apply(
-        fontSizeFactor: fontSize / 14.0,
-        fontFamily: useDyslexiaFont ? 'OpenDyslexic' : null,
-        bodyColor: Color(primaryColorValue),
-        displayColor: Color(primaryColorValue),
-      ),
-    );
-  }
+  ThemeData parseThemeData(String storedTheme) => decodeThemeData(storedTheme);
 
 
 
@@ -865,14 +848,14 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
 
   Future<void> checkAndUpdateWeekProgress() async {
     const String weekKey = 'lastWeekGoalWasCompleted';
-    final String currentWeek = _getWeekIdentifier(DateTime.now());
+    final String currentWeek = StreakLogic.getWeekIdentifier(DateTime.now());
     final String storedWeek = await getStringFromStorage(weekKey);
 
     if (storedWeek != currentWeek) {
       await setStringVariableStorageOnly(weekKey, currentWeek);
       await setStoredInt('goalsCompletedThisWeek', 1);
 
-      final bool isConsecutive = _isPreviousWeek(storedWeek, currentWeek);
+      final bool isConsecutive = StreakLogic.isPreviousWeek(storedWeek, currentWeek);
       if (isConsecutive) {
         await incrementStoredInt('consecutiveWeeksWithGoalsCompleted');
       } else {
@@ -902,70 +885,33 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> {
   }
 
   Future<void> checkAndUpdateGoalAchievementStats(GoalSet goal) async {
-    final bool isHighComplexity = goal.complexity.toLowerCase() == 'high';
-    final bool isHighEffort = goal.effort.toLowerCase() == 'high';
-    final bool isHighMotivation = goal.motivation.toLowerCase() == 'high';
-    final bool isAllHigh = isHighComplexity && isHighEffort && isHighMotivation;
+    final increments = GoalAchievementEval.evaluate(goal, DateTime.now());
 
-    if (goal.points >= 100) {
+    if (increments.highPoints) {
       await incrementStoredInt('goalsCompletedWithHighPoints');
     }
-    if (isHighComplexity) {
+    if (increments.highComplexity) {
       await incrementStoredInt('goalsCompletedWithHighComplexity');
     }
-    if (isHighEffort) {
+    if (increments.highEffort) {
       await incrementStoredInt('goalsCompletedWithHighEffort');
     }
-    if (isHighMotivation) {
+    if (increments.highMotivation) {
       await incrementStoredInt('goalsCompletedWithHighMotivation');
     }
-    if (isAllHigh) {
+    if (increments.allHigh) {
       await incrementStoredInt('goalsCompletedWithAllHigh');
     }
-    if (goal.time >= 150) {
+    if (increments.highTimeRequirement) {
       await incrementStoredInt('goalsCompletedWithHighTimeRequirement');
     }
-    if (goal.steps >= 15) {
+    if (increments.manySteps) {
       await incrementStoredInt('goalsCompletedWithManySteps');
     }
-
-    // Check if completed at least 20 hours before deadline
-    if (goal.deadline.isNotEmpty) {
-      try {
-        final DateTime deadlineDate = DateFormat('dd MMMM yyyy HH:mm').parse(goal.deadline);
-        final DateTime now = DateTime.now();
-        final Duration difference = deadlineDate.difference(now);
-        if (difference.inHours >= 20) {
-          await incrementStoredInt('goalsCompletedEarly');
-        }
-      } catch (e) {
-        debugPrint('Invalid deadline format: ${goal.deadline}');
-      }
+    if (increments.completedEarly) {
+      await incrementStoredInt('goalsCompletedEarly');
     }
   }
-
-
-  bool _isPreviousWeek(String storedWeek, String currentWeek) {
-    if (storedWeek.isEmpty || currentWeek.isEmpty) return false;
-
-    try {
-      final DateTime current = DateFormat('yyyy-MM-dd').parse(currentWeek);
-      final DateTime previousWeekStart = current.subtract(const Duration(days: 7));
-      final String previousWeek = _getWeekIdentifier(previousWeekStart);
-      return storedWeek == previousWeek;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  String _getWeekIdentifier(DateTime date) {
-    final int weekday = date.weekday;
-    final DateTime startOfWeek = date.subtract(Duration(days: weekday - 1));
-    debugPrint(startOfWeek.toString());
-    return DateFormat('yyyy-MM-dd').format(startOfWeek);
-  }
-
-
 
 
 }
