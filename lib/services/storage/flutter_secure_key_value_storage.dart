@@ -17,4 +17,7 @@ class FlutterSecureKeyValueStorage implements KeyValueStorage {
 
   @override
   Future<void> delete({required String key}) => _delegate.delete(key: key);
+
+  @override
+  Future<void> deleteAll() => _delegate.deleteAll();
 }

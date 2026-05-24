@@ -3,23 +3,19 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:focusNexus/progressive_visuals/decor_catalog.dart';
 import 'package:focusNexus/progressive_visuals/decor_item.dart';
 import 'package:focusNexus/progressive_visuals/garden_engine.dart';
 import 'package:focusNexus/progressive_visuals/garden_item.dart';
-import 'package:focusNexus/progressive_visuals/garden_persistence.dart';
 import 'package:focusNexus/progressive_visuals/garden_state.dart';
 import 'package:focusNexus/progressive_visuals/growth_stage.dart';
 import 'package:focusNexus/progressive_visuals/visual_bridge.dart';
 import 'package:focusNexus/progressive_visuals/visual_theme_id.dart';
 import 'package:focusNexus/progressive_visuals/zen_garden_rules.dart';
+import 'package:focusNexus/repositories/app_repositories.dart';
 import 'package:intl/intl.dart';
 
 import 'zen_garden_painters.dart';
-
-const _kPointsKey = 'points';
-const _kZenSaveKey = 'zen_garden_save_v1';
 
 String zenGardenStageLabel(int index) {
   final stage = growthStageFromIndex(index);
@@ -118,7 +114,7 @@ class ZenGardenScreen extends StatefulWidget {
 }
 
 class _ZenGardenScreenState extends State<ZenGardenScreen> {
-  final _storage = const FlutterSecureStorage();
+  final _repos = AppRepositories.instance;
   final _engine = ProgressiveGardenEngine(
     transitionRules: zenGardenTransitionRules(),
     // TODO: change to 0.05 once testing concludes.
@@ -163,14 +159,10 @@ class _ZenGardenScreenState extends State<ZenGardenScreen> {
   }
 
   Future<void> _bootstrap() async {
-    final wallet = int.tryParse(await _storage.read(key: _kPointsKey) ?? '') ?? 50;
-    if (await _storage.read(key: _kPointsKey) == null) {
-      await _storage.write(key: _kPointsKey, value: wallet.toString());
-    }
-    final raw = await _storage.read(key: _kZenSaveKey);
+    final garden = await _repos.garden.load();
     if (!mounted) return;
     setState(() {
-      _garden = GardenPersistence.decodeZenGarden(raw, wallet);
+      _garden = garden;
       _loaded = true;
     });
     _syncTicker();
@@ -200,8 +192,7 @@ class _ZenGardenScreenState extends State<ZenGardenScreen> {
   }
 
   Future<void> _persist() async {
-    await _storage.write(key: _kPointsKey, value: _garden.pointsBalance.toString());
-    await _storage.write(key: _kZenSaveKey, value: GardenPersistence.encodeZenGarden(_garden));
+    await _repos.garden.save(_garden);
   }
 
   void _apply(GardenOpResult result, {String? announce}) {

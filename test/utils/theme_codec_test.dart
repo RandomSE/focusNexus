@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:focusNexus/utils/theme_codec.dart';
+import 'package:focusNexus/utils/theme_styles.dart';
 
 void main() {
   test('encodeThemeData and decodeThemeData roundtrip', () {
@@ -24,5 +25,20 @@ void main() {
     final theme = decodeThemeData('{}');
     expect(theme.brightness, Brightness.light);
     expect(theme.primaryColor, const Color(0xFF000000));
+  });
+
+  test('buildThemeData supports font sizes above default without throwing', () {
+    for (final size in [10.0, 15.0, 24.0]) {
+      expect(
+        () => ThemeStyles.buildThemeData(
+          isDark: false,
+          primaryColor: Colors.black,
+          secondaryColor: Colors.white,
+          fontSize: size,
+          useDyslexiaFont: false,
+        ),
+        returnsNormally,
+      );
+    }
   });
 }

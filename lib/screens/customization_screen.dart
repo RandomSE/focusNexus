@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:focusNexus/utils/BaseState.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import '../repositories/app_repositories.dart';
 import '../utils/common_utils.dart';
-
+import '../utils/screen_theme.dart';
 import '../models/classes/theme_bundle.dart';
 
 class CustomizationScreen extends StatefulWidget {
@@ -13,18 +12,18 @@ class CustomizationScreen extends StatefulWidget {
   State<CustomizationScreen> createState() => _CustomizationScreenState();
 }
 
-class _CustomizationScreenState extends BaseState<CustomizationScreen> {
-  late ThemeData _themeData;
-  late Color _primaryColor;
-  late Color _secondaryColor;
-  late TextStyle _textStyle;
-  bool _themeLoaded = false;
+class _CustomizationScreenState extends State<CustomizationScreen> {
+  final _settings = AppRepositories.instance.settings;
   bool _hasUnsavedChanges = false;
-  final _storage = const FlutterSecureStorage();
-  late Color _savedPrimaryColor;
-  late Color _savedSecondaryColor;
+  bool _colorsInitialized = false;
   late Color _previewPrimaryColor;
   late Color _previewSecondaryColor;
+
+  TextStyle _textStyleFor(Color primary) => _settings.textStyle(
+        fontSize: _settings.userFontSize,
+        color: primary,
+        dyslexia: _settings.useDyslexiaFont,
+      );
 
   List<Color> get _freeDefaultColors {
     // These are the built-in theme/contrast defaults. They should always be selectable for free.
@@ -50,7 +49,10 @@ class _CustomizationScreenState extends BaseState<CustomizationScreen> {
   }
 
   List<Color> get _selectableColors {
-    final List<Color> combined = [..._freeDefaultColors, ...allowedColors];
+    final List<Color> combined = [
+      ..._freeDefaultColors,
+      ..._settings.allowedColors,
+    ];
     final Map<int, Color> byArgb = <int, Color>{};
     for (final c in combined) {
       byArgb[c.toARGB32()] = c;
@@ -74,38 +76,50 @@ class _CustomizationScreenState extends BaseState<CustomizationScreen> {
   @override
   void initState() {
     super.initState();
-    _loadScreen();
+    _initializePreviewColors();
+  }
+
+  Future<void> _initializePreviewColors() async {
+    final bundle = currentThemeBundle();
+    for (final c in [bundle.primaryColor, bundle.secondaryColor]) {
+      if (!_settings.allowedColors.contains(c)) {
+        await _settings.setAllowedColors(c);
+      }
+    }
+    if (!mounted) return;
+    setState(() {
+      _previewPrimaryColor = bundle.primaryColor;
+      _previewSecondaryColor = bundle.secondaryColor;
+      _colorsInitialized = true;
+    });
   }
 
   Future<void> _purchaseColor(String name, int price, Color color) async {
-    final currentPointsStr = await _storage.read(key: 'points') ?? '0';
-    int currentPoints = int.tryParse(currentPointsStr) ?? 0;
+    final textStyle = _textStyleFor(_previewPrimaryColor);
+    final currentPoints = await AppRepositories.instance.points.readBalance();
     if (_isFreeDefaultColor(color)) {
       if (!mounted) return;
       CommonUtils.showSnackBar(
         context,
         "This color is already available by default",
-        _textStyle,
+        textStyle,
         2000,
         12,
       );
       return;
     }
-    if (!allowedColors.contains(color)) {
+    if (!_settings.allowedColors.contains(color)) {
       // check user doesn't already have.
       if (currentPoints >= price) {
-        // Deduct points
-        currentPoints -= price;
-        await _storage.write(key: 'points', value: currentPoints.toString());
+        await AppRepositories.instance.points.writeBalance(currentPoints - price);
 
-        // Add to allowed colors in BaseState
-        await setAllowedColors(color);
+        await _settings.setAllowedColors(color);
         if (!mounted) return;
 
         CommonUtils.showSnackBar(
           context,
           "Unlocked $name!",
-          _textStyle,
+          textStyle,
           2000,
           12,
         );
@@ -115,7 +129,7 @@ class _CustomizationScreenState extends BaseState<CustomizationScreen> {
         CommonUtils.showSnackBar(
           context,
           "Not enough points! Need $price.",
-          _textStyle,
+          textStyle,
           2000,
           12,
         );
@@ -125,7 +139,7 @@ class _CustomizationScreenState extends BaseState<CustomizationScreen> {
       CommonUtils.showSnackBar(
         context,
         "You already own this color",
-        _textStyle,
+        textStyle,
         2000,
         12,
       );
@@ -135,6 +149,7 @@ class _CustomizationScreenState extends BaseState<CustomizationScreen> {
   Future<void> _openCustomColorPicker() async {
     const int customPrice = 10000;
     Color pickedColor = _previewPrimaryColor;
+    final textStyle = _textStyleFor(_previewPrimaryColor);
 
     showDialog(
       context: context,
@@ -142,7 +157,7 @@ class _CustomizationScreenState extends BaseState<CustomizationScreen> {
           (context) => AlertDialog(
             title: Text(
               'Pick Custom Color ($customPrice pts)',
-              style: _textStyle,
+              style: textStyle,
             ),
             content: SingleChildScrollView(
               child: ColorPicker(
@@ -152,18 +167,18 @@ class _CustomizationScreenState extends BaseState<CustomizationScreen> {
             ),
             actions: [
               TextButton(
-                child: Text('Cancel', style: _textStyle),
+                child: Text('Cancel', style: textStyle),
                 onPressed: () => Navigator.pop(context),
               ),
               TextButton(
-                child: Text('Buy', style: _textStyle),
+                child: Text('Buy', style: textStyle),
                 onPressed: () {
                   if (_isFreeDefaultColor(pickedColor)) {
                     Navigator.pop(context);
                     CommonUtils.showSnackBar(
                       context,
                       "That shade is already a default color",
-                      _textStyle,
+                      textStyle,
                       2000,
                       12,
                     );
@@ -178,87 +193,56 @@ class _CustomizationScreenState extends BaseState<CustomizationScreen> {
     );
   }
 
-  void _selectColor(Color color, bool isPrimarySelection) {
+  void _selectColor(Color color, bool isPrimarySelection, ThemeBundle bundle) {
     setState(() {
+      if (!_hasUnsavedChanges) {
+        _previewPrimaryColor = bundle.primaryColor;
+        _previewSecondaryColor = bundle.secondaryColor;
+      }
       if (isPrimarySelection) {
         _previewPrimaryColor = color;
       } else {
         _previewSecondaryColor = color;
       }
-      _applyPreviewThemeToScreen();
       _hasUnsavedChanges =
-          _previewPrimaryColor != _savedPrimaryColor ||
-          _previewSecondaryColor != _savedSecondaryColor;
+          _previewPrimaryColor != bundle.primaryColor ||
+          _previewSecondaryColor != bundle.secondaryColor;
     });
-  }
-
-  void _applyPreviewThemeToScreen() {
-    _primaryColor = _previewPrimaryColor;
-    _secondaryColor = _previewSecondaryColor;
-    _textStyle = getTextStyle(
-      userFontSize,
-      _previewPrimaryColor,
-      useDyslexiaFont,
-    );
-    _themeData = _themeData.copyWith(
-      primaryColor: _previewPrimaryColor,
-      scaffoldBackgroundColor: _previewSecondaryColor,
-      textTheme: _themeData.textTheme.apply(
-        bodyColor: _previewPrimaryColor,
-        displayColor: _previewPrimaryColor,
-      ),
-    );
   }
 
   void _revertPreviewToSaved() {
-    setState(() {
-      _previewPrimaryColor = _savedPrimaryColor;
-      _previewSecondaryColor = _savedSecondaryColor;
-      _applyPreviewThemeToScreen();
-      _hasUnsavedChanges = false;
-    });
+    setState(() => _hasUnsavedChanges = false);
   }
 
   void _revertPreviewToThemeDefaults() {
-    final bool isDark = userTheme == 'dark';
-    final bool contrast = highContrastMode;
-
-    final Color defaultPrimary =
-        contrast
-            ? (isDark ? Colors.cyan : const Color(0xFF004F52))
-            : (isDark ? Colors.white70 : Colors.black87);
-
-    final Color defaultSecondary =
-        contrast
-            ? (isDark ? Colors.black : const Color(0xFFF2EFE6))
-            : (isDark ? Colors.black : const Color(0xFFF2EFE6));
+    final isDark = _settings.userTheme == 'dark';
+    final contrast = _settings.highContrastMode;
+    final defaultPrimary = contrast
+        ? (isDark ? Colors.cyan : const Color(0xFF004F52))
+        : (isDark ? Colors.white70 : Colors.black87);
+    final defaultSecondary = contrast
+        ? (isDark ? Colors.black : const Color(0xFFF2EFE6))
+        : (isDark ? Colors.black : const Color(0xFFF2EFE6));
 
     setState(() {
       _previewPrimaryColor = defaultPrimary;
       _previewSecondaryColor = defaultSecondary;
-      _applyPreviewThemeToScreen();
-      _hasUnsavedChanges =
-          _previewPrimaryColor != _savedPrimaryColor ||
-          _previewSecondaryColor != _savedSecondaryColor;
+      _hasUnsavedChanges = true;
     });
   }
 
   Future<void> _saveCustomization() async {
-    await setCustomizationEnabled(true);
-    await setCustomizedColors(
+    await _settings.setCustomizationEnabled(true);
+    await _settings.setCustomizedColors(
       primaryColor: _previewPrimaryColor,
       secondaryColor: _previewSecondaryColor,
     );
     if (!mounted) return;
-    setState(() {
-      _savedPrimaryColor = _previewPrimaryColor;
-      _savedSecondaryColor = _previewSecondaryColor;
-      _hasUnsavedChanges = false;
-    });
+    setState(() => _hasUnsavedChanges = false);
     CommonUtils.showSnackBar(
       context,
       "Customization saved",
-      _textStyle,
+      _textStyleFor(_previewPrimaryColor),
       2000,
       12,
     );
@@ -266,14 +250,15 @@ class _CustomizationScreenState extends BaseState<CustomizationScreen> {
 
   Future<bool> _onBackPressed() async {
     if (!_hasUnsavedChanges) return true;
+    final textStyle = _textStyleFor(_previewPrimaryColor);
     final shouldLeave = await showDialog<bool>(
       context: context,
       builder:
           (context) => AlertDialog(
-            title: Text('Save changes?', style: _textStyle),
+            title: Text('Save changes?', style: textStyle),
             content: Text(
               'You have unsaved color changes. Save before leaving?',
-              style: _textStyle.copyWith(fontWeight: FontWeight.normal),
+              style: textStyle.copyWith(fontWeight: FontWeight.normal),
             ),
             actions: [
               TextButton(
@@ -281,11 +266,11 @@ class _CustomizationScreenState extends BaseState<CustomizationScreen> {
                   _revertPreviewToSaved();
                   Navigator.of(context).pop(true);
                 },
-                child: Text('Don\'t save', style: _textStyle),
+                child: Text('Don\'t save', style: textStyle),
               ),
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: Text('Cancel', style: _textStyle),
+                child: Text('Cancel', style: textStyle),
               ),
               TextButton(
                 onPressed: () async {
@@ -293,7 +278,7 @@ class _CustomizationScreenState extends BaseState<CustomizationScreen> {
                   if (!context.mounted) return;
                   Navigator.of(context).pop(true);
                 },
-                child: Text('Save', style: _textStyle),
+                child: Text('Save', style: textStyle),
               ),
             ],
           ),
@@ -301,15 +286,37 @@ class _CustomizationScreenState extends BaseState<CustomizationScreen> {
     return shouldLeave ?? false;
   }
 
+  ThemeData _previewThemeData(
+    ThemeBundle bundle,
+    Color primary,
+    Color secondary,
+  ) {
+    return bundle.themeData.copyWith(
+      primaryColor: primary,
+      scaffoldBackgroundColor: secondary,
+      textTheme: bundle.themeData.textTheme.apply(
+        bodyColor: primary,
+        displayColor: primary,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // TODO: implement build
-
-    if (!_themeLoaded) {
+    if (!_colorsInitialized) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return PopScope(
+    return SettingsThemedBuilder(
+      builder: (context, bundle) {
+        final primary =
+            _hasUnsavedChanges ? _previewPrimaryColor : bundle.primaryColor;
+        final secondary = _hasUnsavedChanges
+            ? _previewSecondaryColor
+            : bundle.secondaryColor;
+        final textStyle = _textStyleFor(primary);
+
+        return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
@@ -320,31 +327,31 @@ class _CustomizationScreenState extends BaseState<CustomizationScreen> {
         }
       },
       child: Theme(
-        data: _themeData,
+        data: _previewThemeData(bundle, primary, secondary),
         child: Scaffold(
-          backgroundColor: _secondaryColor,
+          backgroundColor: secondary,
           appBar: AppBar(
             title: Text(
               'Customization',
               style: TextStyle(
-                backgroundColor: _secondaryColor,
-                color: _primaryColor,
+                backgroundColor: secondary,
+                color: primary,
               ),
             ),
-            backgroundColor: _secondaryColor,
-            iconTheme: IconThemeData(color: _primaryColor),
+            backgroundColor: secondary,
+            iconTheme: IconThemeData(color: primary),
           ),
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CommonUtils.buildText("Color Shop", _textStyle),
+                CommonUtils.buildText("Color Shop", textStyle),
                 const SizedBox(height: 8),
                 CommonUtils.buildText(
                   "Tap a swatch to unlock it.",
-                  _textStyle.copyWith(
-                    fontSize: _textStyle.fontSize! - 2,
+                  textStyle.copyWith(
+                    fontSize: textStyle.fontSize! - 2,
                     fontWeight: FontWeight.normal,
                   ),
                 ),
@@ -363,7 +370,7 @@ class _CustomizationScreenState extends BaseState<CustomizationScreen> {
                     String name = _shopData.keys.elementAt(index);
                     Color color = _shopData[name]!['color'];
                     int price = _shopData[name]!['price'];
-                    bool isUnlocked = allowedColors.contains(color);
+                    bool isUnlocked = _settings.allowedColors.contains(color);
                     final bool isFree = _isFreeDefaultColor(color);
 
                     return GestureDetector(
@@ -380,7 +387,7 @@ class _CustomizationScreenState extends BaseState<CustomizationScreen> {
                               color: color,
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: _primaryColor,
+                                color: primary,
                                 width: 2,
                               ),
                             ),
@@ -403,8 +410,8 @@ class _CustomizationScreenState extends BaseState<CustomizationScreen> {
                           ),
                           CommonUtils.buildText(
                             isUnlocked ? "Owned" : (isFree ? "Free" : "$price"),
-                            _textStyle.copyWith(
-                              fontSize: _textStyle.fontSize! - 1,
+                            textStyle.copyWith(
+                              fontSize: textStyle.fontSize! - 1,
                             ),
                           ),
                         ],
@@ -416,16 +423,16 @@ class _CustomizationScreenState extends BaseState<CustomizationScreen> {
                 Center(
                   child: CommonUtils.buildElevatedButton(
                     "Unlock Custom Color (10,000 pts)",
-                    _primaryColor,
-                    _secondaryColor, // Or a gradient style
-                    _textStyle,
+                    primary,
+                    secondary,
+                    textStyle,
                     16,
                     12,
                     _openCustomColorPicker,
                   ),
                 ),
                 const SizedBox(height: 24),
-                CommonUtils.buildText("Theme Preview", _textStyle),
+                CommonUtils.buildText("Theme Preview", textStyle),
                 const SizedBox(height: 10),
                 Row(
                   children: [
@@ -435,8 +442,8 @@ class _CustomizationScreenState extends BaseState<CustomizationScreen> {
                         children: [
                           CommonUtils.buildText(
                             "Primary",
-                            _textStyle.copyWith(
-                              fontSize: _textStyle.fontSize! - 1,
+                            textStyle.copyWith(
+                              fontSize: textStyle.fontSize! - 1,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -446,10 +453,10 @@ class _CustomizationScreenState extends BaseState<CustomizationScreen> {
                             children:
                                 _selectableColors.map((color) {
                                   final bool selected =
-                                      _previewPrimaryColor.toARGB32() ==
+                                      primary.toARGB32() ==
                                       color.toARGB32();
                                   return GestureDetector(
-                                    onTap: () => _selectColor(color, true),
+                                    onTap: () => _selectColor(color, true, bundle),
                                     child: Container(
                                       width: 36,
                                       height: 36,
@@ -460,7 +467,7 @@ class _CustomizationScreenState extends BaseState<CustomizationScreen> {
                                           color:
                                               selected
                                                   ? Colors.white
-                                                  : _primaryColor,
+                                                  : primary,
                                           width: selected ? 3 : 1.5,
                                         ),
                                       ),
@@ -478,8 +485,8 @@ class _CustomizationScreenState extends BaseState<CustomizationScreen> {
                         children: [
                           CommonUtils.buildText(
                             "Secondary",
-                            _textStyle.copyWith(
-                              fontSize: _textStyle.fontSize! - 1,
+                            textStyle.copyWith(
+                              fontSize: textStyle.fontSize! - 1,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -489,10 +496,10 @@ class _CustomizationScreenState extends BaseState<CustomizationScreen> {
                             children:
                                 _selectableColors.map((color) {
                                   final bool selected =
-                                      _previewSecondaryColor.toARGB32() ==
+                                      secondary.toARGB32() ==
                                       color.toARGB32();
                                   return GestureDetector(
-                                    onTap: () => _selectColor(color, false),
+                                    onTap: () => _selectColor(color, false, bundle),
                                     child: Container(
                                       width: 36,
                                       height: 36,
@@ -503,7 +510,7 @@ class _CustomizationScreenState extends BaseState<CustomizationScreen> {
                                           color:
                                               selected
                                                   ? Colors.white
-                                                  : _primaryColor,
+                                                  : primary,
                                           width: selected ? 3 : 1.5,
                                         ),
                                       ),
@@ -532,7 +539,7 @@ class _CustomizationScreenState extends BaseState<CustomizationScreen> {
                         ),
                         child: Text(
                           "Revert to Defaults",
-                          style: _textStyle.copyWith(color: Colors.white),
+                          style: textStyle.copyWith(color: Colors.white),
                         ),
                       ),
                     ),
@@ -540,9 +547,9 @@ class _CustomizationScreenState extends BaseState<CustomizationScreen> {
                     Expanded(
                       child: CommonUtils.buildElevatedButton(
                         "Save Changes",
-                        _primaryColor,
-                        _secondaryColor,
-                        _textStyle,
+                        primary,
+                        secondary,
+                        textStyle,
                         16,
                         12,
                         _hasUnsavedChanges ? _saveCustomization : null,
@@ -556,30 +563,7 @@ class _CustomizationScreenState extends BaseState<CustomizationScreen> {
         ),
       ),
     );
-  }
-
-  Future<void> _loadScreen() async {
-    final themeBundle = await initializeScreenTheme();
-    await setThemeDataScreen(themeBundle);
-  }
-
-  Future<void> setThemeDataScreen(ThemeBundle themeBundle) async {
-    setState(() {
-      _themeData = themeBundle.themeData;
-      _primaryColor = themeBundle.primaryColor;
-      _secondaryColor = themeBundle.secondaryColor;
-      _textStyle = themeBundle.textStyle;
-      _savedPrimaryColor = _primaryColor;
-      _savedSecondaryColor = _secondaryColor;
-      _previewPrimaryColor = _primaryColor;
-      _previewSecondaryColor = _secondaryColor;
-      if (!allowedColors.contains(_primaryColor)) {
-        allowedColors.add(_primaryColor);
-      }
-      if (!allowedColors.contains(_secondaryColor)) {
-        allowedColors.add(_secondaryColor);
-      }
-      _themeLoaded = true;
-    });
+      },
+    );
   }
 }

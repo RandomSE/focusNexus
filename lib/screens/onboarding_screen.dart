@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:focusNexus/repositories/app_repositories.dart';
 import 'package:focusNexus/screens/dashboard_screen.dart';
-import 'package:focusNexus/utils/BaseState.dart';
 import 'package:focusNexus/utils/notifier.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
@@ -14,11 +14,10 @@ class OnboardingScreen extends StatefulWidget {
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends BaseState<OnboardingScreen> {
+class _OnboardingScreenState extends State<OnboardingScreen> {
+  final _settings = AppRepositories.instance.settings;
   final PageController _pageController = PageController();
   int _currentPage = 0;
-  final String baseImagePath = 'assets/images/onboarding_images';
-  bool _notificationsEnabled = false;
   int totalImages = 0;
   List<String> onboardingImages = [];
   final primaryColor = CommonUtils.getDefaultPrimaryColor();
@@ -69,9 +68,8 @@ class _OnboardingScreenState extends BaseState<OnboardingScreen> {
     final notificationsGranted =
         await GoalNotifier.checkNotificationsPermissionsGranted();
     debugPrint('Notifications enabled: $notificationsGranted');
-    _notificationsEnabled = getNotificationsEnabled();
 
-    if (_notificationsEnabled && !notificationsGranted) {
+    if (_settings.notificationsEnabled && !notificationsGranted) {
       final shouldEnable = await CommonUtils.showInteractableAlertDialog(
         context,
         'Enable Notifications',
@@ -80,9 +78,22 @@ class _OnboardingScreenState extends BaseState<OnboardingScreen> {
         secondaryColor,
         actions: [
           CommonUtils.buildElevatedButton(
-            'Not Now', primaryColor, secondaryColor, textStyle, 0, 0, () => Navigator.pop(context, false),
+            'Not Now',
+            primaryColor,
+            secondaryColor,
+            textStyle,
+            0,
+            0,
+            () => Navigator.pop(context, false),
           ),
-          CommonUtils.buildElevatedButton('Enable', primaryColor, secondaryColor, textStyle, 0, 0, () => Navigator.pop(context, true),
+          CommonUtils.buildElevatedButton(
+            'Enable',
+            primaryColor,
+            secondaryColor,
+            textStyle,
+            0,
+            0,
+            () => Navigator.pop(context, true),
           ),
         ],
       );
@@ -92,9 +103,7 @@ class _OnboardingScreenState extends BaseState<OnboardingScreen> {
       }
     }
 
-    setOnboardingCompleted(
-      true,
-    ); // To ensure user only has to endure onboarding once per account made.
+    await _settings.setOnboardingCompleted(true);
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const DashboardScreen()),
@@ -129,19 +138,46 @@ class _OnboardingScreenState extends BaseState<OnboardingScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 if (_currentPage > 0)
-                  CommonUtils.buildElevatedButton('Go to previous image', primaryColor, secondaryColor, textStyle, 0, 0, _goToPreviousPage)
-                  //ElevatedButton(
-                    //onPressed: _goToPreviousPage,
-                    //child: const Text('Go Back'),
-                  //),
+                  CommonUtils.buildElevatedButton(
+                    'Go to previous image',
+                    primaryColor,
+                    secondaryColor,
+                    textStyle,
+                    0,
+                    0,
+                    _goToPreviousPage,
+                  )
                 else
-                  const SizedBox(width: 100), // Placeholder to balance layout
-
+                  const SizedBox(width: 100),
                 if (_currentPage < totalImages - 1)
-                  CommonUtils.buildElevatedButton('Next', primaryColor, secondaryColor, textStyle, 0, 0, _goToNextPage)
+                  CommonUtils.buildElevatedButton(
+                    'Next',
+                    primaryColor,
+                    secondaryColor,
+                    textStyle,
+                    0,
+                    0,
+                    _goToNextPage,
+                  )
                 else
-                  CommonUtils.buildElevatedButton('Finish', primaryColor, secondaryColor, textStyle, 0, 0, _finishOnboarding),
-                CommonUtils.buildElevatedButton('Skip', primaryColor, secondaryColor, textStyle, 0, 0, _finishOnboarding),
+                  CommonUtils.buildElevatedButton(
+                    'Finish',
+                    primaryColor,
+                    secondaryColor,
+                    textStyle,
+                    0,
+                    0,
+                    _finishOnboarding,
+                  ),
+                CommonUtils.buildElevatedButton(
+                  'Skip',
+                  primaryColor,
+                  secondaryColor,
+                  textStyle,
+                  0,
+                  0,
+                  _finishOnboarding,
+                ),
               ],
             ),
           ),

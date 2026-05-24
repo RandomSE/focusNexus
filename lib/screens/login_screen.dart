@@ -1,8 +1,8 @@
 // lib/screens/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:focusNexus/repositories/app_repositories.dart';
 import 'package:focusNexus/screens/registration_screen.dart';
-import '../utils/BaseState.dart';
 import '../utils/common_utils.dart';
 import 'dashboard_screen.dart';
 import 'onboarding_screen.dart';
@@ -14,11 +14,12 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends BaseState<LoginScreen> {
+class _LoginScreenState extends State<LoginScreen> {
+  final _settings = AppRepositories.instance.settings;
   final TextEditingController _userController = TextEditingController();
   final TextEditingController _passController = TextEditingController();
-  bool _rememberMe = false;
   final _storage = const FlutterSecureStorage();
+  bool _rememberMe = false;
   String showPasswordText = 'Show Password';
   bool hidePassword = true;
   final primaryColor = CommonUtils.getDefaultPrimaryColor();
@@ -31,11 +32,12 @@ class _LoginScreenState extends BaseState<LoginScreen> {
 
     if (_userController.text == storedUser &&
         _passController.text == storedPass) {
-      await setLoggedIn(true);
+      await _settings.setLoggedIn(true);
       if (_rememberMe) {
-        await setRememberMe(true);
+        await _settings.setRememberMe(true);
       }
-      final isOnboardingComplete = (await checkOnboardingCompleted());
+      await _settings.reload();
+      final isOnboardingComplete = _settings.onboardingCompleted;
       if (!isOnboardingComplete) {
         debugPrint('Pushing to onboarding.');
         Navigator.pushReplacement(
@@ -50,9 +52,21 @@ class _LoginScreenState extends BaseState<LoginScreen> {
         );
       }
     } else if (storedUser == null || storedPass == null) {
-      CommonUtils.showSnackBar(context, 'You have not registered yet. Register an account.', textStyle, 1000, 5);
+      CommonUtils.showSnackBar(
+        context,
+        'You have not registered yet. Register an account.',
+        textStyle,
+        1000,
+        5,
+      );
     } else {
-      CommonUtils.showSnackBar(context, 'Invalid username or password', textStyle, 1500, 5);
+      CommonUtils.showSnackBar(
+        context,
+        'Invalid username or password',
+        textStyle,
+        1500,
+        5,
+      );
     }
   }
 
@@ -64,31 +78,61 @@ class _LoginScreenState extends BaseState<LoginScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-
             CommonUtils.buildTextField(_userController, 'Username', textStyle),
-            CommonUtils.buildTextField(_passController, 'Password', textStyle, hideText: hidePassword),
+            CommonUtils.buildTextField(
+              _passController,
+              'Password',
+              textStyle,
+              hideText: hidePassword,
+            ),
             Row(
               children: [
-                CommonUtils.buildSwitch(_rememberMe, (val) => setState(() => _rememberMe = val), primaryColor),
+                CommonUtils.buildSwitch(
+                  _rememberMe,
+                  (val) => setState(() => _rememberMe = val),
+                  primaryColor,
+                ),
                 CommonUtils.buildText('Remember Me', textStyle),
               ],
             ),
-            CommonUtils.buildElevatedButton(showPasswordText, primaryColor, secondaryColor, textStyle, 0, 0,  () {
-              setState(() {
-                hidePassword = !hidePassword;
-                showPasswordText = hidePassword ? 'Show Password' : 'Hide Password';
-              });
-            },
+            CommonUtils.buildElevatedButton(
+              showPasswordText,
+              primaryColor,
+              secondaryColor,
+              textStyle,
+              0,
+              0,
+              () {
+                setState(() {
+                  hidePassword = !hidePassword;
+                  showPasswordText =
+                      hidePassword ? 'Show Password' : 'Hide Password';
+                });
+              },
             ),
             const SizedBox(height: 20),
-            CommonUtils.buildElevatedButton('Login', primaryColor, secondaryColor, textStyle, 1, 1, _login),
-            //ElevatedButton(onPressed: _login, child: const Text('Login')),
-            CommonUtils.buildElevatedButton('Register', primaryColor, secondaryColor, textStyle, 1, 1, () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const RegistrationScreen()),
-              );
-            },
+            CommonUtils.buildElevatedButton(
+              'Login',
+              primaryColor,
+              secondaryColor,
+              textStyle,
+              1,
+              1,
+              _login,
+            ),
+            CommonUtils.buildElevatedButton(
+              'Register',
+              primaryColor,
+              secondaryColor,
+              textStyle,
+              1,
+              1,
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const RegistrationScreen()),
+                );
+              },
             ),
           ],
         ),
