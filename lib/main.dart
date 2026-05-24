@@ -1,7 +1,8 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:focusNexus/repositories/app_repositories.dart';
 import 'package:focusNexus/screens/achievements_screen.dart';
+import 'package:focusNexus/services/storage/storage_keys.dart';
 import 'package:focusNexus/screens/ai_chat_screen.dart';
 import 'package:focusNexus/screens/customization_screen.dart';
 import 'package:focusNexus/screens/goals_screen.dart';
@@ -17,15 +18,15 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final storage = FlutterSecureStorage();
-  final loggedIn = await storage.read(key: 'loggedIn');
-  final rememberMe = await storage.read(key: 'rememberMe');
+  final repos = AppRepositories.instance;
+  await repos.settings.load();
+  final loggedIn = repos.settings.loggedIn;
+  final rememberMe = repos.settings.rememberMe;
   bool currentlyLoggedIn = false;
-  WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
 
   // TODO: Privacy policy, terms & conditions.
-  if (rememberMe == 'true' && loggedIn == 'true') { // If someone has both remember me and valid credentials, they can stay logged in. No remember me - not automatically logged back in.
+  if (rememberMe && loggedIn) { // If someone has both remember me and valid credentials, they can stay logged in. No remember me - not automatically logged back in.
     currentlyLoggedIn = true;
   }
 
@@ -35,9 +36,8 @@ void main() async {
 }
 
 Future<String> _getRewardTitle() async {
-  final storage = FlutterSecureStorage();
-  final reward = await storage.read(key: 'rewardType') ?? 'Mini-games';
-  return reward;
+  final reward = await AppRepositories.instance.userPrefs.readString(StorageKeys.rewardType);
+  return reward ?? 'Mini-games';
 }
 
 class FocusNexusApp extends StatelessWidget {

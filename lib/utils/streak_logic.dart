@@ -1,6 +1,6 @@
 import 'package:intl/intl.dart';
 
-/// Week/month streak helpers extracted from [BaseState] for unit testing.
+/// Week/month streak helpers used by [AchievementStreakService].
 class StreakLogic {
   StreakLogic._();
 

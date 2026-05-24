@@ -6,3 +6,11 @@ enum VisualThemeId {
   constellation,
   sandGarden,
 }
+
+String visualThemeLabel(VisualThemeId id) => switch (id) {
+      VisualThemeId.zenGarden => 'Zen garden',
+      VisualThemeId.bonsai => 'Bonsai',
+      VisualThemeId.coralReef => 'Coral reef',
+      VisualThemeId.constellation => 'Constellation',
+      VisualThemeId.sandGarden => 'Sand garden',
+    };

@@ -1,0 +1,70 @@
+/// Canonical secure-storage keys (single source of truth).
+abstract final class StorageKeys {
+  // Goals
+  static const activeGoals = 'activeGoals';
+  static const completedGoals = 'completedGoals';
+  static const completedToday = 'completedToday';
+  static const pauseGoals = 'pauseGoals';
+
+  // Templates
+  static const userTemplates = 'userTemplates';
+  static const templateGroups = 'templateGroups';
+
+  // Wallet
+  static const points = 'points';
+
+  // Garden
+  static const zenGardenSave = 'zen_garden_save_v1';
+
+  // User preferences
+  static const theme = 'theme';
+  static const themeData = 'themeData';
+  static const fontSize = 'fontSize';
+  static const dyslexiaFont = 'dyslexiaFont';
+  static const highContrast = 'highContrast';
+  static const dailyAffirmations = 'dailyAffirmations';
+  static const aiEncouragement = 'aiEncouragement';
+  static const rememberMe = 'rememberMe';
+  static const loggedIn = 'loggedIn';
+  static const onboardingCompleted = 'onboardingCompleted';
+  static const skipToday = 'skipToday';
+  static const notificationStyle = 'notificationStyle';
+  static const notificationFrequency = 'notificationFrequency';
+  static const rewardType = 'rewardType';
+  static const customizationEnabled = 'customizationEnabled';
+  static const allowedColors = 'allowedColors';
+  static const customizedPrimaryColor = 'customizedPrimaryColor';
+  static const customizedSecondaryColor = 'customizedSecondaryColor';
+  static const customizedFont = 'customizedFont';
+  static const soundEnabled = 'soundEnabled';
+  static const soundVolume = 'soundVolume';
+  static const dailyAffirmationsTime = 'dailyAffirmationsTime';
+
+  // Achievement counters (scalar keys read by AchievementService)
+  static const totalGoalsCreated = 'totalGoalsCreated';
+  static const totalGoalsActive = 'totalGoalsActive';
+  static const totalGoalsCompleted = 'totalGoalsCompleted';
+  static const goalsCompletedToday = 'goalsCompletedToday';
+  static const goalsCompletedThisWeek = 'goalsCompletedThisWeek';
+  static const goalsCompletedThisMonth = 'goalsCompletedThisMonth';
+  static const goalsCompletedWithHighPoints = 'goalsCompletedWithHighPoints';
+  static const goalsCompletedWithHighComplexity = 'goalsCompletedWithHighComplexity';
+  static const goalsCompletedWithHighEffort = 'goalsCompletedWithHighEffort';
+  static const goalsCompletedWithHighMotivation = 'goalsCompletedWithHighMotivation';
+  static const goalsCompletedWithAllHigh = 'goalsCompletedWithAllHigh';
+  static const goalsCompletedWithHighTimeRequirement =
+      'goalsCompletedWithHighTimeRequirement';
+  static const goalsCompletedWithManySteps = 'goalsCompletedWithManySteps';
+  static const goalsCompletedEarly = 'goalsCompletedEarly';
+  static const dateGoalsCompleted = 'dateGoalsCompleted';
+  static const lastWeekGoalWasCompleted = 'lastWeekGoalWasCompleted';
+  static const lastMonthGoalWasCompleted = 'lastMonthGoalWasCompleted';
+  static const consecutiveDaysWithGoalsCompleted =
+      'consecutiveDaysWithGoalsCompleted';
+  static const consecutiveWeeksWithGoalsCompleted =
+      'consecutiveWeeksWithGoalsCompleted';
+
+  // Achievements list blob
+  static const achievements = 'achievements';
+  static const achievementTrackingData = 'achievementTrackingData';
+}

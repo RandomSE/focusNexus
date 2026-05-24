@@ -20,4 +20,9 @@ class InMemoryKeyValueStorage implements KeyValueStorage {
   Future<void> write({required String key, required String value}) async {
     _data[key] = value;
   }
+
+  @override
+  Future<void> deleteAll() async {
+    _data.clear();
+  }
 }
