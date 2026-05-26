@@ -1,87 +1,53 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+import 'json/garden_json_converters.dart';
 import 'mutation_kind.dart';
 import 'visual_theme_id.dart';
 
+part 'garden_item.freezed.dart';
+part 'garden_item.g.dart';
+
 /// One placeable progressive entity in the sandbox (plant, coral polyp, star, …).
-class GardenItem {
-  const GardenItem({
-    required this.id,
-    required this.themeId,
-    required this.stageIndex,
-    this.positionX = 0,
-    this.positionY = 0,
-    this.nextAdvanceAllowedAt,
-    this.pendingSkipWaitCost,
-    this.mutation,
-    this.awaitingRegrowthForRemutation = false,
-    this.mutationRolledThisCycle = false,
-    this.regrowthDiscountActive = false,
-  });
+@freezed
+class GardenItem with _$GardenItem {
+  const GardenItem._();
 
-  final String id;
-  final VisualThemeId themeId;
+  const factory GardenItem({
+    required String id,
+    @VisualThemeIdJsonConverter() required VisualThemeId themeId,
+    @Default(0) int stageIndex,
+    @Default(0.5) double positionX,
+    @Default(0.5) double positionY,
+    DateTime? nextAdvanceAllowedAt,
+    int? pendingSkipWaitCost,
+    @MutationKindJsonConverter() MutationKind? mutation,
+    @Default(false) bool awaitingRegrowthForRemutation,
+    @Default(false) bool mutationRolledThisCycle,
+    @Default(false) bool regrowthDiscountActive,
+  }) = _GardenItem;
 
-  /// Index into [GrowthStage] (0 = seed).
-  final int stageIndex;
+  factory GardenItem.fromJson(Map<String, dynamic> json) =>
+      _$GardenItemFromJson(json);
 
-  /// Normalized sandbox coordinates (0–1) for free placement.
-  final double positionX;
-  final double positionY;
-
-  /// When non-null, advancing again is blocked until [DateTime.now] passes this
-  /// (or the user skips with points).
-  final DateTime? nextAdvanceAllowedAt;
-
-  /// Cost to clear [nextAdvanceAllowedAt] when set.
-  final int? pendingSkipWaitCost;
-
-  final MutationKind? mutation;
-
-  /// After the user removes a mutation, new rolls require a full regrowth cycle.
-  final bool awaitingRegrowthForRemutation;
-
-  /// Prevents duplicate rolls while staying at the final stage.
-  final bool mutationRolledThisCycle;
-
-  /// After [restartGrowthCycle], grow and skip-wait costs use 1/5 of the rule
-  /// table (does not stack with free-first growth; free-first wins when applicable).
-  final bool regrowthDiscountActive;
-
-  static const int maxStageIndex = 4; // GrowthStage.mature
+  static const int maxStageIndex = 4;
 
   bool get isFullyGrown => stageIndex >= maxStageIndex;
 
-  GardenItem copyWith({
-    VisualThemeId? themeId,
-    int? stageIndex,
-    double? positionX,
-    double? positionY,
-    DateTime? nextAdvanceAllowedAt,
-    bool clearNextAdvanceAllowedAt = false,
-    int? pendingSkipWaitCost,
-    bool clearPendingSkipWaitCost = false,
-    MutationKind? mutation,
-    bool clearMutation = false,
-    bool? awaitingRegrowthForRemutation,
-    bool? mutationRolledThisCycle,
-    bool? regrowthDiscountActive,
-  }) {
-    return GardenItem(
-      id: id,
-      themeId: themeId ?? this.themeId,
-      stageIndex: stageIndex ?? this.stageIndex,
-      positionX: positionX ?? this.positionX,
-      positionY: positionY ?? this.positionY,
-      nextAdvanceAllowedAt: clearNextAdvanceAllowedAt
-          ? null
-          : (nextAdvanceAllowedAt ?? this.nextAdvanceAllowedAt),
-      pendingSkipWaitCost: clearPendingSkipWaitCost
-          ? null
-          : (pendingSkipWaitCost ?? this.pendingSkipWaitCost),
-      mutation: clearMutation ? null : (mutation ?? this.mutation),
-      awaitingRegrowthForRemutation:
-          awaitingRegrowthForRemutation ?? this.awaitingRegrowthForRemutation,
-      mutationRolledThisCycle: mutationRolledThisCycle ?? this.mutationRolledThisCycle,
-      regrowthDiscountActive: regrowthDiscountActive ?? this.regrowthDiscountActive,
+  void validate() {
+    assert(id.isNotEmpty, 'id must not be empty');
+    assert(
+      stageIndex >= 0 && stageIndex <= maxStageIndex,
+      'stageIndex out of range',
+    );
+    assert(
+      positionX >= 0 && positionX <= 1 && positionY >= 0 && positionY <= 1,
+      'position must be normalized 0–1',
     );
   }
+
+  /// Clears growth timer fields after an advance.
+  GardenItem clearedAdvanceLock() => copyWith(
+        nextAdvanceAllowedAt: null,
+        pendingSkipWaitCost: null,
+      );
 }

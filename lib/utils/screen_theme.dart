@@ -4,7 +4,8 @@ import 'package:focusNexus/widgets/settings_themed_builder.dart';
 
 export 'package:focusNexus/widgets/settings_themed_builder.dart';
 
-/// One-shot async load (startup delay + persisted theme read). Prefer [SettingsThemedBuilder] in UI.
+/// Legacy async theme read. Prefer [SettingsThemedBuilder] (sync from [AppSettings]).
+/// Do not call from [State.initState]; use [SettingsThemedBuilder] instead.
 Future<ThemeBundle> loadScreenThemeBundle() {
   final repos = AppRepositories.instance;
   return repos.theme.loadScreenBundle(prefs: repos.settings.snapshot);

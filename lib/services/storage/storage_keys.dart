@@ -42,6 +42,8 @@ abstract final class StorageKeys {
   static const soundEnabled = 'soundEnabled';
   static const soundVolume = 'soundVolume';
   static const dailyAffirmationsTime = 'dailyAffirmationsTime';
+  /// Last calendar day (yyyy-MM-dd) with a scheduled daily affirmation.
+  static const dailyAffirmationsScheduledUntil = 'dailyAffirmationsScheduledUntil';
 
   // Achievement counters (scalar keys read by AchievementService)
   static const totalGoalsCreated = 'totalGoalsCreated';

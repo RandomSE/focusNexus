@@ -113,16 +113,15 @@ class _GoalsScreenState extends State<GoalsScreen> {
   final DateFormat formatter = DateFormat('dd MMMM yyyy HH:mm');
   Map<String, Map<String, dynamic>> _userTemplates = {};
   Map<String, List<String>> _templateGroups = {};
-  bool _pageReady = false;
   bool _notificationsEnabled = false;
   String _notificationStyle = 'Minimal';
   String _notificationFrequency = 'Low';
   late ConfettiController _confettiController;
+  Future<void>? _pageFuture;
 
   @override
   void initState() {
     super.initState();
-    _loadGoalsPage();
     _confettiController = ConfettiController(duration: const Duration(seconds: 1));
   }
 
@@ -145,7 +144,6 @@ class _GoalsScreenState extends State<GoalsScreen> {
     await _loadTemplates();
     await _loadTemplateGroups();
     await loadNotificationStyleAndFrequency();
-    if (mounted) setState(() => _pageReady = true);
   }
 
 
@@ -983,16 +981,23 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    _pageFuture ??= _loadGoalsPage();
+
     return SettingsThemedBuilder(
       builder: (context, bundle) {
-        if (!_pageReady) {
-          return themedLoadingShell(
-            bundle,
-            title: 'Goals',
-            body: GoalsSkeleton(bundle: bundle),
-          );
-        }
-        return _buildGoalsScaffold(context, bundle);
+        return FutureBuilder<void>(
+          future: _pageFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return themedLoadingShell(
+                bundle,
+                title: 'Goals',
+                body: GoalsSkeleton(bundle: bundle),
+              );
+            }
+            return _buildGoalsScaffold(context, bundle);
+          },
+        );
       },
     );
   }

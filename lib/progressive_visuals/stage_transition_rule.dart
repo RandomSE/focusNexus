@@ -1,26 +1,25 @@
-/// Rules for advancing from [fromStage] to the next stage.
-///
-/// After the user pays [pointCost] and any active wait is cleared, they enter
-/// [fromStage] + 1. If [waitBeforeNextAdvance] is non-null, a lock starts
-/// *after* this transition completes, blocking further advances until elapsed
-/// or [skipWaitPointCost] is paid.
-class StageTransitionRule {
-  const StageTransitionRule({
-    required this.fromStageIndex,
-    required this.pointCost,
-    this.waitBeforeNextAdvance,
-    this.skipWaitPointCost,
-  })  : assert(fromStageIndex >= 0),
-        assert(pointCost >= 0),
-        assert(skipWaitPointCost == null || skipWaitPointCost >= 0);
+import 'package:freezed_annotation/freezed_annotation.dart';
 
-  final int fromStageIndex;
-  final int pointCost;
+part 'stage_transition_rule.freezed.dart';
 
-  /// When advancing *from* [fromStageIndex] to the next stage, the user may
-  /// need to wait this long before the *next* advance is allowed.
-  final Duration? waitBeforeNextAdvance;
+/// Rules for advancing from [fromStageIndex] to the next stage.
+@freezed
+class StageTransitionRule with _$StageTransitionRule {
+  const StageTransitionRule._();
 
-  /// Cost to clear [waitBeforeNextAdvance] early.
-  final int? skipWaitPointCost;
+  const factory StageTransitionRule({
+    required int fromStageIndex,
+    required int pointCost,
+    Duration? waitBeforeNextAdvance,
+    int? skipWaitPointCost,
+  }) = _StageTransitionRule;
+
+  void validate() {
+    assert(fromStageIndex >= 0, 'fromStageIndex must be non-negative');
+    assert(pointCost >= 0, 'pointCost must be non-negative');
+    assert(
+      skipWaitPointCost == null || skipWaitPointCost! >= 0,
+      'skipWaitPointCost must be non-negative',
+    );
+  }
 }

@@ -1,41 +1,40 @@
-class GoalSet { /// here so I can pass over many variables without many lines of code. Mostly used when goals are passed to notifier to be canceled, so it can filter correctly. Also used as part of achievement logic.
-  final String title;
-  final String category;
-  final String complexity;
-  final String effort;
-  final String motivation;
-  final int time;
-  final String deadline;
-  final int steps;
-  final int points;
-  final int stepProgress;
-  final int goalId;
+import 'package:freezed_annotation/freezed_annotation.dart';
 
-  GoalSet({
-    required this.title,
-    required this.category,
-    required this.complexity,
-    required this.effort,
-    required this.motivation,
-    required this.time,
-    required this.deadline,
-    required this.steps,
-    required this.points,
-    required this.stepProgress,
-    required this.goalId,
-});
+part 'goal_set.freezed.dart';
+part 'goal_set.g.dart';
 
+/// Typed view of a goal map for notifier filtering and achievement stats.
+///
+/// Storage maps use legacy keys `Deadline` and `Id`; [fromMap] tolerates string
+/// numeric fields. Prefer [fromMap]/[toMap] for repository roundtrips.
+@Freezed(fromJson: false, toJson: true)
+class GoalSet with _$GoalSet {
+  const GoalSet._();
 
-  /// Factory to build from Map of (String, dynamic)
+  const factory GoalSet({
+    @Default('') String title,
+    @Default('') String category,
+    @Default('') String complexity,
+    @Default('') String effort,
+    @Default('') String motivation,
+    @Default(0) int time,
+    @JsonKey(name: 'Deadline') @Default('') String deadline,
+    @Default(0) int steps,
+    @Default(0) int points,
+    @Default(0) int stepProgress,
+    @JsonKey(name: 'Id') @Default(0) int goalId,
+  }) = _GoalSet;
+
+  /// Parses loosely typed goal maps from secure storage.
   factory GoalSet.fromMap(Map<String, dynamic> map) {
     return GoalSet(
-      title: map['title'] ?? '',
-      category: map['category'] ?? '',
-      complexity: map['complexity'] ?? '',
-      effort: map['effort'] ?? '',
-      motivation: map['motivation'] ?? '',
+      title: map['title']?.toString() ?? '',
+      category: map['category']?.toString() ?? '',
+      complexity: map['complexity']?.toString() ?? '',
+      effort: map['effort']?.toString() ?? '',
+      motivation: map['motivation']?.toString() ?? '',
       time: int.tryParse(map['time']?.toString() ?? '0') ?? 0,
-      deadline: map['Deadline'] ?? '', // watch casing here
+      deadline: map['Deadline']?.toString() ?? '',
       steps: int.tryParse(map['steps']?.toString() ?? '0') ?? 0,
       points: int.tryParse(map['points']?.toString() ?? '0') ?? 0,
       stepProgress: int.tryParse(map['stepProgress']?.toString() ?? '0') ?? 0,
@@ -43,26 +42,15 @@ class GoalSet { /// here so I can pass over many variables without many lines of
     );
   }
 
-  /// convert back to Map
-  Map<String, dynamic> toMap() {
-    return {
-      'title': title,
-      'category': category,
-      'complexity': complexity,
-      'effort': effort,
-      'motivation': motivation,
-      'time': time,
-      'Deadline': deadline,
-      'steps': steps,
-      'points': points,
-      'stepProgress': stepProgress,
-      'Id': goalId,
-    };
-  }
+  factory GoalSet.fromJson(Map<String, dynamic> json) => GoalSet.fromMap(json);
 
-  @override
-  String toString() {
-    return 'title: $title \n category: $category \n complexity: $complexity \n effort: $effort \n motivation: $motivation \n time required in minutes: $time \n'
-        ' deadline: $deadline \n steps: $steps \n points: $points \n steps completed: $stepProgress \n goalId: $goalId' ;
+  void validate() {
+    assert(title.isNotEmpty, 'title must not be empty');
+    assert(goalId > 0, 'goalId must be positive');
+    assert(steps >= 0 && stepProgress >= 0, 'steps must be non-negative');
   }
+}
+
+extension GoalSetMap on GoalSet {
+  Map<String, dynamic> toMap() => toJson();
 }

@@ -3,23 +3,11 @@ import 'dart:math';
 import 'decor_catalog.dart';
 import 'decor_item.dart';
 import 'garden_item.dart';
+import 'garden_op_result.dart';
 import 'garden_state.dart';
 import 'mutation_kind.dart';
 import 'stage_transition_rule.dart';
 import 'visual_theme_id.dart';
-
-class GardenOpResult {
-  const GardenOpResult._(this.state, this.error);
-
-  final GardenState? state;
-  final String? error;
-
-  bool get isSuccess => error == null && state != null;
-
-  static GardenOpResult success(GardenState state) => GardenOpResult._(state, null);
-
-  static GardenOpResult failure(String message) => GardenOpResult._(null, message);
-}
 
 /// Default progression (5× costs vs original); tests use these or custom lists.
 List<StageTransitionRule> defaultTransitionRules() {
@@ -105,7 +93,7 @@ class ProgressiveGardenEngine {
     }
     var next = state.copyWith(items: nextItems);
     if (state.freeFirstGrowthEligibleItemId == id) {
-      next = next.copyWith(clearFreeFirstEligible: true);
+      next = next.withoutFreeFirstEligible();
     }
     return GardenOpResult.success(next);
   }
@@ -260,10 +248,7 @@ class ProgressiveGardenEngine {
     if (state.pointsBalance < cost) {
       return GardenOpResult.failure('Not enough points to skip wait');
     }
-    final cleared = item.copyWith(
-      clearNextAdvanceAllowedAt: true,
-      clearPendingSkipWaitCost: true,
-    );
+    final cleared = item.clearedAdvanceLock();
     final nextItems = [...state.items]..[idx] = cleared;
     return GardenOpResult.success(
       state.copyWith(
@@ -293,10 +278,7 @@ class ProgressiveGardenEngine {
     if (state.pointsBalance < cost) {
       return GardenOpResult.failure('Not enough points to skip wait');
     }
-    final cleared = d.copyWith(
-      clearNextAdvanceAllowedAt: true,
-      clearPendingSkipWaitCost: true,
-    );
+    final cleared = d.clearedAdvanceLock();
     final nextDecor = [...state.decor]..[idx] = cleared;
     return GardenOpResult.success(
       state.copyWith(
@@ -344,11 +326,7 @@ class ProgressiveGardenEngine {
 
     final newStage = item.stageIndex + 1;
     var balance = state.pointsBalance - cost;
-    var nextItem = item.copyWith(
-      stageIndex: newStage,
-      clearNextAdvanceAllowedAt: true,
-      clearPendingSkipWaitCost: true,
-    );
+    var nextItem = item.copyWith(stageIndex: newStage).clearedAdvanceLock();
 
     final skipOverride = (item.regrowthDiscountActive && rule.skipWaitPointCost != null)
         ? (rule.skipWaitPointCost! + 4) ~/ 5
@@ -377,7 +355,8 @@ class ProgressiveGardenEngine {
         pointsBalance: balance,
         items: nextItems,
         freeFirstGrowthEverConsumed: everConsumed,
-        clearFreeFirstEligible: everConsumed,
+        freeFirstGrowthEligibleItemId:
+            everConsumed ? null : state.freeFirstGrowthEligibleItemId,
       ),
     );
   }
@@ -428,11 +407,7 @@ class ProgressiveGardenEngine {
 
     final newStage = d.stageIndex + 1;
     var balance = state.pointsBalance - cost;
-    var nextDecor = d.copyWith(
-      stageIndex: newStage,
-      clearNextAdvanceAllowedAt: true,
-      clearPendingSkipWaitCost: true,
-    );
+    var nextDecor = d.copyWith(stageIndex: newStage).clearedAdvanceLock();
 
     _applyPostAdvanceWait(rule, newStage, now, (at, skip) {
       nextDecor = nextDecor.copyWith(
@@ -505,7 +480,7 @@ class ProgressiveGardenEngine {
       return GardenOpResult.failure('No active mutation');
     }
     final updated = item.copyWith(
-      clearMutation: true,
+      mutation: null,
       awaitingRegrowthForRemutation: true,
       mutationRolledThisCycle: false,
     );
@@ -523,7 +498,7 @@ class ProgressiveGardenEngine {
       return GardenOpResult.failure('No active mutation');
     }
     final updated = d.copyWith(
-      clearMutation: true,
+      mutation: null,
       awaitingRegrowthForRemutation: true,
       mutationRolledThisCycle: false,
     );
@@ -543,15 +518,15 @@ class ProgressiveGardenEngine {
     if (state.pointsBalance < pointCost) {
       return GardenOpResult.failure('Not enough points to restart growth');
     }
-    final item = state.items[idx].copyWith(
-      stageIndex: 0,
-      clearMutation: true,
-      clearNextAdvanceAllowedAt: true,
-      clearPendingSkipWaitCost: true,
-      awaitingRegrowthForRemutation: false,
-      mutationRolledThisCycle: false,
-      regrowthDiscountActive: true,
-    );
+    final item = state.items[idx]
+        .copyWith(
+          stageIndex: 0,
+          mutation: null,
+          awaitingRegrowthForRemutation: false,
+          mutationRolledThisCycle: false,
+          regrowthDiscountActive: true,
+        )
+        .clearedAdvanceLock();
     final nextItems = [...state.items]..[idx] = item;
     return GardenOpResult.success(
       state.copyWith(
@@ -573,14 +548,14 @@ class ProgressiveGardenEngine {
     if (state.pointsBalance < pointCost) {
       return GardenOpResult.failure('Not enough points to restart growth');
     }
-    final d = state.decor[idx].copyWith(
-      stageIndex: 0,
-      clearMutation: true,
-      clearNextAdvanceAllowedAt: true,
-      clearPendingSkipWaitCost: true,
-      awaitingRegrowthForRemutation: false,
-      mutationRolledThisCycle: false,
-    );
+    final d = state.decor[idx]
+        .copyWith(
+          stageIndex: 0,
+          mutation: null,
+          awaitingRegrowthForRemutation: false,
+          mutationRolledThisCycle: false,
+        )
+        .clearedAdvanceLock();
     final next = [...state.decor]..[idx] = d;
     return GardenOpResult.success(
       state.copyWith(

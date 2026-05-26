@@ -7,6 +7,7 @@ import 'package:focusNexus/progressive_visuals/decor_catalog.dart';
 import 'package:focusNexus/progressive_visuals/decor_item.dart';
 import 'package:focusNexus/progressive_visuals/garden_engine.dart';
 import 'package:focusNexus/progressive_visuals/garden_item.dart';
+import 'package:focusNexus/progressive_visuals/garden_op_result.dart';
 import 'package:focusNexus/progressive_visuals/garden_state.dart';
 import 'package:focusNexus/progressive_visuals/growth_stage.dart';
 import 'package:focusNexus/progressive_visuals/visual_bridge.dart';
@@ -134,7 +135,7 @@ class _ZenGardenScreenState extends State<ZenGardenScreen> {
   _EntityPick? _pointerPick;
   bool _pointerDragging = false;
   Timer? _ticker;
-  bool _loaded = false;
+  Future<void>? _gardenLoadFuture;
 
   static const double _pointerSlop = 14.0;
   static const double _plantVisualW = 96;
@@ -147,24 +148,15 @@ class _ZenGardenScreenState extends State<ZenGardenScreen> {
       const Duration(minutes: 2);
 
   @override
-  void initState() {
-    super.initState();
-    _bootstrap();
-  }
-
-  @override
   void dispose() {
     _ticker?.cancel();
     super.dispose();
   }
 
-  Future<void> _bootstrap() async {
+  Future<void> _loadGarden() async {
     final garden = await _repos.garden.load();
     if (!mounted) return;
-    setState(() {
-      _garden = garden;
-      _loaded = true;
-    });
+    setState(() => _garden = garden);
     _syncTicker();
   }
 
@@ -772,10 +764,22 @@ class _ZenGardenScreenState extends State<ZenGardenScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_loaded) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    _gardenLoadFuture ??= _loadGarden();
 
+    return FutureBuilder<void>(
+      future: _gardenLoadFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return Center(
+            child: CircularProgressIndicator(color: widget.primaryColor),
+          );
+        }
+        return _buildGarden(context);
+      },
+    );
+  }
+
+  Widget _buildGarden(BuildContext context) {
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     final focusPlant = _focusPlant;
     final focusDecor = _focusDecor;

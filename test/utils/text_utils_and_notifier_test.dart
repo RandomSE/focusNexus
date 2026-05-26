@@ -118,10 +118,27 @@ void main() {
     });
   });
 
-  group('TextUtils.generateDailyAffirmationBody', () {
-    test('returns one of the known affirmations', () {
-      final body = TextUtils.generateDailyAffirmationBody();
-      expect(body.isNotEmpty, isTrue);
+  group('TextUtils.dailyAffirmationForDate', () {
+    test('same calendar day returns the same message', () {
+      final morning = TextUtils.dailyAffirmationForDate(
+        DateTime(2026, 5, 26, 6),
+      );
+      final evening = TextUtils.dailyAffirmationForDate(
+        DateTime(2026, 5, 26, 20),
+      );
+      expect(morning, evening);
+    });
+
+    test('consecutive days return different messages', () {
+      final today = TextUtils.dailyAffirmationForDate(DateTime(2026, 5, 26));
+      final tomorrow = TextUtils.dailyAffirmationForDate(DateTime(2026, 5, 27));
+      expect(today, isNot(equals(tomorrow)));
+    });
+
+    test('generateDailyAffirmationBody matches today', () {
+      final fromDate = TextUtils.dailyAffirmationForDate(DateTime.now());
+      final generated = TextUtils.generateDailyAffirmationBody();
+      expect(generated, fromDate);
     });
   });
 

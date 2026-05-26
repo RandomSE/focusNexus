@@ -1,9 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:focusNexus/app/app_routes.dart';
 import 'package:focusNexus/main.dart';
 
 void main() {
   testWidgets('Auth route shows welcome screen', (WidgetTester tester) async {
-    await tester.pumpWidget(const FocusNexusApp(initialRoute: 'auth'));
+    await tester.pumpWidget(
+      const FocusNexusApp(initialRoute: AppRoutes.auth),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Welcome to FocusNexus'), findsOneWidget);
