@@ -7,6 +7,7 @@ import '../utils/onboarding_assets.dart';
 import '../models/classes/theme_bundle.dart';
 import '../utils/screen_theme.dart';
 import '../widgets/skeleton_loaders.dart';
+import '../widgets/deferred_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -19,32 +20,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _settings = AppRepositories.instance.settings;
   final PageController _pageController = PageController();
   int _currentPage = 0;
-  List<String> _onboardingImages = [];
-  bool _imagesLoaded = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadImageData();
-  }
-
   @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadImageData() async {
-    final images = await loadOnboardingImagePaths();
-    if (!mounted) return;
-    setState(() {
-      _onboardingImages = images;
-      _imagesLoaded = true;
-    });
-  }
-
-  void _goToNextPage() {
-    if (_currentPage < _onboardingImages.length - 1) {
+  void _goToNextPage(List<String> images) {
+    if (_currentPage < images.length - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -113,24 +96,29 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget build(BuildContext context) {
     return SettingsThemedBuilder(
       builder: (context, bundle) {
-        if (!_imagesLoaded) {
-          return Scaffold(
+        return DeferredScreen<List<String>>(
+          load: loadOnboardingImagePaths,
+          loading: (_) => Scaffold(
             backgroundColor: bundle.secondaryColor,
             body: OnboardingSkeleton(bundle: bundle),
-          );
-        }
-
-        return _buildOnboardingContent(context, bundle);
+          ),
+          builder: (context, images) =>
+              _buildOnboardingContent(context, bundle, images),
+        );
       },
     );
   }
 
-  Widget _buildOnboardingContent(BuildContext context, ThemeBundle bundle) {
+  Widget _buildOnboardingContent(
+    BuildContext context,
+    ThemeBundle bundle,
+    List<String> onboardingImages,
+  ) {
     final textStyle = bundle.textStyle;
     final primaryColor = bundle.primaryColor;
     final secondaryColor = bundle.secondaryColor;
 
-    if (_onboardingImages.isEmpty) {
+    if (onboardingImages.isEmpty) {
       return Scaffold(
         backgroundColor: secondaryColor,
         body: Center(
@@ -161,7 +149,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       );
     }
 
-    final lastIndex = _onboardingImages.length - 1;
+    final lastIndex = onboardingImages.length - 1;
 
     return Theme(
       data: bundle.themeData,
@@ -172,14 +160,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
-                itemCount: _onboardingImages.length,
+                itemCount: onboardingImages.length,
                 onPageChanged: (index) => setState(() => _currentPage = index),
                 itemBuilder: (context, index) {
                   return Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: Center(
                       child: Image.asset(
-                        _onboardingImages[index],
+                        onboardingImages[index],
                         fit: BoxFit.contain,
                       ),
                     ),
@@ -216,7 +204,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       textStyle,
                       0,
                       0,
-                      _goToNextPage,
+                      () => _goToNextPage(onboardingImages),
                     )
                   else
                     CommonUtils.buildElevatedButton(

@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:timezone/timezone.dart' as tz;
 
+import 'notification_schedule_utils.dart';
+
 class CommonUtils {
 
   static Color getDefaultPrimaryColor() {
@@ -34,30 +36,13 @@ class CommonUtils {
     String hhmm, {
     tz.Location? location,
   }) async {
-    final loc = location ?? tz.local;
-    final parts = hhmm.trim().split(':');
-    if (parts.length != 2) return null;
-
-    final hour = int.tryParse(parts[0]);
-    final minute = int.tryParse(parts[1]);
-    if (hour == null || minute == null) return null;
-    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
-
-    final now = tz.TZDateTime.now(loc);
-    var candidate = tz.TZDateTime(
-      loc,
-      now.year,
-      now.month,
-      now.day,
-      hour,
-      minute,
-    );
-
-    if (!candidate.isAfter(now)) {
-      candidate = candidate.add(const Duration(days: 1));
+    if (NotificationScheduleUtils.parseClock(hhmm.trim()) == null) {
+      return null;
     }
-
-    return candidate;
+    return NotificationScheduleUtils.nextTriggerFromHHmm(
+      NotificationScheduleUtils.normalizeHHmm(hhmm),
+      location: location,
+    );
   }
 
   static int scoreFromLevel(String level) {

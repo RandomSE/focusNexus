@@ -14,8 +14,8 @@ class CustomizationScreen extends StatefulWidget {
 class _CustomizationScreenState extends State<CustomizationScreen> {
   final _settings = AppRepositories.instance.settings;
   bool _hasUnsavedChanges = false;
-  late Color _previewPrimaryColor;
-  late Color _previewSecondaryColor;
+  late Color _previewPrimaryColor = currentThemeBundle().primaryColor;
+  late Color _previewSecondaryColor = currentThemeBundle().secondaryColor;
 
   TextStyle _textStyleFor(Color primary) => _settings.textStyle(
         fontSize: _settings.userFontSize,
@@ -71,14 +71,7 @@ class _CustomizationScreenState extends State<CustomizationScreen> {
     'Forest Green': {'color': const Color(0xFF228B22), 'price': 6000},
   };
 
-  @override
-  void initState() {
-    super.initState();
-    final bundle = currentThemeBundle();
-    _previewPrimaryColor = bundle.primaryColor;
-    _previewSecondaryColor = bundle.secondaryColor;
-    _ensureDefaultColorsAllowed();
-  }
+  Future<void>? _ensureColorsFuture;
 
   Future<void> _ensureDefaultColorsAllowed() async {
     final bundle = currentThemeBundle();
@@ -298,6 +291,8 @@ class _CustomizationScreenState extends State<CustomizationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    _ensureColorsFuture ??= _ensureDefaultColorsAllowed();
+
     return SettingsThemedBuilder(
       builder: (context, bundle) {
         final useCustom = _settings.customizationEnabled;

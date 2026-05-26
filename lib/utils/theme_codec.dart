@@ -2,27 +2,16 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
-import 'package:focusNexus/utils/theme_styles.dart';
+import 'package:focusNexus/models/theme_persisted_snapshot.dart';
+
+export 'package:focusNexus/models/theme_persisted_snapshot.dart';
 
 /// Parses persisted theme JSON into [ThemeData].
 ThemeData decodeThemeData(String storedTheme) {
-  final Map<String, dynamic> themeMap =
-      Map<String, dynamic>.from(jsonDecode(storedTheme) as Map);
-
-  final bool isDark = themeMap['isDark'] ?? false;
-  final primaryColor = Color(themeMap['primaryColor'] as int? ?? 0xFF000000);
-  final secondaryColor =
-      Color(themeMap['secondaryColor'] as int? ?? 0xFFFFFFFF);
-  final double fontSize = (themeMap['userFontSize'] ?? 14).toDouble();
-  final bool useDyslexiaFont = themeMap['useDyslexiaFont'] as bool? ?? false;
-
-  return ThemeStyles.buildThemeData(
-    isDark: isDark,
-    primaryColor: primaryColor,
-    secondaryColor: secondaryColor,
-    fontSize: fontSize,
-    useDyslexiaFont: useDyslexiaFont,
-  );
+  final map = Map<String, dynamic>.from(jsonDecode(storedTheme) as Map);
+  final snapshot = ThemePersistedSnapshot.fromJson(map);
+  snapshot.validate();
+  return snapshot.toThemeData();
 }
 
 String encodeThemeData({
@@ -32,11 +21,13 @@ String encodeThemeData({
   required double userFontSize,
   required bool useDyslexiaFont,
 }) {
-  return jsonEncode({
-    'isDark': isDark,
-    'primaryColor': primaryColor.value,
-    'secondaryColor': secondaryColor.value,
-    'userFontSize': userFontSize,
-    'useDyslexiaFont': useDyslexiaFont,
-  });
+  final snapshot = ThemePersistedSnapshot(
+    isDark: isDark,
+    primaryColorArgb: primaryColor.value,
+    secondaryColorArgb: secondaryColor.value,
+    userFontSize: userFontSize,
+    useDyslexiaFont: useDyslexiaFont,
+  );
+  snapshot.validate();
+  return jsonEncode(snapshot.toJson());
 }

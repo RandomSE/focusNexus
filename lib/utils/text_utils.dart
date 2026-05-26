@@ -2,6 +2,8 @@ import 'dart:math';
 
 import 'package:intl/intl.dart';
 
+import 'affirmation_selector.dart';
+
 class TextUtils {
   static int _randomIndex(int length) {
     final random = Random();
@@ -274,42 +276,23 @@ class TextUtils {
     return '$finalCore$reasonText$deadlineText';
   }
 
-  static final List<String> _affirmations = [
-    'You are capable of amazing things.',
-    'Today is a fresh start. make it count.',
-    'Your effort matters, even in small steps.',
-    'You bring value just by being you.',
-    'Progress is progress, no matter the pace.',
-    'You’ve overcome before. you’ll do it again.',
-    'Your presence makes a difference.',
-    'You are worthy of kindness and care.',
-    'One step forward is still forward.',
-    'You’re allowed to take breaks and still succeed.',
-    'You are growing, even when it’s hard to see.',
-    'You deserve encouragement. here it is.',
-    'You’re doing better than you think.',
-    'You are not alone in this journey.',
-    'You’ve got strength that shows up quietly.',
-    'You are enough, exactly as you are.',
-    'You’re building something meaningful.',
-    'You’ve got this. one moment at a time.',
-    'You are resilient and resourceful.',
-    'You’re allowed to ask for help.',
-    'You are making progress, even when it’s slow.',
-    'You’re showing up. and that matters.',
-    'You are more than your productivity.',
-    'You’re allowed to feel proud of yourself.',
-    'You are learning and evolving every day.',
-    'You’ve got courage tucked inside you.',
-    'You are worthy of rest and renewal.',
-    'You’re doing something brave by trying.',
-    'You are making space for growth.',
-    'You are a work in progress. and that’s beautiful.',
-  ];
+  /// Deterministic affirmation for a calendar day (stable for that day, varies by day).
+  static String dailyAffirmationForDate(
+    DateTime date, {
+    String notificationStyle = 'Minimal',
+  }) {
+    return AffirmationSelector.forDate(
+      date,
+      notificationStyle: notificationStyle,
+    );
+  }
 
-  static String generateDailyAffirmationBody() {
-    final random = Random();
-    final index = random.nextInt(_affirmations.length);
-    return _affirmations[index];
+  static String generateDailyAffirmationBody({
+    String notificationStyle = 'Minimal',
+  }) {
+    return dailyAffirmationForDate(
+      DateTime.now(),
+      notificationStyle: notificationStyle,
+    );
   }
 }

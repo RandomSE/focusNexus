@@ -247,13 +247,22 @@ class AppSettings extends ChangeNotifier {
     double? userFontSize,
     bool? useDyslexiaFont,
   }) async {
-    var next = _snapshot.copyWith(
-      highContrastMode: highContrastMode,
-      fontSize: userFontSize,
-      useDyslexiaFont: useDyslexiaFont,
-      customizedPrimary: primaryColor,
-      customizedSecondary: secondaryColor,
-    );
+    var next = _snapshot;
+    if (highContrastMode != null) {
+      next = next.copyWith(highContrastMode: highContrastMode);
+    }
+    if (userFontSize != null) {
+      next = next.copyWith(fontSize: userFontSize);
+    }
+    if (useDyslexiaFont != null) {
+      next = next.copyWith(useDyslexiaFont: useDyslexiaFont);
+    }
+    if (primaryColor != null) {
+      next = next.copyWith(customizedPrimary: primaryColor);
+    }
+    if (secondaryColor != null) {
+      next = next.copyWith(customizedSecondary: secondaryColor);
+    }
     if (isDark != null) {
       next = next.copyWith(theme: isDark ? 'dark' : 'light');
     }
