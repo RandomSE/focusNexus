@@ -10,13 +10,26 @@ import 'package:focusNexus/progressive_visuals/garden_item.dart';
 import 'package:focusNexus/progressive_visuals/garden_op_result.dart';
 import 'package:focusNexus/progressive_visuals/garden_state.dart';
 import 'package:focusNexus/progressive_visuals/growth_stage.dart';
-import 'package:focusNexus/progressive_visuals/visual_bridge.dart';
+import 'package:focusNexus/progressive_visuals/sandbox_entity.dart';
+import 'package:focusNexus/progressive_visuals/sandbox_selection.dart';
+import 'package:focusNexus/progressive_visuals/sandbox_viewport.dart';
+import 'package:focusNexus/progressive_visuals/mutation_kind.dart';
 import 'package:focusNexus/progressive_visuals/visual_theme_id.dart';
+import 'package:focusNexus/progressive_visuals/garden_valuation.dart';
+import 'package:focusNexus/progressive_visuals/zen_placeable_bounds.dart';
+import 'package:focusNexus/progressive_visuals/zen_garden_hit_test.dart';
 import 'package:focusNexus/progressive_visuals/zen_garden_rules.dart';
 import 'package:focusNexus/repositories/app_repositories.dart';
 import 'package:intl/intl.dart';
 
+import 'zen_garden_cartoon_style.dart';
+import 'zen_garden_decor_visual.dart';
 import 'zen_garden_painters.dart';
+import 'zen_inventory_stacks.dart';
+import 'zen_placeable_layout.dart';
+import 'zen_garden_sandbox_logic.dart';
+import 'zen_garden_static_scenery.dart';
+import 'zen_garden_waterfall.dart';
 
 String zenGardenStageLabel(int index) {
   final stage = growthStageFromIndex(index);
@@ -38,43 +51,6 @@ Duration _zenWaitAfterAdvancingFrom(int fromStage) {
   return r.waitBeforeNextAdvance ?? const Duration(minutes: 2);
 }
 
-bool _zenPlantHitNorm(double nx, double ny, GardenItem item) {
-  final dx = nx - item.positionX;
-  final dy = ny - item.positionY;
-  final st = item.stageIndex.clamp(0, 4);
-  final rx = 0.088 + st * 0.016;
-  final ry = 0.12 + st * 0.022;
-  return (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) <= 1.0;
-}
-
-bool _zenDecorHitNorm(double nx, double ny, DecorItem d) {
-  final dx = nx - d.positionX;
-  final dy = ny - d.positionY;
-  final st = d.stageIndex.clamp(0, 4);
-  switch (d.kind) {
-    case 'zen.stone_path':
-      final rx = 0.2 + st * 0.022;
-      final ry = 0.12 + st * 0.018;
-      return (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) <= 1.0;
-    case 'zen.koi_pond':
-      final rx = 0.17 + st * 0.03;
-      final ry = 0.13 + st * 0.024;
-      return (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) <= 1.0;
-    case 'zen.bamboo_fence':
-      final rx = 0.22 + st * 0.024;
-      final ry = 0.12 + st * 0.018;
-      return (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) <= 1.0;
-    case 'zen.wood_bench':
-      final rx = 0.16 + st * 0.02;
-      final ry = 0.1 + st * 0.014;
-      return (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) <= 1.0;
-    default:
-      final rx = 0.15 + st * 0.022;
-      final ry = 0.12 + st * 0.02;
-      return (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) <= 1.0;
-  }
-}
-
 class _DragSession {
   _DragSession({
     required this.isPlant,
@@ -89,10 +65,20 @@ class _DragSession {
   double ny;
 }
 
-class _EntityPick {
-  const _EntityPick({required this.id, required this.isPlant});
-  final String id;
-  final bool isPlant;
+class _BulkDragSession {
+  _BulkDragSession({
+    required this.anchorNx,
+    required this.anchorNy,
+    required this.plantOrigins,
+    required this.decorOrigins,
+  });
+
+  final double anchorNx;
+  final double anchorNy;
+  final Map<String, Offset> plantOrigins;
+  final Map<String, Offset> decorOrigins;
+  double dx = 0;
+  double dy = 0;
 }
 
 /// Calm, playable Zen garden: plants, growth, decorations, selection, drag preview.
@@ -114,7 +100,48 @@ class ZenGardenScreen extends StatefulWidget {
   State<ZenGardenScreen> createState() => _ZenGardenScreenState();
 }
 
-class _ZenGardenScreenState extends State<ZenGardenScreen> {
+class _AreaSelectBoxPainter extends CustomPainter {
+  _AreaSelectBoxPainter({
+    required this.startNorm,
+    required this.endNorm,
+    required this.color,
+  });
+
+  final Offset startNorm;
+  final Offset endNorm;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Rect.fromPoints(
+      Offset(startNorm.dx * size.width, startNorm.dy * size.height),
+      Offset(endNorm.dx * size.width, endNorm.dy * size.height),
+    );
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..color = color.withValues(alpha: 0.12)
+        ..style = PaintingStyle.fill,
+    );
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..color = color.withValues(alpha: 0.75)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _AreaSelectBoxPainter oldDelegate) {
+    return oldDelegate.startNorm != startNorm ||
+        oldDelegate.endNorm != endNorm ||
+        oldDelegate.color != color;
+  }
+}
+
+class _ZenGardenScreenState extends State<ZenGardenScreen>
+    with SingleTickerProviderStateMixin {
   final _repos = AppRepositories.instance;
   final _engine = ProgressiveGardenEngine(
     transitionRules: zenGardenTransitionRules(),
@@ -124,33 +151,103 @@ class _ZenGardenScreenState extends State<ZenGardenScreen> {
   final _random = Random();
 
   GardenState _garden = const GardenState(pointsBalance: 0, items: []);
-  String? _focusPlantId;
-  String? _focusDecorId;
-  bool _multiMode = false;
-  final Set<String> _bulkPlants = {};
-  final Set<String> _bulkDecor = {};
-  String? _placingDecorKind;
+  final SandboxSelectionState _selection = SandboxSelectionState();
+  final SandboxHitTester _hitTester = const ZenGardenHitTester();
+  final TransformationController _viewportTransform = TransformationController();
+  bool _chromeVisible = true;
+  String? _placingDecorInventoryId;
+  bool _placingPlant = false;
+  String? _placingPlantInventoryId;
   _DragSession? _drag;
+  _BulkDragSession? _bulkDrag;
+  Size _gardenLayoutSize = zenReferenceGardenSize;
+  Map<String, Offset>? _bulkPlantPreview;
+  Map<String, Offset>? _bulkDecorPreview;
   Offset? _pointerDownGlobal;
-  _EntityPick? _pointerPick;
+  SandboxEntityRef? _pointerPick;
   bool _pointerDragging = false;
+  Offset? _areaSelectStartNorm;
+  Offset? _areaSelectCurrentNorm;
+  bool _areaSelecting = false;
+  bool _viewportMoved = false;
   Timer? _ticker;
+  late final AnimationController _viewportResetAnim;
+  bool _centeringViewport = false;
   Future<void>? _gardenLoadFuture;
 
   static const double _pointerSlop = 14.0;
-  static const double _plantVisualW = 96;
-  static const double _plantVisualH = 118;
-  static const double _decorVisualW = 96;
-  static const double _decorVisualH = 90;
+  static const double _plantVisualW = zenPlantVisualWidth;
+  static const double _plantVisualH = zenPlantVisualHeight;
+  static const double _decorVisualW = zenDecorVisualWidth;
+  static const double _decorVisualH = zenDecorVisualHeight;
 
   Duration get _zenFirstWait =>
       zenGardenTransitionRules().firstWhere((r) => r.fromStageIndex == 0).waitBeforeNextAdvance ??
       const Duration(minutes: 2);
 
   @override
+  void initState() {
+    super.initState();
+    _viewportResetAnim = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 450),
+    );
+    _viewportTransform.addListener(_syncViewportMoved);
+  }
+
+  @override
   void dispose() {
+    _viewportTransform.removeListener(_syncViewportMoved);
+    _viewportResetAnim.dispose();
     _ticker?.cancel();
+    _viewportTransform.dispose();
     super.dispose();
+  }
+
+  void _syncViewportMoved() {
+    final moved = !sandboxViewportIsDefault(_viewportTransform.value);
+    if (moved != _viewportMoved && mounted) {
+      setState(() => _viewportMoved = moved);
+    }
+  }
+
+  Future<void> _centerViewport() async {
+    if (_centeringViewport) return;
+    _centeringViewport = true;
+    try {
+      if (sandboxViewportIsDefault(_viewportTransform.value)) {
+        resetSandboxViewport(_viewportTransform);
+        _syncViewportMoved();
+        return;
+      }
+
+      _viewportResetAnim.stop();
+      _viewportResetAnim.reset();
+      final begin = _viewportTransform.value.clone();
+      final curve = CurvedAnimation(
+        parent: _viewportResetAnim,
+        curve: Curves.easeOutCubic,
+      );
+      void tick() {
+        _viewportTransform.value = lerpSandboxViewportMatrix(
+          begin,
+          Matrix4.identity(),
+          curve.value,
+        );
+      }
+
+      _viewportResetAnim.addListener(tick);
+      try {
+        await _viewportResetAnim.forward();
+      } finally {
+        _viewportResetAnim.removeListener(tick);
+        curve.dispose();
+      }
+      resetSandboxViewport(_viewportTransform);
+      _syncViewportMoved();
+    } finally {
+      _centeringViewport = false;
+    }
   }
 
   Future<void> _loadGarden() async {
@@ -208,19 +305,87 @@ class _ZenGardenScreenState extends State<ZenGardenScreen> {
     );
   }
 
+  void _clearPlacementPrompts() {
+    ScaffoldMessenger.of(context).clearSnackBars();
+  }
+
+  SandboxEntityRef? _focusedEntityRef() {
+    final pid = _selection.focusPrimaryId;
+    if (pid != null) {
+      return SandboxEntityRef(id: pid, kind: SandboxEntityKind.primary);
+    }
+    final did = _selection.focusDecorId;
+    if (did != null) {
+      return SandboxEntityRef(id: did, kind: SandboxEntityKind.decoration);
+    }
+    return null;
+  }
+
+  void _exitSelectionForPlacement() {
+    _selection.setMultiMode(false);
+    _selection.clearAll();
+  }
+
+  DecorItem? _decorInventoryItem(String? id) {
+    if (id == null) return null;
+    for (final d in _garden.decorInventory) {
+      if (d.id == id) return d;
+    }
+    return null;
+  }
+
+  GardenItem? _plantInventoryItem(String? id) {
+    if (id == null) return null;
+    for (final p in _garden.plantInventory) {
+      if (p.id == id) return p;
+    }
+    return null;
+  }
+
+  bool get _isPlacing => _placingDecorInventoryId != null || _placingPlant;
+
+  String? get _placingLabel {
+    if (_placingPlant) {
+      final invPlant = _plantInventoryItem(_placingPlantInventoryId);
+      if (invPlant != null) {
+        final mut = invPlant.mutation != null ? ' · variant' : '';
+        return 'plant (${zenGardenStageLabel(invPlant.stageIndex)})$mut';
+      }
+      return 'seed';
+    }
+    final invDecor = _decorInventoryItem(_placingDecorInventoryId);
+    if (invDecor != null) {
+      final label = decorEntryByKind(invDecor.kind)?.label ?? invDecor.kind;
+      final mut = invDecor.mutation != null ? ' · variant' : '';
+      return '$label · stage ${invDecor.stageIndex + 1}$mut';
+    }
+    return null;
+  }
+
+  void _cancelPlacement() {
+    setState(() {
+      _placingDecorInventoryId = null;
+      _placingPlant = false;
+      _placingPlantInventoryId = null;
+    });
+    _clearPlacementPrompts();
+  }
+
   GardenItem? get _focusPlant {
-    if (_focusPlantId == null) return null;
+    final id = _selection.focusPrimaryId;
+    if (id == null) return null;
     try {
-      return _garden.items.firstWhere((e) => e.id == _focusPlantId);
+      return _garden.items.firstWhere((e) => e.id == id);
     } catch (_) {
       return null;
     }
   }
 
   DecorItem? get _focusDecor {
-    if (_focusDecorId == null) return null;
+    final id = _selection.focusDecorId;
+    if (id == null) return null;
     try {
-      return _garden.decor.firstWhere((e) => e.id == _focusDecorId);
+      return _garden.decor.firstWhere((e) => e.id == id);
     } catch (_) {
       return null;
     }
@@ -228,48 +393,27 @@ class _ZenGardenScreenState extends State<ZenGardenScreen> {
 
   void _setMultiMode(bool v) {
     setState(() {
-      _multiMode = v;
+      _selection.setMultiMode(v);
       if (v) {
-        _focusPlantId = null;
-        _focusDecorId = null;
-        _placingDecorKind = null;
-      } else {
-        _bulkPlants.clear();
-        _bulkDecor.clear();
+        _cancelPlacement();
       }
     });
   }
 
-  void _toggleBulkPlant(String id) {
-    setState(() {
-      if (_bulkPlants.contains(id)) {
-        _bulkPlants.remove(id);
-      } else {
-        _bulkPlants.add(id);
-      }
-    });
+  void _toggleChrome() {
+    setState(() => _chromeVisible = !_chromeVisible);
   }
 
-  void _toggleBulkDecor(String id) {
-    setState(() {
-      if (_bulkDecor.contains(id)) {
-        _bulkDecor.remove(id);
-      } else {
-        _bulkDecor.add(id);
-      }
-    });
-  }
-
-  void _bulkDelete() {
-    final pn = Set<String>.from(_bulkPlants);
-    final dn = Set<String>.from(_bulkDecor);
+  void _bulkStashToInventory() {
+    final pn = Set<String>.from(_selection.bulkPrimary);
+    final dn = Set<String>.from(_selection.bulkDecor);
     if (pn.isEmpty && dn.isEmpty) {
       _snack('Select items first.');
       return;
     }
     var next = _garden;
     if (pn.isNotEmpty) {
-      final r = _engine.removeItemsBulk(next, pn);
+      final r = _engine.stashPlantsToInventoryBulk(next, pn);
       if (!r.isSuccess) {
         _snack(r.error ?? 'Could not remove plants');
         return;
@@ -277,7 +421,7 @@ class _ZenGardenScreenState extends State<ZenGardenScreen> {
       next = r.state!;
     }
     if (dn.isNotEmpty) {
-      final r = _engine.removeDecorsBulk(next, dn);
+      final r = _engine.stashDecorsToInventoryBulk(next, dn);
       if (!r.isSuccess) {
         _snack(r.error ?? 'Could not remove decorations');
         return;
@@ -286,29 +430,88 @@ class _ZenGardenScreenState extends State<ZenGardenScreen> {
     }
     setState(() {
       _garden = next;
-      _bulkPlants.clear();
-      _bulkDecor.clear();
+      _selection.bulkPrimary.clear();
+      _selection.bulkDecor.clear();
     });
     _persist();
-    SemanticsService.announce('Removed selection.', Directionality.of(context));
+    SemanticsService.announce('Moved selection to inventory.', Directionality.of(context));
   }
 
-  void _addPlant() {
-    final id = 'zen_${DateTime.now().millisecondsSinceEpoch}';
-    final r = _engine.placeItem(
-      state: _garden,
-      id: id,
-      themeId: VisualThemeId.zenGarden,
-      x: 0.45 + _random.nextDouble() * 0.1,
-      y: 0.45 + _random.nextDouble() * 0.1,
+  void _startPlantPlacement() {
+    setState(() {
+      _placingPlant = true;
+      _placingPlantInventoryId = null;
+      _placingDecorInventoryId = null;
+      _exitSelectionForPlacement();
+    });
+  }
+
+  void _placePlantAt(double nx, double ny) {
+    final seed = GardenItem(id: 'tmp', themeId: VisualThemeId.zenGarden);
+    final (mrx, mry) = _placingPlantInventoryId != null
+        ? zenPlantPlacementMargins(
+            _garden.plantInventory.firstWhere(
+              (p) => p.id == _placingPlantInventoryId,
+            ),
+            gardenSize: _gardenLayoutSize,
+          )
+        : zenPlantPlacementMargins(seed, gardenSize: _gardenLayoutSize);
+    final resolved = _resolvePlacement(
+      nx: nx,
+      ny: ny,
+      moverRx: mrx,
+      moverRy: mry,
     );
-    _apply(r, announce: 'New plant added.');
-    if (r.isSuccess) {
-      setState(() {
-        _focusPlantId = id;
-        _focusDecorId = null;
-      });
+    _clearPlacementPrompts();
+    final fromInventoryId = _placingPlantInventoryId;
+    String? plantStackKey;
+    if (fromInventoryId != null) {
+      final source = _plantInventoryItem(fromInventoryId);
+      if (source != null) {
+        plantStackKey = plantInventoryStackKey(source);
+      }
     }
+    final GardenOpResult r;
+    if (fromInventoryId != null) {
+      r = _engine.placePlantFromInventory(
+        state: _garden,
+        inventoryItemId: fromInventoryId,
+        x: resolved.x,
+        y: resolved.y,
+      );
+    } else {
+      final id = 'zen_${DateTime.now().millisecondsSinceEpoch}';
+      r = _engine.placeItem(
+        state: _garden,
+        id: id,
+        themeId: VisualThemeId.zenGarden,
+        x: resolved.x,
+        y: resolved.y,
+      );
+    }
+    if (!r.isSuccess) {
+      _snack(r.error ?? 'Could not place plant');
+      return;
+    }
+    final placedId = fromInventoryId ?? r.state!.items.last.id;
+    setState(() {
+      _garden = r.state!;
+      _exitSelectionForPlacement();
+      if (fromInventoryId != null && plantStackKey != null) {
+        _placingPlantInventoryId =
+            nextPlantInventoryIdInStack(_garden.plantInventory, plantStackKey);
+        _placingPlant = _placingPlantInventoryId != null;
+      } else {
+        _placingPlant = false;
+        _placingPlantInventoryId = null;
+      }
+      _selection.applyPick(
+        SandboxEntityRef(id: placedId, kind: SandboxEntityKind.primary),
+      );
+    });
+    _syncTicker();
+    _persist();
+    SemanticsService.announce('Plant placed.', Directionality.of(context));
   }
 
   void _showShopToast(String message) {
@@ -359,77 +562,322 @@ class _ZenGardenScreenState extends State<ZenGardenScreen> {
     );
   }
 
+  void _applyInventoryOp(
+    GardenOpResult result, {
+    String? announce,
+    int? pointsEarned,
+  }) {
+    if (!result.isSuccess) {
+      _snack(result.error ?? 'Something went wrong');
+      return;
+    }
+    setState(() => _garden = result.state!);
+    _syncTicker();
+    _persist();
+    if (pointsEarned != null && pointsEarned > 0) {
+      _showShopToast('Sold for +$pointsEarned points');
+    } else if (announce != null && announce.isNotEmpty) {
+      _snack(announce);
+    }
+    if (announce != null && announce.isNotEmpty && mounted) {
+      SemanticsService.announce(announce, Directionality.of(context));
+    }
+  }
+
+  ({double nx, double ny}) _clampDragNorm({
+    required double nx,
+    required double ny,
+    required bool isPlant,
+    required String id,
+  }) {
+    final (mx, my) = isPlant
+        ? zenPlantPlacementMargins(
+            _garden.items.firstWhere((e) => e.id == id),
+            gardenSize: _gardenLayoutSize,
+          )
+        : zenDecorPlacementMargins(
+            _garden.decor.firstWhere((e) => e.id == id),
+            gardenSize: _gardenLayoutSize,
+          );
+    return (nx: nx.clamp(mx, 1 - mx), ny: ny.clamp(my, 1 - my));
+  }
+
+  ({double x, double y}) _resolvePlacement({
+    required double nx,
+    required double ny,
+    required double moverRx,
+    required double moverRy,
+  }) {
+    final resolved = resolveZenGardenPlacement(
+      nx: nx,
+      ny: ny,
+      moverRx: moverRx,
+      moverRy: moverRy,
+    );
+    return (x: resolved.x, y: resolved.y);
+  }
+
   void _openInventory() {
-    final entries = _garden.decorStash.entries.where((e) => e.value > 0).toList();
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
-      builder: (ctx) => SafeArea(
-        child: entries.isEmpty
-            ? Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(
-                    'Inventory is empty. Buy decorations from the shop.',
-                    style: widget.textStyle.copyWith(fontWeight: FontWeight.normal),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              )
-            : ListView(
-                padding: const EdgeInsets.all(16),
+      isScrollControlled: true,
+      builder: (sheetCtx) {
+        return StatefulBuilder(
+          builder: (sheetCtx, setSheetState) {
+            void refreshSheet() {
+              if (mounted) setState(() {});
+              setSheetState(() {});
+            }
+
+            final plantStacks = groupPlantInventory(_garden.plantInventory);
+            final decorStacks = groupDecorInventory(_garden.decorInventory);
+            final isEmpty = plantStacks.isEmpty && decorStacks.isEmpty;
+
+            return SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('Inventory', style: widget.textStyle.copyWith(fontSize: 18)),
-                  const SizedBox(height: 12),
-                  ...entries.map((e) {
-                    final meta = decorEntryByKind(e.key);
-                    return ListTile(
-                      leading: Icon(meta?.icon ?? Icons.inventory_2_outlined),
-                      title: Text(meta?.label ?? e.key),
-                      subtitle: Text('Owned: ${e.value}'),
-                      trailing: FilledButton.tonal(
-                        onPressed: () {
-                          Navigator.pop(ctx);
-                          setState(() {
-                            _placingDecorKind = e.key;
-                            _focusPlantId = null;
-                            _focusDecorId = null;
-                          });
-                          _snack('Tap the garden where you want it.');
-                        },
-                        child: const Text('Place'),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Inventory',
+                            style: widget.textStyle.copyWith(fontSize: 18),
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Close',
+                          onPressed: () => Navigator.pop(sheetCtx),
+                          icon: const Icon(Icons.close),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(
+                        'Inventory is empty. Buy decorations from the shop or move items here from the garden.',
+                        style: widget.textStyle.copyWith(fontWeight: FontWeight.normal),
+                        textAlign: TextAlign.center,
                       ),
-                    );
-                  }),
+                    )
+                  else
+                    Flexible(
+                      child: ListView(
+                        shrinkWrap: true,
+                        padding: const EdgeInsets.all(16),
+                        children: [
+                          if (plantStacks.isNotEmpty) ...[
+                            Text('Plants', style: widget.textStyle.copyWith(fontSize: 15)),
+                            const SizedBox(height: 8),
+                            ...plantStacks.map((stack) {
+                              final p = stack.representative;
+                              final sell = plantSellValue(p);
+                              final countLabel =
+                                  stack.count > 1 ? ' ×${stack.count}' : '';
+                              return ListTile(
+                                leading: Badge(
+                                  isLabelVisible: stack.count > 1,
+                                  label: Text('${stack.count}'),
+                                  child: const Icon(Icons.grass_outlined),
+                                ),
+                                title: Text(
+                                  'Plant · ${zenGardenStageLabel(p.stageIndex)}$countLabel',
+                                ),
+                                subtitle: Text('Sell: $sell pts each'),
+                                trailing: Wrap(
+                                  spacing: 8,
+                                  children: [
+                                    FilledButton.tonal(
+                                      onPressed: () {
+                                        Navigator.pop(sheetCtx);
+                                        setState(() {
+                                          _placingPlant = true;
+                                          _placingPlantInventoryId =
+                                              stack.placeOrSellItemId;
+                                          _placingDecorInventoryId = null;
+                                          _exitSelectionForPlacement();
+                                        });
+                                      },
+                                      child: const Text('Place'),
+                                    ),
+                                    OutlinedButton(
+                                      onPressed: () {
+                                        final itemId = stack.placeOrSellItemId;
+                                        _applyInventoryOp(
+                                          _engine.sellPlantInventoryItem(
+                                            _garden,
+                                            itemId,
+                                          ),
+                                          announce: 'Sold plant for $sell points.',
+                                          pointsEarned: sell,
+                                        );
+                                        if (_placingPlantInventoryId == itemId) {
+                                          final stackKey =
+                                              plantInventoryStackKey(p);
+                                          _placingPlantInventoryId =
+                                              nextPlantInventoryIdInStack(
+                                            _garden.plantInventory,
+                                            stackKey,
+                                          );
+                                          _placingPlant =
+                                              _placingPlantInventoryId != null;
+                                        }
+                                        refreshSheet();
+                                        if (_garden.plantInventory.isEmpty &&
+                                            _garden.decorInventory.isEmpty) {
+                                          Navigator.pop(sheetCtx);
+                                        }
+                                      },
+                                      child: const Text('Sell 1'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }),
+                            const SizedBox(height: 16),
+                          ],
+                          if (decorStacks.isNotEmpty) ...[
+                            Text('Decorations', style: widget.textStyle.copyWith(fontSize: 15)),
+                            const SizedBox(height: 8),
+                            ...decorStacks.map((stack) {
+                              final d = stack.representative;
+                              final meta = decorEntryByKind(d.kind);
+                              final sell = decorSellValue(d);
+                              final stackKey = decorInventoryStackKey(d);
+                              final placingThis =
+                                  _placingDecorInventoryId != null &&
+                                  stack.itemIds.contains(_placingDecorInventoryId);
+                              final countLabel =
+                                  stack.count > 1 ? ' ×${stack.count}' : '';
+                              return ListTile(
+                                leading: Badge(
+                                  isLabelVisible: stack.count > 1,
+                                  label: Text('${stack.count}'),
+                                  child: Icon(meta?.icon ?? Icons.inventory_2_outlined),
+                                ),
+                                title: Text('${meta?.label ?? d.kind}$countLabel'),
+                                subtitle: Text(
+                                  'Stage ${d.stageIndex + 1} · Sell: $sell pts each'
+                                  '${d.mutation != null ? ' · variant' : ''}',
+                                ),
+                                trailing: Wrap(
+                                  spacing: 8,
+                                  children: [
+                                    FilledButton.tonal(
+                                      onPressed: () {
+                                        Navigator.pop(sheetCtx);
+                                        setState(() {
+                                          _placingDecorInventoryId =
+                                              stack.sellItemId;
+                                          _placingPlant = false;
+                                          _placingPlantInventoryId = null;
+                                          _exitSelectionForPlacement();
+                                        });
+                                      },
+                                      child: Text(placingThis ? 'Placing…' : 'Place'),
+                                    ),
+                                    if (placingThis)
+                                      TextButton(
+                                        onPressed: () {
+                                          setState(() => _placingDecorInventoryId = null);
+                                          _clearPlacementPrompts();
+                                          refreshSheet();
+                                        },
+                                        child: const Text('Deselect'),
+                                      ),
+                                    OutlinedButton(
+                                      onPressed: () {
+                                        final itemId = stack.sellItemId;
+                                        _applyInventoryOp(
+                                          _engine.sellDecorInventoryItem(
+                                            _garden,
+                                            itemId,
+                                          ),
+                                          announce: 'Sold decoration for $sell points.',
+                                          pointsEarned: sell,
+                                        );
+                                        if (_placingDecorInventoryId != null &&
+                                            stack.itemIds.contains(
+                                              _placingDecorInventoryId,
+                                            )) {
+                                          _placingDecorInventoryId =
+                                              nextDecorInventoryIdInStack(
+                                            _garden.decorInventory,
+                                            stackKey,
+                                          );
+                                        }
+                                        refreshSheet();
+                                        if (_garden.plantInventory.isEmpty &&
+                                            _garden.decorInventory.isEmpty) {
+                                          Navigator.pop(sheetCtx);
+                                        }
+                                      },
+                                      child: const Text('Sell 1'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }),
+                          ],
+                        ],
+                      ),
+                    ),
                 ],
               ),
-      ),
+            );
+          },
+        );
+      },
     );
   }
 
   void _placeDecorAt(double nx, double ny) {
-    final kind = _placingDecorKind;
-    if (kind == null) return;
-    final id = 'd_${DateTime.now().millisecondsSinceEpoch}';
-    _apply(
-      _engine.placeDecorFromStash(
-        state: _garden,
-        kind: kind,
-        id: id,
-        x: nx,
-        y: ny,
-        themeId: VisualThemeId.zenGarden,
-      ),
-      announce: 'Decoration placed.',
+    final inventoryId = _placingDecorInventoryId;
+    if (inventoryId == null) return;
+    final invItem = _decorInventoryItem(inventoryId);
+    if (invItem == null) return;
+    final stackKey = decorInventoryStackKey(invItem);
+    final (mrx, mry) = zenDecorPlacementMargins(
+      invItem,
+      gardenSize: _gardenLayoutSize,
     );
+    final resolved = _resolvePlacement(
+      nx: nx,
+      ny: ny,
+      moverRx: mrx,
+      moverRy: mry,
+    );
+    _clearPlacementPrompts();
+    final r = _engine.placeDecorFromInventory(
+      state: _garden,
+      inventoryItemId: inventoryId,
+      x: resolved.x,
+      y: resolved.y,
+    );
+    if (!r.isSuccess) {
+      _snack(r.error ?? 'Could not place decoration');
+      return;
+    }
     setState(() {
-      _placingDecorKind = null;
-      _focusDecorId = id;
+      _garden = r.state!;
+      _exitSelectionForPlacement();
+      _placingDecorInventoryId =
+          nextDecorInventoryIdInStack(_garden.decorInventory, stackKey);
+      _selection.applyPick(
+        SandboxEntityRef(id: inventoryId, kind: SandboxEntityKind.decoration),
+      );
     });
+    _persist();
+    SemanticsService.announce('Decoration placed.', Directionality.of(context));
   }
 
   void _growSelected() {
-    final id = _focusPlantId;
+    final id = _selection.focusPrimaryId;
     if (id == null) return;
     final r = _engine.advanceGrowth(
       state: _garden,
@@ -452,13 +900,13 @@ class _ZenGardenScreenState extends State<ZenGardenScreen> {
   }
 
   void _skipWait() {
-    final id = _focusPlantId;
+    final id = _selection.focusPrimaryId;
     if (id == null) return;
     _apply(_engine.skipGrowthWait(_garden, id, DateTime.now()), announce: 'Growth wait skipped.');
   }
 
   void _removeMutation() {
-    final id = _focusPlantId;
+    final id = _selection.focusPrimaryId;
     if (id == null) return;
     _apply(
       _engine.removeMutation(_garden, id),
@@ -467,21 +915,21 @@ class _ZenGardenScreenState extends State<ZenGardenScreen> {
   }
 
   void _removeFocusPlant() {
-    final id = _focusPlantId;
+    final id = _selection.focusPrimaryId;
     if (id == null) return;
-    _apply(_engine.removeItem(_garden, id), announce: 'Plant removed.');
-    setState(() => _focusPlantId = null);
+    _apply(_engine.removeItem(_garden, id), announce: 'Plant moved to inventory.');
+    setState(() => _selection.clearFocus());
   }
 
   void _removeFocusDecor() {
-    final id = _focusDecorId;
+    final id = _selection.focusDecorId;
     if (id == null) return;
-    _apply(_engine.removeDecor(_garden, id), announce: 'Decoration removed.');
-    setState(() => _focusDecorId = null);
+    _apply(_engine.removeDecor(_garden, id), announce: 'Decoration moved to inventory.');
+    setState(() => _selection.clearFocus());
   }
 
   void _growDecorSelected() {
-    final id = _focusDecorId;
+    final id = _selection.focusDecorId;
     if (id == null) return;
     final r = _engine.advanceDecorGrowth(
       state: _garden,
@@ -493,19 +941,19 @@ class _ZenGardenScreenState extends State<ZenGardenScreen> {
   }
 
   void _skipDecorWait() {
-    final id = _focusDecorId;
+    final id = _selection.focusDecorId;
     if (id == null) return;
     _apply(_engine.skipDecorGrowthWait(_garden, id, DateTime.now()));
   }
 
   void _removeDecorMutation() {
-    final id = _focusDecorId;
+    final id = _selection.focusDecorId;
     if (id == null) return;
     _apply(_engine.removeDecorMutation(_garden, id));
   }
 
   Future<void> _confirmDecorRestart() async {
-    final id = _focusDecorId;
+    final id = _selection.focusDecorId;
     if (id == null) return;
     final ok = await showDialog<bool>(
       context: context,
@@ -524,7 +972,7 @@ class _ZenGardenScreenState extends State<ZenGardenScreen> {
   }
 
   Future<void> _confirmRestart() async {
-    final id = _focusPlantId;
+    final id = _selection.focusPrimaryId;
     if (id == null) return;
     final ok = await showDialog<bool>(
       context: context,
@@ -623,10 +1071,103 @@ class _ZenGardenScreenState extends State<ZenGardenScreen> {
     return 1.0 - (left / totalMs).clamp(0.0, 1.0);
   }
 
+  void _commitBulkDrag() {
+    final session = _bulkDrag;
+    if (session == null) return;
+    var next = _garden;
+    final plantMoves = <String, ({double x, double y})>{};
+    for (final entry in session.plantOrigins.entries) {
+      final item = _garden.items.firstWhere((e) => e.id == entry.key);
+      final (mrx, mry) = zenPlantSeparationRadii(item);
+      final resolved = resolveZenGardenPlacement(
+        nx: entry.value.dx + session.dx,
+        ny: entry.value.dy + session.dy,
+        moverRx: mrx,
+        moverRy: mry,
+      );
+      plantMoves[entry.key] = (x: resolved.x, y: resolved.y);
+    }
+    if (plantMoves.isNotEmpty) {
+      final r = _engine.moveItemsBulk(next, plantMoves);
+      if (r.isSuccess) next = r.state!;
+    }
+    final decorMoves = <String, ({double x, double y})>{};
+    for (final entry in session.decorOrigins.entries) {
+      final item = _garden.decor.firstWhere((e) => e.id == entry.key);
+      final (mrx, mry) = zenDecorSeparationRadii(item);
+      final resolved = resolveZenGardenPlacement(
+        nx: entry.value.dx + session.dx,
+        ny: entry.value.dy + session.dy,
+        moverRx: mrx,
+        moverRy: mry,
+      );
+      decorMoves[entry.key] = (x: resolved.x, y: resolved.y);
+    }
+    if (decorMoves.isNotEmpty) {
+      final r = _engine.moveDecorsBulk(next, decorMoves);
+      if (r.isSuccess) next = r.state!;
+    }
+    setState(() {
+      _garden = next;
+      _bulkDrag = null;
+      _bulkPlantPreview = null;
+      _bulkDecorPreview = null;
+    });
+    _persist();
+  }
+
+  void _updateBulkDragPreview(double nx, double ny) {
+    final session = _bulkDrag;
+    if (session == null) return;
+    var dx = nx - session.anchorNx;
+    var dy = ny - session.anchorNy;
+    final members = <({double x, double y, double rx, double ry})>[];
+    for (final entry in session.plantOrigins.entries) {
+      final item = _garden.items.firstWhere((e) => e.id == entry.key);
+      final (mrx, mry) = zenPlantPlacementMargins(
+        item,
+        gardenSize: _gardenLayoutSize,
+      );
+      members.add((x: entry.value.dx, y: entry.value.dy, rx: mrx, ry: mry));
+    }
+    for (final entry in session.decorOrigins.entries) {
+      final item = _garden.decor.firstWhere((e) => e.id == entry.key);
+      final (mrx, mry) = zenDecorPlacementMargins(
+        item,
+        gardenSize: _gardenLayoutSize,
+      );
+      members.add((x: entry.value.dx, y: entry.value.dy, rx: mrx, ry: mry));
+    }
+    final clamped = zenClampGroupDelta(dx: dx, dy: dy, members: members);
+    session.dx = clamped.dx;
+    session.dy = clamped.dy;
+    setState(() {
+      _bulkPlantPreview = {
+        for (final e in session.plantOrigins.entries)
+          e.key: Offset(e.value.dx + session.dx, e.value.dy + session.dy),
+      };
+      _bulkDecorPreview = {
+        for (final e in session.decorOrigins.entries)
+          e.key: Offset(e.value.dx + session.dx, e.value.dy + session.dy),
+      };
+    });
+  }
+
   void _commitPlantDrag(String id) {
     final d = _drag;
     if (d != null && d.isPlant && d.id == id) {
-      _apply(_engine.moveItem(_garden, id, x: d.nx, y: d.ny));
+      final item = _garden.items.firstWhere((e) => e.id == id);
+      final (mrx, mry) = zenPlantPlacementMargins(
+        item,
+        gardenSize: _gardenLayoutSize,
+      );
+      final resolved = _resolvePlacement(
+        nx: d.nx,
+        ny: d.ny,
+        moverRx: mrx,
+        moverRy: mry,
+      );
+      _apply(_engine.moveItem(_garden, id, x: resolved.x, y: resolved.y));
     }
     setState(() => _drag = null);
   }
@@ -634,7 +1175,18 @@ class _ZenGardenScreenState extends State<ZenGardenScreen> {
   void _commitDecorDrag(String id) {
     final d = _drag;
     if (d != null && !d.isPlant && d.id == id) {
-      _apply(_engine.moveDecor(_garden, id, x: d.nx, y: d.ny));
+      final item = _garden.decor.firstWhere((e) => e.id == id);
+      final (mrx, mry) = zenDecorPlacementMargins(
+        item,
+        gardenSize: _gardenLayoutSize,
+      );
+      final resolved = _resolvePlacement(
+        nx: d.nx,
+        ny: d.ny,
+        moverRx: mrx,
+        moverRy: mry,
+      );
+      _apply(_engine.moveDecor(_garden, id, x: resolved.x, y: resolved.y));
     }
     setState(() => _drag = null);
   }
@@ -643,86 +1195,147 @@ class _ZenGardenScreenState extends State<ZenGardenScreen> {
     _pointerDownGlobal = null;
     _pointerPick = null;
     _pointerDragging = false;
-    if (_drag != null) {
-      setState(() => _drag = null);
-    }
-  }
-
-  _EntityPick? _nearestPick(double nx, double ny) {
-    final candidates = <({_EntityPick pick, double dist})>[];
-    for (final p in _garden.items) {
-      if (!_zenPlantHitNorm(nx, ny, p)) continue;
-      final d = sqrt(pow(nx - p.positionX, 2) + pow(ny - p.positionY, 2));
-      candidates.add((pick: _EntityPick(id: p.id, isPlant: true), dist: d));
-    }
-    for (final d in _garden.decor) {
-      if (!_zenDecorHitNorm(nx, ny, d)) continue;
-      final dist = sqrt(pow(nx - d.positionX, 2) + pow(ny - d.positionY, 2));
-      candidates.add((pick: _EntityPick(id: d.id, isPlant: false), dist: dist));
-    }
-    if (candidates.isEmpty) return null;
-    candidates.sort((a, b) {
-      final dc = a.dist.compareTo(b.dist);
-      if (dc != 0) return dc;
-      if (a.pick.isPlant != b.pick.isPlant) {
-        return a.pick.isPlant ? -1 : 1;
-      }
-      return a.pick.id.compareTo(b.pick.id);
-    });
-    return candidates.first.pick;
-  }
-
-  void _onSandPointerDown(PointerDownEvent e, RenderBox box, double w, double h) {
-    final local = box.globalToLocal(e.position);
-    final nx = (local.dx / w).clamp(0.0, 1.0);
-    final ny = (local.dy / h).clamp(0.0, 1.0);
-    _pointerDownGlobal = e.position;
-    _pointerDragging = false;
-    if (_multiMode) {
-      _pointerPick = _nearestPick(nx, ny);
-      return;
-    }
-    if (_placingDecorKind != null) {
-      _pointerPick = null;
-      return;
-    }
-    _pointerPick = _nearestPick(nx, ny);
-  }
-
-  void _onSandPointerMove(PointerMoveEvent e, RenderBox box, double w, double h) {
-    final local = box.globalToLocal(e.position);
-    final nx = (local.dx / w).clamp(0.02, 0.98);
-    final ny = (local.dy / h).clamp(0.02, 0.98);
-    if (_pointerDragging && _drag != null) {
+    _areaSelectStartNorm = null;
+    _areaSelectCurrentNorm = null;
+    _areaSelecting = false;
+    if (_drag != null || _bulkDrag != null) {
       setState(() {
-        _drag!.nx = nx;
-        _drag!.ny = ny;
+        _drag = null;
+        _bulkDrag = null;
+        _bulkPlantPreview = null;
+        _bulkDecorPreview = null;
+      });
+    } else if (_areaSelecting) {
+      setState(() {});
+    }
+  }
+
+  bool get _viewportScaleEnabled => !_pointerDragging && _bulkDrag == null;
+
+  void _onSandPointerDown(PointerDownEvent e, double nx, double ny) {
+    setState(() {
+      _pointerDownGlobal = e.position;
+      _pointerDragging = false;
+      _areaSelecting = false;
+      _areaSelectStartNorm = Offset(nx, ny);
+      _areaSelectCurrentNorm = Offset(nx, ny);
+      if (_isPlacing) {
+        _pointerPick = null;
+      } else {
+        _pointerPick = _hitTester.nearestPick(
+          nx,
+          ny,
+          _garden,
+          gardenSize: _gardenLayoutSize,
+        );
+      }
+    });
+  }
+
+  void _onSandPointerMove(PointerMoveEvent e, double nx, double ny) {
+    if (_pointerDragging && _bulkDrag != null) {
+      _updateBulkDragPreview(nx, ny);
+      return;
+    }
+    if (_pointerDragging && _drag != null) {
+      final clamped = _clampDragNorm(
+        nx: nx,
+        ny: ny,
+        isPlant: _drag!.isPlant,
+        id: _drag!.id,
+      );
+      setState(() {
+        _drag!.nx = clamped.nx;
+        _drag!.ny = clamped.ny;
       });
       return;
     }
-    if (_pointerDownGlobal == null ||
-        _multiMode ||
-        _placingDecorKind != null ||
-        _pointerPick == null) {
+    if (_pointerDownGlobal == null || _isPlacing) {
       return;
     }
-    if ((e.position - _pointerDownGlobal!).distance > _pointerSlop) {
+    if ((e.position - _pointerDownGlobal!).distance <= _pointerSlop) {
+      return;
+    }
+    if (_selection.multiMode && _selection.bulkCount > 0) {
       setState(() {
         _pointerDragging = true;
-        _drag = _DragSession(
-          isPlant: _pointerPick!.isPlant,
-          id: _pointerPick!.id,
-          nx: nx,
-          ny: ny,
+        final plantOrigins = <String, Offset>{};
+        for (final id in _selection.bulkPrimary) {
+          final item = _garden.items.firstWhere((p) => p.id == id);
+          plantOrigins[id] = Offset(item.positionX, item.positionY);
+        }
+        final decorOrigins = <String, Offset>{};
+        for (final id in _selection.bulkDecor) {
+          final item = _garden.decor.firstWhere((d) => d.id == id);
+          decorOrigins[id] = Offset(item.positionX, item.positionY);
+        }
+        _bulkDrag = _BulkDragSession(
+          anchorNx: nx,
+          anchorNy: ny,
+          plantOrigins: plantOrigins,
+          decorOrigins: decorOrigins,
         );
+        _updateBulkDragPreview(nx, ny);
       });
+      return;
     }
+    if (_selection.multiMode &&
+        _selection.bulkSelectStyle == BulkSelectStyle.area) {
+      setState(() {
+        _areaSelecting = true;
+        _areaSelectCurrentNorm = Offset(nx, ny);
+      });
+      return;
+    }
+    if (_selection.multiMode) {
+      return;
+    }
+    final pick = _selection.hasFocus ? _focusedEntityRef() : _pointerPick;
+    if (pick == null) return;
+    final clamped = _clampDragNorm(
+      nx: nx,
+      ny: ny,
+      isPlant: pick.isPrimary,
+      id: pick.id,
+    );
+    setState(() {
+      _pointerDragging = true;
+      _drag = _DragSession(
+        isPlant: pick.isPrimary,
+        id: pick.id,
+        nx: clamped.nx,
+        ny: clamped.ny,
+      );
+    });
   }
 
-  void _onSandPointerUp(PointerUpEvent e, RenderBox box, double w, double h) {
-    final local = box.globalToLocal(e.position);
-    final nx = (local.dx / w).clamp(0.02, 0.98);
-    final ny = (local.dy / h).clamp(0.02, 0.98);
+  void _commitAreaSelection() {
+    final start = _areaSelectStartNorm;
+    final end = _areaSelectCurrentNorm;
+    if (start == null || end == null) return;
+    final rect = Rect.fromPoints(start, end);
+    if (rect.width < 0.008 && rect.height < 0.008) {
+      _selection.deselectOnEmptyTap();
+      return;
+    }
+    final primary = <String>{};
+    final decor = <String>{};
+    zenGardenCollectInNormRect(
+      rect,
+      _garden,
+      _gardenLayoutSize,
+      bulkPrimary: primary,
+      bulkDecor: decor,
+    );
+    _selection.replaceBulkSelection(primaryIds: primary, decorIds: decor);
+  }
+
+  void _onSandPointerUp(PointerUpEvent e, double nx, double ny) {
+    if (_pointerDragging && _bulkDrag != null) {
+      _commitBulkDrag();
+      _resetPointer();
+      return;
+    }
     if (_pointerDragging && _drag != null) {
       if (_drag!.isPlant) {
         _commitPlantDrag(_drag!.id);
@@ -732,34 +1345,235 @@ class _ZenGardenScreenState extends State<ZenGardenScreen> {
       _resetPointer();
       return;
     }
-    if (_multiMode && _pointerPick != null) {
-      if (_pointerPick!.isPlant) {
-        _toggleBulkPlant(_pointerPick!.id);
-      } else {
-        _toggleBulkDecor(_pointerPick!.id);
-      }
+    if (_selection.multiMode &&
+        _selection.bulkSelectStyle == BulkSelectStyle.area &&
+        _areaSelecting) {
+      setState(_commitAreaSelection);
       _resetPointer();
       return;
     }
-    if (_placingDecorKind != null && _pointerDownGlobal != null) {
+    if (_selection.multiMode) {
+      setState(() {
+        if (_pointerPick != null) {
+          _selection.toggleBulk(_pointerPick!);
+        } else {
+          _selection.deselectOnEmptyTap();
+        }
+      });
+      _resetPointer();
+      return;
+    }
+    if (_placingDecorInventoryId != null && _pointerDownGlobal != null) {
       if ((e.position - _pointerDownGlobal!).distance <= _pointerSlop * 2) {
         _placeDecorAt(nx, ny);
       }
       _resetPointer();
       return;
     }
-    if (_pointerPick != null) {
-      setState(() {
-        if (_pointerPick!.isPlant) {
-          _focusPlantId = _pointerPick!.id;
-          _focusDecorId = null;
-        } else {
-          _focusDecorId = _pointerPick!.id;
-          _focusPlantId = null;
-        }
-      });
+    if (_placingPlant && _pointerDownGlobal != null) {
+      if ((e.position - _pointerDownGlobal!).distance <= _pointerSlop * 2) {
+        _placePlantAt(nx, ny);
+      }
+      _resetPointer();
+      return;
     }
+    setState(() {
+      if (_pointerPick != null) {
+        if (!_selection.multiMode &&
+            _selection.hasFocus &&
+            ((_selection.focusPrimaryId != null &&
+                    _pointerPick!.isPrimary &&
+                    _selection.focusPrimaryId == _pointerPick!.id) ||
+                (_selection.focusDecorId != null &&
+                    !_pointerPick!.isPrimary &&
+                    _selection.focusDecorId == _pointerPick!.id))) {
+          _selection.deselectOnEmptyTap();
+        } else {
+          _selection.applyPick(_pointerPick!);
+        }
+      } else {
+        _selection.deselectOnEmptyTap();
+      }
+    });
     _resetPointer();
+  }
+
+  /// When the selected item sits low on the sand, anchor the action panel at the top
+  /// so it does not cover the selection.
+  bool _actionPanelUsesTopAnchor(double normY) => normY > 0.58;
+
+  double _fullscreenTopInset(BuildContext context) {
+    final topPadding = MediaQuery.paddingOf(context).top;
+    return topPadding + (_chromeVisible ? 8 : 56);
+  }
+
+  Widget _buildGardenOverlayShell({
+    required BuildContext context,
+    required bool anchorTop,
+    required Widget child,
+  }) {
+    final bottomPadding = MediaQuery.paddingOf(context).bottom;
+    return Align(
+      alignment: anchorTop ? Alignment.topCenter : Alignment.bottomCenter,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          12,
+          anchorTop ? _fullscreenTopInset(context) : 10,
+          12,
+          anchorTop ? 10 : bottomPadding + 10,
+        ),
+        child: Material(
+          elevation: 10,
+          shadowColor: Colors.black38,
+          borderRadius: BorderRadius.circular(16),
+          clipBehavior: Clip.antiAlias,
+          color: widget.secondaryColor.withValues(alpha: 0.97),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 520,
+              maxHeight: _gardenLayoutSize.height * 0.48,
+            ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+              child: child,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBulkSelectOverlay(
+    BuildContext context, {
+    required int bulkCount,
+  }) {
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          12,
+          10,
+          12,
+          MediaQuery.paddingOf(context).bottom + 10,
+        ),
+        child: Material(
+          elevation: 8,
+          shadowColor: Colors.black38,
+          borderRadius: BorderRadius.circular(16),
+          clipBehavior: Clip.antiAlias,
+          color: widget.secondaryColor.withValues(alpha: 0.97),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 520,
+              maxHeight: _gardenLayoutSize.height * 0.32,
+            ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SegmentedButton<BulkSelectStyle>(
+                    segments: const [
+                      ButtonSegment(
+                        value: BulkSelectStyle.tap,
+                        label: Text('Tap'),
+                        icon: Icon(Icons.touch_app_outlined, size: 18),
+                      ),
+                      ButtonSegment(
+                        value: BulkSelectStyle.area,
+                        label: Text('Area'),
+                        icon: Icon(Icons.crop_free, size: 18),
+                      ),
+                    ],
+                    selected: {_selection.bulkSelectStyle},
+                    onSelectionChanged: (selected) {
+                      setState(() {
+                        _selection.setBulkSelectStyle(selected.first);
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _selection.bulkSelectStyle == BulkSelectStyle.area
+                        ? (bulkCount == 0
+                            ? 'Drag a box over items to select them. Tap empty sand to clear.'
+                            : '$bulkCount selected. Drag to move the group. Tap empty sand to clear.')
+                        : (bulkCount == 0
+                            ? 'Tap plants or decorations to toggle selection.'
+                            : '$bulkCount selected. Drag to move the group. Tap empty sand to clear.'),
+                    style: widget.textStyle.copyWith(
+                      fontWeight: FontWeight.normal,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFocusActionOverlay(
+    BuildContext context, {
+    required GardenItem? focusPlant,
+    required DecorItem? focusDecor,
+  }) {
+    if (_selection.multiMode) return const SizedBox.shrink();
+
+    if (focusPlant == null && focusDecor == null) {
+      if (!_chromeVisible) return const SizedBox.shrink();
+      return Align(
+        alignment: Alignment.bottomCenter,
+        child: IgnorePointer(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              16,
+              10,
+              16,
+              MediaQuery.paddingOf(context).bottom + 16,
+            ),
+            child: Text(
+              'Tap a plant or decoration. Drag to reposition.',
+              textAlign: TextAlign.center,
+              style: widget.textStyle.copyWith(
+                fontWeight: FontWeight.normal,
+                color: widget.textStyle.color?.withValues(alpha: 0.72),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final anchorY = focusPlant?.positionY ?? focusDecor!.positionY;
+    return _buildGardenOverlayShell(
+      context: context,
+      anchorTop: _actionPanelUsesTopAnchor(anchorY),
+      child: _BottomActions(
+        textStyle: widget.textStyle,
+        primary: widget.primaryColor,
+        secondary: widget.secondaryColor,
+        garden: _garden,
+        plant: focusPlant,
+        decor: focusDecor,
+        growCost: focusPlant == null ? null : _growCostFor(focusPlant),
+        growCostDecor: focusDecor == null ? null : _growCostDecor(focusDecor),
+        isFirstPlantFree: focusPlant != null && _isFirstPlantFree(focusPlant),
+        onGrow: focusPlant == null ? null : _growSelected,
+        onGrowDecor: focusDecor == null ? null : _growDecorSelected,
+        onSkip: focusPlant == null ? null : _skipWait,
+        onSkipDecor: focusDecor == null ? null : _skipDecorWait,
+        onRemoveMutation: focusPlant == null ? null : _removeMutation,
+        onRemoveDecorMutation: focusDecor == null ? null : _removeDecorMutation,
+        onRestart: focusPlant == null ? null : _confirmRestart,
+        onRestartDecor: focusDecor == null ? null : _confirmDecorRestart,
+        onRemovePlant: focusPlant == null ? null : _removeFocusPlant,
+        onRemoveDecor: focusDecor == null ? null : _removeFocusDecor,
+      ),
+    );
   }
 
   @override
@@ -783,278 +1597,337 @@ class _ZenGardenScreenState extends State<ZenGardenScreen> {
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     final focusPlant = _focusPlant;
     final focusDecor = _focusDecor;
-    final bulkCount = _bulkPlants.length + _bulkDecor.length;
+    final bulkCount = _selection.bulkCount;
+    final topPadding = MediaQuery.paddingOf(context).top;
 
     return Theme(
       data: widget.themeData,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Stack(
+        fit: StackFit.expand,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: Semantics(
-              container: true,
-              label:
-                  'Focus points: ${_garden.pointsBalance}. Earn more from goals on the dashboard.',
-              child: Row(
-                children: [
-                  Icon(Icons.spa_outlined, color: widget.primaryColor, size: 22),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text('Points: ${_garden.pointsBalance}', style: widget.textStyle),
-                  ),
-                  IconButton(
-                    tooltip: 'How points work',
-                    onPressed: () => _snack(
-                      'Earn points from goals on the dashboard. Shared balance here.',
-                    ),
-                    icon: Icon(Icons.info_outline, color: widget.primaryColor),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              alignment: WrapAlignment.start,
-              children: [
-                FilledButton.tonalIcon(
-                  onPressed: _addPlant,
-                  icon: const Icon(Icons.grass_outlined),
-                  label: const Text('Add plant'),
-                  style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
-                ),
-                FilledButton.tonalIcon(
-                  onPressed: _openShop,
-                  icon: const Icon(Icons.storefront_outlined),
-                  label: const Text('Shop'),
-                  style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
-                ),
-                FilledButton.tonalIcon(
-                  onPressed: _openInventory,
-                  icon: const Icon(Icons.inventory_2_outlined),
-                  label: const Text('Inventory'),
-                  style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
-                ),
-                FilledButton.tonalIcon(
-                  onPressed: () => _setMultiMode(!_multiMode),
-                  icon: Icon(_multiMode ? Icons.check_box : Icons.check_box_outline_blank),
-                  label: Text(_multiMode ? 'Selection on' : 'Select'),
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size(0, 48),
-                    backgroundColor: _multiMode
-                        ? widget.primaryColor.withValues(alpha: 0.15)
-                        : null,
-                  ),
-                ),
-                if (_multiMode && bulkCount > 0)
-                  FilledButton.icon(
-                    onPressed: _bulkDelete,
-                    icon: const Icon(Icons.delete_outline),
-                    label: Text('Delete ($bulkCount)'),
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size(0, 48),
-                      backgroundColor: Colors.red.withValues(alpha: 0.12),
-                      foregroundColor: Colors.red.shade900,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_chromeVisible) ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                  child: Semantics(
+                    container: true,
+                    label:
+                        'Focus points: ${_garden.pointsBalance}. Earn more from goals on the dashboard.',
+                    child: Row(
+                      children: [
+                        Icon(Icons.spa_outlined, color: widget.primaryColor, size: 22),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Points: ${_garden.pointsBalance}',
+                            style: widget.textStyle,
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'How points work',
+                          onPressed: () => _snack(
+                            'Earn points from goals on the dashboard. Shared balance here.',
+                          ),
+                          icon: Icon(Icons.info_outline, color: widget.primaryColor),
+                        ),
+                      ],
                     ),
                   ),
-              ],
-            ),
-          ),
-          if (_placingDecorKind != null)
-            Material(
-              color: widget.secondaryColor,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                child: Row(
-                  children: [
-                    Icon(Icons.touch_app, color: widget.primaryColor, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Placing: ${decorEntryByKind(_placingDecorKind!)?.label ?? _placingDecorKind}. Tap sand.',
-                        style: widget.textStyle.copyWith(fontWeight: FontWeight.normal, fontSize: 13),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    alignment: WrapAlignment.start,
+                    children: [
+                      FilledButton.tonalIcon(
+                        onPressed: _startPlantPlacement,
+                        icon: const Icon(Icons.grass_outlined),
+                        label: const Text('Add plant'),
+                        style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
                       ),
-                    ),
-                    TextButton(
-                      onPressed: () => setState(() => _placingDecorKind = null),
-                      child: const Text('Cancel'),
-                    ),
-                  ],
+                      FilledButton.tonalIcon(
+                        onPressed: _openShop,
+                        icon: const Icon(Icons.storefront_outlined),
+                        label: const Text('Shop'),
+                        style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
+                      ),
+                      FilledButton.tonalIcon(
+                        onPressed: _openInventory,
+                        icon: const Icon(Icons.inventory_2_outlined),
+                        label: const Text('Inventory'),
+                        style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
+                      ),
+                      FilledButton.tonalIcon(
+                        onPressed: () => _setMultiMode(!_selection.multiMode),
+                        icon: Icon(
+                          _selection.multiMode
+                              ? Icons.check_box
+                              : Icons.check_box_outline_blank,
+                        ),
+                        label: Text(_selection.multiMode ? 'Selection on' : 'Select'),
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size(0, 48),
+                          backgroundColor: _selection.multiMode
+                              ? widget.primaryColor.withValues(alpha: 0.15)
+                              : null,
+                        ),
+                      ),
+                      FilledButton.tonalIcon(
+                        onPressed: _toggleChrome,
+                        icon: const Icon(Icons.fullscreen),
+                        label: const Text('Fullscreen'),
+                        style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
+                      ),
+                      FilledButton.tonalIcon(
+                        onPressed: _centerViewport,
+                        icon: const Icon(Icons.center_focus_strong),
+                        label: const Text('Center'),
+                        style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
+                      ),
+                      if (_selection.multiMode && bulkCount > 0)
+                        FilledButton.icon(
+                          onPressed: _bulkStashToInventory,
+                          icon: const Icon(Icons.inventory_2_outlined),
+                          label: Text('To inventory ($bulkCount)'),
+                          style: FilledButton.styleFrom(
+                            minimumSize: const Size(0, 48),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-            ),
-          const SizedBox(height: 6),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final w = constraints.maxWidth;
-                  final h = constraints.maxHeight;
-                  return ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Builder(
-                      builder: (sandContext) {
-                        return Stack(
-                          clipBehavior: Clip.hardEdge,
-                          children: [
-                            CustomPaint(
-                              size: Size(w, h),
-                              painter: RakedSandPainter(
-                                line: Color.lerp(
-                                  widget.primaryColor,
-                                  const Color(0xFF7A6B5C),
-                                  0.35,
-                                )!.withValues(alpha: 0.11),
-                                washTop: Color.lerp(
-                                  widget.secondaryColor,
-                                  const Color(0xFFF2EBDF),
-                                  0.5,
-                                )!,
-                                washBottom: Color.lerp(
-                                  widget.secondaryColor,
-                                  const Color(0xFFD9CFC0),
-                                  0.28,
-                                )!,
+                if (_isPlacing)
+                  Material(
+                    color: widget.secondaryColor,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                      child: Row(
+                        children: [
+                          Icon(Icons.touch_app, color: widget.primaryColor, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Placing ${_placingLabel ?? 'object'} — tap the garden',
+                              style: widget.textStyle.copyWith(
+                                fontWeight: FontWeight.normal,
+                                fontSize: 13,
                               ),
                             ),
-                            ..._garden.decor.map((d) {
-                              final sel = _multiMode
-                                  ? _bulkDecor.contains(d.id)
-                                  : _focusDecorId == d.id;
-                              final dispX = _drag?.id == d.id && !(_drag?.isPlant ?? true)
-                                  ? _drag!.nx
-                                  : d.positionX;
-                              final dispY = _drag?.id == d.id && !(_drag?.isPlant ?? true)
-                                  ? _drag!.ny
-                                  : d.positionY;
-                              final left = dispX * w - _decorVisualW / 2;
-                              final top = dispY * h - _decorVisualH / 2;
-                              final tProg = _timerProgressDecor(d);
-                              return Positioned(
-                                left: left.clamp(2.0, w - _decorVisualW - 2),
-                                top: top.clamp(2.0, h - _decorVisualH - 2),
-                                child: IgnorePointer(
-                                  child: _DecorVisual(
-                                    item: d,
-                                    selected: sel,
-                                    primary: widget.primaryColor,
-                                    secondary: widget.secondaryColor,
+                          ),
+                          TextButton(
+                            onPressed: _cancelPlacement,
+                            child: const Text('Cancel'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 6),
+              ],
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: _chromeVisible ? 12 : 0),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final w = constraints.maxWidth;
+                      final h = constraints.maxHeight;
+                      _gardenLayoutSize = Size(w, h);
+                      final plantOverrides = <String, Offset>{};
+                      final decorOverrides = <String, Offset>{};
+                      if (_drag != null) {
+                        if (_drag!.isPlant) {
+                          plantOverrides[_drag!.id] = Offset(_drag!.nx, _drag!.ny);
+                        } else {
+                          decorOverrides[_drag!.id] = Offset(_drag!.nx, _drag!.ny);
+                        }
+                      }
+                      if (_bulkPlantPreview != null) {
+                        plantOverrides.addAll(_bulkPlantPreview!);
+                      }
+                      if (_bulkDecorPreview != null) {
+                        decorOverrides.addAll(_bulkDecorPreview!);
+                      }
+                      final paintEntities = zenBuildPaintEntities(
+                        _garden,
+                        _gardenLayoutSize,
+                        plantOverrides: plantOverrides.isEmpty ? null : plantOverrides,
+                        decorOverrides: decorOverrides.isEmpty ? null : decorOverrides,
+                      );
+                      return ClipRRect(
+                        borderRadius: BorderRadius.circular(_chromeVisible ? 12 : 0),
+                        child: Stack(
+                          clipBehavior: Clip.hardEdge,
+                          children: [
+                            ProgressiveSandboxViewport(
+                              width: w,
+                              height: h,
+                              transformationController: _viewportTransform,
+                              panEnabled: false,
+                              scaleEnabled: _viewportScaleEnabled,
+                              onPointerDown: _onSandPointerDown,
+                              onPointerMove: _onSandPointerMove,
+                              onPointerUp: _onSandPointerUp,
+                              onPointerCancel: _resetPointer,
+                              child: Stack(
+                                clipBehavior: Clip.hardEdge,
+                                children: [
+                                  CustomPaint(
+                                    size: Size(w, h),
+                                    painter: RakedSandPainter.harmonized(
+                                      themePrimary: widget.primaryColor,
+                                      themeSecondary: widget.secondaryColor,
+                                    ),
+                                  ),
+                                  CustomPaint(
+                                    size: Size(w, h),
+                                    painter: ZenGardenStaticSceneryPainter.harmonized(
+                                      themePrimary: widget.primaryColor,
+                                      themeSecondary: widget.secondaryColor,
+                                    ),
+                                  ),
+                                  ZenGardenWaterfallLayer(
+                                    size: Size(w, h),
                                     reduceMotion: reduceMotion,
-                                    timerProgress: tProg,
+                                  ),
+                                  ...paintEntities.map((entity) {
+                                    if (entity.kind == ZenPaintEntityKind.decor) {
+                                      final d = entity.decor!;
+                                      final sel = _selection.isDecorSelected(d.id);
+                                      final left = entity.displayX * w - _decorVisualW / 2;
+                                      final top = entity.displayY * h - _decorVisualH / 2;
+                                      final tProg = _timerProgressDecor(d);
+                                      return Positioned(
+                                        left: left.clamp(2.0, w - _decorVisualW - 2),
+                                        top: top.clamp(2.0, h - _decorVisualH - 2),
+                                        child: IgnorePointer(
+                                          child: RepaintBoundary(
+                                            child: ZenDecorVisual(
+                                              key: ValueKey('decor-${d.id}'),
+                                              item: d,
+                                              selected: sel,
+                                              primary: widget.primaryColor,
+                                              secondary: widget.secondaryColor,
+                                              reduceMotion: reduceMotion,
+                                              timerProgress: tProg,
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                    final item = entity.plant!;
+                                    final sel = _selection.isPrimarySelected(item.id);
+                                    final left = entity.displayX * w - _plantVisualW / 2;
+                                    final top = entity.displayY * h - _plantVisualH / 2;
+                                    final tProg = _timerProgress(item);
+                                    return Positioned(
+                                      left: left.clamp(2.0, w - _plantVisualW - 2),
+                                      top: top.clamp(2.0, h - _plantVisualH - 2),
+                                      child: IgnorePointer(
+                                        child: _PlantVisual(
+                                          key: ValueKey('plant-${item.id}'),
+                                          item: item,
+                                          primary: widget.primaryColor,
+                                          selected: sel,
+                                          timerProgress: tProg,
+                                          reduceMotion: reduceMotion,
+                                        ),
+                                      ),
+                                    );
+                                  }),
+                                if (_areaSelecting &&
+                                    _areaSelectStartNorm != null &&
+                                    _areaSelectCurrentNorm != null)
+                                  Positioned.fill(
+                                    child: IgnorePointer(
+                                      child: CustomPaint(
+                                        painter: _AreaSelectBoxPainter(
+                                          startNorm: _areaSelectStartNorm!,
+                                          endNorm: _areaSelectCurrentNorm!,
+                                          color: widget.primaryColor,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              if (_drag != null)
+                                Positioned(
+                                  left: _drag!.nx * w - 30,
+                                  top: _drag!.ny * h - 30,
+                                  child: IgnorePointer(
+                                    child: CustomPaint(
+                                      size: const Size(60, 60),
+                                      painter: DropPreviewPainter(
+                                        center: const Offset(30, 30),
+                                        color: widget.primaryColor,
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              );
-                            }),
-                            ..._garden.items.map((item) {
-                              final sel = _multiMode
-                                  ? _bulkPlants.contains(item.id)
-                                  : _focusPlantId == item.id;
-                              final dispX =
-                                  _drag?.isPlant == true && _drag?.id == item.id
-                                      ? _drag!.nx
-                                      : item.positionX;
-                              final dispY =
-                                  _drag?.isPlant == true && _drag?.id == item.id
-                                      ? _drag!.ny
-                                      : item.positionY;
-                              final left = dispX * w - _plantVisualW / 2;
-                              final top = dispY * h - _plantVisualH / 2;
-                              final tProg = _timerProgress(item);
-                              return Positioned(
-                                left: left.clamp(2.0, w - _plantVisualW - 2),
-                                top: top.clamp(2.0, h - _plantVisualH - 2),
-                                child: IgnorePointer(
-                                  child: _PlantVisual(
-                                    item: item,
-                                    primary: widget.primaryColor,
-                                    selected: sel,
-                                    timerProgress: tProg,
-                                    reduceMotion: reduceMotion,
-                                  ),
-                                ),
-                              );
-                            }),
-                            if (_drag != null)
+                                ],
+                              ),
+                            ),
+                            if (_viewportMoved)
                               Positioned(
-                                left: _drag!.nx * w - 30,
-                                top: _drag!.ny * h - 30,
-                                child: IgnorePointer(
-                                  child: CustomPaint(
-                                    size: const Size(60, 60),
-                                    painter: DropPreviewPainter(
-                                      center: const Offset(30, 30),
+                                left: 10,
+                                bottom: 10,
+                                child: Material(
+                                  elevation: 3,
+                                  shadowColor: Colors.black26,
+                                  borderRadius: BorderRadius.circular(24),
+                                  color: widget.secondaryColor.withValues(alpha: 0.94),
+                                  child: IconButton(
+                                    tooltip: 'Center garden',
+                                    onPressed: _centerViewport,
+                                    icon: Icon(
+                                      Icons.center_focus_strong,
                                       color: widget.primaryColor,
                                     ),
                                   ),
                                 ),
                               ),
-                            Positioned.fill(
-                              child: Listener(
-                                behavior: HitTestBehavior.translucent,
-                                onPointerDown: (e) {
-                                  final box = sandContext.findRenderObject() as RenderBox?;
-                                  if (box == null || !box.hasSize) return;
-                                  _onSandPointerDown(e, box, w, h);
-                                },
-                                onPointerMove: (e) {
-                                  final box = sandContext.findRenderObject() as RenderBox?;
-                                  if (box == null || !box.hasSize) return;
-                                  _onSandPointerMove(e, box, w, h);
-                                },
-                                onPointerUp: (e) {
-                                  final box = sandContext.findRenderObject() as RenderBox?;
-                                  if (box == null || !box.hasSize) return;
-                                  _onSandPointerUp(e, box, w, h);
-                                },
-                                onPointerCancel: (_) => _resetPointer(),
+                            if (_selection.multiMode)
+                              _buildBulkSelectOverlay(context, bulkCount: bulkCount),
+                            if (!_selection.multiMode)
+                              _buildFocusActionOverlay(
+                                context,
+                                focusPlant: focusPlant,
+                                focusDecor: focusDecor,
                               ),
-                            ),
                           ],
-                        );
-                      },
-                    ),
-                  );
-                },
+                        ),
+                      );
+                    },
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
-          if (_multiMode)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Text(
-                bulkCount == 0
-                    ? 'Selection mode: tap plants or decorations to toggle. Then delete.'
-                    : '$bulkCount selected.',
-                style: widget.textStyle.copyWith(fontWeight: FontWeight.normal, fontSize: 13),
+          if (!_chromeVisible)
+            Positioned(
+              top: topPadding + 8,
+              left: 12,
+              right: 12,
+              child: Row(
+                children: [
+                  FilledButton.tonalIcon(
+                    onPressed: _toggleChrome,
+                    icon: const Icon(Icons.dashboard_customize_outlined),
+                    label: const Text('Show controls'),
+                    style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
+                  ),
+                  const Spacer(),
+                  if (_selection.multiMode && bulkCount > 0)
+                    FilledButton.icon(
+                      onPressed: _bulkStashToInventory,
+                      icon: const Icon(Icons.inventory_2_outlined),
+                      label: Text('To inventory ($bulkCount)'),
+                      style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
+                    ),
+                ],
               ),
-            ),
-          if (!_multiMode)
-            _BottomActions(
-              textStyle: widget.textStyle,
-              primary: widget.primaryColor,
-              secondary: widget.secondaryColor,
-              garden: _garden,
-              plant: focusPlant,
-              decor: focusDecor,
-              growCost: focusPlant == null ? null : _growCostFor(focusPlant),
-              growCostDecor: focusDecor == null ? null : _growCostDecor(focusDecor),
-              isFirstPlantFree:
-                  focusPlant != null && _isFirstPlantFree(focusPlant),
-              onGrow: focusPlant == null ? null : _growSelected,
-              onGrowDecor: focusDecor == null ? null : _growDecorSelected,
-              onSkip: focusPlant == null ? null : _skipWait,
-              onSkipDecor: focusDecor == null ? null : _skipDecorWait,
-              onRemoveMutation: focusPlant == null ? null : _removeMutation,
-              onRemoveDecorMutation: focusDecor == null ? null : _removeDecorMutation,
-              onRestart: focusPlant == null ? null : _confirmRestart,
-              onRestartDecor: focusDecor == null ? null : _confirmDecorRestart,
-              onRemovePlant: focusPlant == null ? null : _removeFocusPlant,
-              onRemoveDecor: focusDecor == null ? null : _removeFocusDecor,
             ),
         ],
       ),
@@ -1065,6 +1938,7 @@ class _ZenGardenScreenState extends State<ZenGardenScreen> {
 /// Visual only; hit-testing and drag are handled by the sand [Listener].
 class _PlantVisual extends StatelessWidget {
   const _PlantVisual({
+    super.key,
     required this.item,
     required this.primary,
     required this.selected,
@@ -1083,9 +1957,12 @@ class _PlantVisual extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fill = applyMutationTint(base: primary, mutation: item.mutation)
-        .withValues(alpha: selected ? 0.95 : 0.82);
-    final outline = primary;
+    final fill = ZenCartoonStyle.plantFill(
+      primary,
+      selected: selected,
+      mutated: item.mutation == MutationKind.invertedColors,
+    );
+    final outline = ZenCartoonStyle.ink;
 
     return Semantics(
       container: true,
@@ -1115,77 +1992,41 @@ class _PlantVisual extends StatelessWidget {
               ),
               Positioned(
                 bottom: 6,
-                child: CustomPaint(
-                  size: const Size(72, 92),
-                  painter: ZenPlantPainter(
-                    stageIndex: item.stageIndex,
-                    fill: fill,
-                    outline: outline,
-                    mutation: item.mutation,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DecorVisual extends StatelessWidget {
-  const _DecorVisual({
-    required this.item,
-    required this.selected,
-    required this.primary,
-    required this.secondary,
-    required this.reduceMotion,
-    this.timerProgress,
-  });
-
-  final DecorItem item;
-  final bool selected;
-  final Color primary;
-  final Color secondary;
-  final bool reduceMotion;
-  final double? timerProgress;
-
-  static const double _w = 96;
-  static const double _h = 90;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      container: true,
-      excludeSemantics: true,
-      child: AnimatedScale(
-        scale: reduceMotion ? 1.0 : (selected ? 1.05 : 1.0),
-        duration: reduceMotion ? Duration.zero : const Duration(milliseconds: 200),
-        child: SizedBox(
-          width: _w,
-          height: _h,
-          child: Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.center,
-            children: [
-              if (selected && !reduceMotion)
-                Positioned(
-                  top: -4,
-                  child: Icon(Icons.arrow_drop_up, size: 30, color: primary.withValues(alpha: 0.85)),
-                ),
-              CustomPaint(
-                size: const Size(_w, _h),
-                painter: PlantHaloPainter(
-                  selected: selected,
-                  primary: primary,
-                  timerProgress: timerProgress,
-                ),
-              ),
-              Positioned(
-                bottom: 2,
-                child: CustomPaint(
-                  size: const Size(94, 78),
-                  painter: ZenDecorPainter(item: item, primary: primary, secondary: secondary),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.bottomCenter,
+                  children: [
+                    CustomPaint(
+                      size: const Size(72, 14),
+                      painter: PlaceableGroundShadowPainter(
+                        center: const Offset(36, 10),
+                        width: 54,
+                        height: 12,
+                      ),
+                    ),
+                    DecoratedBox(
+                      decoration: item.mutation == MutationKind.invertedColors
+                          ? const BoxDecoration(
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Color(0x4D00FFD1),
+                                  blurRadius: 12,
+                                  spreadRadius: 4,
+                                ),
+                              ],
+                            )
+                          : const BoxDecoration(),
+                      child: CustomPaint(
+                        size: const Size(72, 92),
+                        painter: ZenPlantPainter(
+                          stageIndex: item.stageIndex,
+                          fill: fill,
+                          outline: outline,
+                          mutation: item.mutation,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -1261,12 +2102,9 @@ class _BottomActions extends StatelessWidget {
       return Semantics(
         container: true,
         label: 'Nothing selected. Tap the garden or add a plant.',
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Text(
-            'Tap a plant or decoration. Drag to reposition.',
-            style: textStyle.copyWith(fontWeight: FontWeight.normal),
-          ),
+        child: Text(
+          'Tap a plant or decoration. Drag to reposition.',
+          style: textStyle.copyWith(fontWeight: FontWeight.normal),
         ),
       );
     }
@@ -1283,107 +2121,99 @@ class _BottomActions extends StatelessWidget {
           ? ''
           : ', rare inverted-color variant active. Remove variant button available.';
 
-      return Material(
-        color: secondary,
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Semantics(
-                  container: true,
-                  label:
-                      'Selected decoration $label, stage ${d.stageIndex + 1} of five.$mutLabel Balance ${garden.pointsBalance} points.',
-                  child: Text(
-                    '$label · Stage ${d.stageIndex + 1} of 5'
-                    '${d.mutation != null ? ' · variant on' : ''}',
-                    style: textStyle,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Semantics(
-                  button: true,
-                  label: 'Remove this decoration from the garden',
-                  child: OutlinedButton(
-                    onPressed: onRemoveDecor,
-                    style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
-                    child: const Text('Remove decoration'),
-                  ),
-                ),
-                if (waiting && skipCost != null) ...[
-                  const SizedBox(height: 8),
-                  _CountdownRow(
-                    remaining: remaining,
-                    waitTotal: waitTotal,
-                    skipCost: skipCost,
-                    balance: garden.pointsBalance,
-                    textStyle: textStyle,
-                    primary: primary,
-                    onSkip: onSkipDecor,
-                  ),
-                ],
-                const SizedBox(height: 12),
-                if (!waiting && d.stageIndex < DecorItem.maxStageIndex)
-                  Semantics(
-                    button: true,
-                    enabled:
-                        growCostDecor != null && garden.pointsBalance >= (growCostDecor ?? 0),
-                    label: growCostDecor == 0
-                        ? 'Grow decoration to next stage, no points cost'
-                        : 'Grow decoration to next stage, costs $growCostDecor points',
-                    child: FilledButton(
-                      onPressed: (growCostDecor != null &&
-                              garden.pointsBalance >= growCostDecor!)
-                          ? onGrowDecor
-                          : null,
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size.fromHeight(48),
-                        backgroundColor: primary,
-                        foregroundColor:
-                            ThemeData.estimateBrightnessForColor(primary) == Brightness.dark
-                                ? Colors.white
-                                : const Color(0xFF1C1B1A),
-                      ),
-                      child: Text(
-                        growCostDecor == 0
-                            ? 'Grow next (no points)'
-                            : 'Grow next ($growCostDecor pts)',
-                      ),
-                    ),
-                  ),
-                if (d.stageIndex >= DecorItem.maxStageIndex) ...[
-                  Text(
-                    'This decoration is fully grown.',
-                    style: textStyle.copyWith(fontWeight: FontWeight.normal),
-                  ),
-                  const SizedBox(height: 8),
-                  Semantics(
-                    button: true,
-                    label: 'Restart growth from first stage for a new rare variant chance',
-                    child: OutlinedButton(
-                      onPressed: onRestartDecor,
-                      style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-                      child: const Text('Restart growth'),
-                    ),
-                  ),
-                ],
-                if (d.mutation != null) ...[
-                  const SizedBox(height: 8),
-                  Semantics(
-                    button: true,
-                    label: 'Remove special color variant',
-                    child: TextButton(
-                      onPressed: onRemoveDecorMutation,
-                      child: const Text('Remove special variant'),
-                    ),
-                  ),
-                ],
-              ],
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Semantics(
+            container: true,
+            label:
+                'Selected decoration $label, stage ${d.stageIndex + 1} of five.$mutLabel Balance ${garden.pointsBalance} points.',
+            child: Text(
+              '$label · Stage ${d.stageIndex + 1} of 5'
+              '${d.mutation != null ? ' · variant on' : ''}',
+              style: textStyle,
             ),
           ),
-        ),
+          const SizedBox(height: 8),
+          Semantics(
+            button: true,
+            label: 'Move this decoration to inventory',
+            child: OutlinedButton(
+              onPressed: onRemoveDecor,
+              style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
+              child: const Text('To inventory'),
+            ),
+          ),
+          if (waiting && skipCost != null) ...[
+            const SizedBox(height: 8),
+            _CountdownRow(
+              remaining: remaining,
+              waitTotal: waitTotal,
+              skipCost: skipCost,
+              balance: garden.pointsBalance,
+              textStyle: textStyle,
+              primary: primary,
+              onSkip: onSkipDecor,
+            ),
+          ],
+          const SizedBox(height: 12),
+          if (!waiting && d.stageIndex < DecorItem.maxStageIndex)
+            Semantics(
+              button: true,
+              enabled:
+                  growCostDecor != null && garden.pointsBalance >= (growCostDecor ?? 0),
+              label: growCostDecor == 0
+                  ? 'Grow decoration to next stage, no points cost'
+                  : 'Grow decoration to next stage, costs $growCostDecor points',
+              child: FilledButton(
+                onPressed: (growCostDecor != null &&
+                        garden.pointsBalance >= growCostDecor!)
+                    ? onGrowDecor
+                    : null,
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                  backgroundColor: primary,
+                  foregroundColor:
+                      ThemeData.estimateBrightnessForColor(primary) == Brightness.dark
+                          ? Colors.white
+                          : const Color(0xFF1C1B1A),
+                ),
+                child: Text(
+                  growCostDecor == 0
+                      ? 'Grow next (no points)'
+                      : 'Grow next ($growCostDecor pts)',
+                ),
+              ),
+            ),
+          if (d.stageIndex >= DecorItem.maxStageIndex) ...[
+            Text(
+              'This decoration is fully grown.',
+              style: textStyle.copyWith(fontWeight: FontWeight.normal),
+            ),
+            const SizedBox(height: 8),
+            Semantics(
+              button: true,
+              label: 'Restart growth from first stage for a new rare variant chance',
+              child: OutlinedButton(
+                onPressed: onRestartDecor,
+                style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                child: const Text('Restart growth'),
+              ),
+            ),
+          ],
+          if (d.mutation != null) ...[
+            const SizedBox(height: 8),
+            Semantics(
+              button: true,
+              label: 'Remove special color variant',
+              child: TextButton(
+                onPressed: onRemoveDecorMutation,
+                child: const Text('Remove special variant'),
+              ),
+            ),
+          ],
+        ],
       );
     }
 
@@ -1398,99 +2228,91 @@ class _BottomActions extends StatelessWidget {
         ? ''
         : ', rare inverted-color variant active. Remove variant button available.';
 
-    return Material(
-      color: secondary,
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Semantics(
-                container: true,
-                label:
-                    'Selected plant, stage $stageLabel of five.$mutLabel Balance ${garden.pointsBalance} points.',
-                child: Text(
-                  'Stage: $stageLabel (${i.stageIndex + 1} of 5)'
-                  '${i.mutation != null ? ' · variant on' : ''}',
-                  style: textStyle,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Semantics(
-                button: true,
-                label: 'Remove this plant from the garden',
-                child: OutlinedButton(
-                  onPressed: onRemovePlant,
-                  style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
-                  child: const Text('Remove plant'),
-                ),
-              ),
-              if (waiting && skipCost != null) ...[
-                const SizedBox(height: 8),
-                _CountdownRow(
-                  remaining: remaining,
-                  waitTotal: waitTotal,
-                  skipCost: skipCost,
-                  balance: garden.pointsBalance,
-                  textStyle: textStyle,
-                  primary: primary,
-                  onSkip: onSkip,
-                ),
-              ],
-              const SizedBox(height: 12),
-              if (!waiting && i.stageIndex < GardenItem.maxStageIndex)
-                Semantics(
-                  button: true,
-                  enabled: growCost != null && garden.pointsBalance >= (growCost ?? 0),
-                  label: _growPlantSemanticsLabel(growCost, isFirstPlantFree),
-                  child: FilledButton(
-                    onPressed: (growCost != null && garden.pointsBalance >= growCost!)
-                        ? onGrow
-                        : null,
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size.fromHeight(48),
-                      backgroundColor: primary,
-                      foregroundColor:
-                          ThemeData.estimateBrightnessForColor(primary) == Brightness.dark
-                              ? Colors.white
-                              : const Color(0xFF1C1B1A),
-                    ),
-                    child: Text(_growPlantLabel(growCost, isFirstPlantFree)),
-                  ),
-                ),
-              if (i.stageIndex >= GardenItem.maxStageIndex) ...[
-                Text(
-                  'This plant is fully grown.',
-                  style: textStyle.copyWith(fontWeight: FontWeight.normal),
-                ),
-                const SizedBox(height: 8),
-                Semantics(
-                  button: true,
-                  label: 'Restart growth from seed for a new rare variant chance',
-                  child: OutlinedButton(
-                    onPressed: onRestart,
-                    style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-                    child: const Text('Restart growth from seed'),
-                  ),
-                ),
-              ],
-              if (i.mutation != null) ...[
-                const SizedBox(height: 8),
-                Semantics(
-                  button: true,
-                  label: 'Remove special color variant, keeps mature plant',
-                  child: TextButton(
-                    onPressed: onRemoveMutation,
-                    child: const Text('Remove special variant'),
-                  ),
-                ),
-              ],
-            ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Semantics(
+          container: true,
+          label:
+              'Selected plant, stage $stageLabel of five.$mutLabel Balance ${garden.pointsBalance} points.',
+          child: Text(
+            'Stage: $stageLabel (${i.stageIndex + 1} of 5)'
+            '${i.mutation != null ? ' · variant on' : ''}',
+            style: textStyle,
           ),
         ),
-      ),
+        const SizedBox(height: 8),
+        Semantics(
+          button: true,
+          label: 'Move this plant to inventory',
+          child: OutlinedButton(
+            onPressed: onRemovePlant,
+            style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
+            child: const Text('To inventory'),
+          ),
+        ),
+        if (waiting && skipCost != null) ...[
+          const SizedBox(height: 8),
+          _CountdownRow(
+            remaining: remaining,
+            waitTotal: waitTotal,
+            skipCost: skipCost,
+            balance: garden.pointsBalance,
+            textStyle: textStyle,
+            primary: primary,
+            onSkip: onSkip,
+          ),
+        ],
+        const SizedBox(height: 12),
+        if (!waiting && i.stageIndex < GardenItem.maxStageIndex)
+          Semantics(
+            button: true,
+            enabled: growCost != null && garden.pointsBalance >= (growCost ?? 0),
+            label: _growPlantSemanticsLabel(growCost, isFirstPlantFree),
+            child: FilledButton(
+              onPressed: (growCost != null && garden.pointsBalance >= growCost!)
+                  ? onGrow
+                  : null,
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
+                backgroundColor: primary,
+                foregroundColor:
+                    ThemeData.estimateBrightnessForColor(primary) == Brightness.dark
+                        ? Colors.white
+                        : const Color(0xFF1C1B1A),
+              ),
+              child: Text(_growPlantLabel(growCost, isFirstPlantFree)),
+            ),
+          ),
+        if (i.stageIndex >= GardenItem.maxStageIndex) ...[
+          Text(
+            'This plant is fully grown.',
+            style: textStyle.copyWith(fontWeight: FontWeight.normal),
+          ),
+          const SizedBox(height: 8),
+          Semantics(
+            button: true,
+            label: 'Restart growth from seed for a new rare variant chance',
+            child: OutlinedButton(
+              onPressed: onRestart,
+              style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+              child: const Text('Restart growth from seed'),
+            ),
+          ),
+        ],
+        if (i.mutation != null) ...[
+          const SizedBox(height: 8),
+          Semantics(
+            button: true,
+            label: 'Remove special color variant, keeps mature plant',
+            child: TextButton(
+              onPressed: onRemoveMutation,
+              child: const Text('Remove special variant'),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

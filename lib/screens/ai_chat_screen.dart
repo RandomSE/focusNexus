@@ -43,7 +43,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: msg['role'] == 'user'
-                                ? bundle.primaryColor.withOpacity(0.2)
+                                ? bundle.primaryColor.withValues(alpha: 0.2)
                                 : bundle.secondaryColor,
                             borderRadius: BorderRadius.circular(8),
                           ),

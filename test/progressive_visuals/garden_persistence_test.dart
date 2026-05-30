@@ -36,10 +36,12 @@ void main() {
       expect(state.freeFirstGrowthEverConsumed, isTrue);
     });
 
-    test('stash filters zero and negative counts', () {
-      const json = '{"stash":{"zen.moss_rock":2,"bad":0,"worse":-1,"gone":null}}';
+    test('legacy stash migrates to decor inventory', () {
+      const json = '{"stash":{"zen.moss_rock":2,"bad":0,"worse":-1}}';
       final state = GardenPersistence.decodeZenGarden(json, 0);
-      expect(state.decorStash, {'zen.moss_rock': 2});
+      expect(state.decorInventory.length, 2);
+      expect(state.decorInventory.every((d) => d.kind == 'zen.moss_rock'), isTrue);
+      expect(state.decorStash, isEmpty);
     });
 
     test('unknown theme and mutation fall back safely', () {
@@ -91,7 +93,24 @@ void main() {
             nextAdvanceAllowedAt: DateTime.utc(2026, 6, 1, 8),
           ),
         ],
-        decorStash: {'zen.moss_rock': 3},
+        decorInventory: [
+          DecorItem(
+            id: 'inv-1',
+            themeId: VisualThemeId.zenGarden,
+            kind: 'zen.moss_rock',
+            stageIndex: 1,
+          ),
+          DecorItem(
+            id: 'inv-2',
+            themeId: VisualThemeId.zenGarden,
+            kind: 'zen.moss_rock',
+          ),
+          DecorItem(
+            id: 'inv-3',
+            themeId: VisualThemeId.zenGarden,
+            kind: 'zen.moss_rock',
+          ),
+        ],
         freeFirstGrowthEverConsumed: false,
         freeFirstGrowthEligibleItemId: 'plant-a',
       );
@@ -102,7 +121,8 @@ void main() {
       expect(restored.pointsBalance, 999);
       expect(restored.items.length, 2);
       expect(restored.decor.length, 1);
-      expect(restored.decorStash['zen.moss_rock'], 3);
+      expect(restored.decorInventory.length, 3);
+      expect(restored.decorInventory.every((d) => d.kind == 'zen.moss_rock'), isTrue);
       expect(restored.freeFirstGrowthEligibleItemId, 'plant-a');
 
       final decor = restored.decor.single;

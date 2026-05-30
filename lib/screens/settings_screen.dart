@@ -3,8 +3,12 @@ import 'package:focusNexus/repositories/app_repositories.dart';
 import '../utils/common_utils.dart';
 import '../utils/notifier.dart';
 import '../utils/screen_theme.dart';
+import '../utils/appearance_transition.dart';
 import '../widgets/appearance_settings_section.dart';
+import '../widgets/deferred_screen.dart';
+import '../widgets/skeleton_loaders.dart';
 import '../widgets/settings_themed_builder.dart';
+import '../widgets/sound_volume_control.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -32,7 +36,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     'Customization',
   ];
 
-  bool _permissionCheckStarted = false;
+  Future<void>? _loadFuture;
 
   @override
   void initState() {
@@ -57,6 +61,10 @@ class _SettingsScreenState extends State<SettingsScreen>
   Future<void> _refreshNotificationPermission() async {
     final allowed = await GoalNotifier.checkNotificationsPermissionsGranted();
     if (mounted) setState(() => _notificationsAllowed = allowed);
+  }
+
+  Future<void> _load() async {
+    await _refreshNotificationPermission();
   }
 
   Future<void> setAndCheckDailyAffirmations(bool value) async {
@@ -90,6 +98,10 @@ class _SettingsScreenState extends State<SettingsScreen>
       oldFrequency: oldFrequency,
       newFrequency: newFrequency,
     );
+  }
+
+  Future<void> _runAppearanceChange(Future<void> Function() apply) async {
+    await runAppearanceChange(this, setState, apply);
   }
 
   Future<void> setPauseGoalsScreen(bool value) async {
@@ -143,32 +155,29 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   @override
   Widget build(BuildContext context) {
-    if (!_permissionCheckStarted) {
-      _permissionCheckStarted = true;
-      _refreshNotificationPermission();
-    }
-
     return SettingsThemedBuilder(
       builder: (context, bundle) {
         final primaryColor = bundle.primaryColor;
         final secondaryColor = bundle.secondaryColor;
         final textStyle = bundle.textStyle;
 
-        return PopScope<Object?>(
-          canPop: !_isDeletingAccount,
-          onPopInvokedWithResult: (bool didPop, Object? result) async {
-            if (_isDeletingAccount) return;
-            if (didPop) {
-              Future.microtask(() {
-                Navigator.of(context).pushReplacementNamed('dashboard');
-              });
-            }
-          },
-          child: Stack(
-            children: [
-              Theme(
-                data: bundle.themeData,
-                child: Scaffold(
+        _loadFuture ??= _load();
+
+        return DeferredScreen<void>(
+          load: () => _loadFuture!,
+          minLoadingMs: 120,
+          loading: (_) => themedLoadingShell(
+            bundle,
+            title: 'Settings',
+            body: SettingsListSkeleton(bundle: bundle),
+          ),
+          builder: (context, _) => PopScope<Object?>(
+            canPop: !_isDeletingAccount,
+            child: Stack(
+              children: [
+                Theme(
+                  data: bundle.themeData,
+                  child: Scaffold(
                   appBar: AppBar(
                     title: Text(
                       'Settings',
@@ -229,14 +238,18 @@ class _SettingsScreenState extends State<SettingsScreen>
                           'Dyslexia-friendly Font',
                           textStyle,
                           _settings.useDyslexiaFont,
-                          _settings.setUseDyslexiaFont,
+                          (val) => _runAppearanceChange(
+                            () => _settings.setUseDyslexiaFont(val),
+                          ),
                           primaryColor,
                         ),
                         CommonUtils.buildSwitchListTile(
                           'High Contrast Mode',
                           textStyle,
                           _settings.highContrastMode,
-                          _settings.setHighContrastMode,
+                          (val) => _runAppearanceChange(
+                            () => _settings.setHighContrastMode(val),
+                          ),
                           primaryColor,
                         ),
                         if (_settings.notificationFrequency !=
@@ -330,18 +343,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                           _settings.setSoundEnabled,
                           primaryColor,
                         ),
-                        if (_settings.soundEnabled) ...[
-                          Slider(
-                            value: _settings.soundVolume,
-                            min: 0,
-                            max: 100,
-                            divisions: 100,
-                            label: _settings.soundVolume.toString(),
-                            onChanged:
-                                (val) =>
-                                    _settings.setSoundVolume(val.toDouble()),
-                          ),
-                        ],
+                        if (_settings.soundEnabled)
+                          SoundVolumeControl(bundle: bundle),
                         const Divider(),
                         CommonUtils.buildElevatedButton(
                           'Clear preferences and delete account',
@@ -401,7 +404,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                     ),
                   ),
                 ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -442,7 +446,8 @@ class _SettingsScreenState extends State<SettingsScreen>
         ),
       ],
     );
-    if (firstConfirmation != true || !mounted) return;
+    if (firstConfirmation != true) return;
+    if (!context.mounted) return;
 
     final finalConfirmation = await CommonUtils.showInteractableAlertDialog(
       context,
@@ -472,12 +477,13 @@ class _SettingsScreenState extends State<SettingsScreen>
         ),
       ],
     );
-    if (finalConfirmation != true || !mounted) return;
+    if (finalConfirmation != true) return;
+    if (!context.mounted) return;
 
     setState(() => _isDeletingAccount = true);
     try {
       await _settings.clearAll();
-      if (!mounted) return;
+      if (!context.mounted) return;
       Navigator.pushNamedAndRemoveUntil(context, 'auth', (_) => false);
     } finally {
       if (mounted) setState(() => _isDeletingAccount = false);

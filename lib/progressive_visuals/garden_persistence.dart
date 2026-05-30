@@ -1,7 +1,9 @@
 import 'dart:convert';
 
+import 'decor_item.dart';
 import 'garden_persisted_payload.dart';
 import 'garden_state.dart';
+import 'visual_theme_id.dart';
 
 /// Persists layout and flags; [GardenState.pointsBalance] comes from the wallet.
 class GardenPersistence {
@@ -26,7 +28,9 @@ class GardenPersistence {
         pointsBalance: pointsFromWallet,
         items: payload.items,
         decor: payload.decor,
-        decorStash: _sanitizeStash(payload.decorStash),
+        decorStash: const {},
+        decorInventory: _mergeInventory(payload.decorInventory, payload.decorStash),
+        plantInventory: payload.plantInventory,
         freeFirstGrowthEverConsumed: payload.freeFirstGrowthEverConsumed,
         freeFirstGrowthEligibleItemId: payload.freeFirstGrowthEligibleItemId,
       );
@@ -39,7 +43,8 @@ class GardenPersistence {
     final payload = GardenPersistedPayload(
       items: state.items,
       decor: state.decor,
-      decorStash: state.decorStash,
+      decorInventory: state.decorInventory,
+      plantInventory: state.plantInventory,
       freeFirstGrowthEverConsumed: state.freeFirstGrowthEverConsumed,
       freeFirstGrowthEligibleItemId: state.freeFirstGrowthEligibleItemId,
     );
@@ -74,5 +79,29 @@ class GardenPersistence {
       for (final entry in raw.entries)
         if (entry.value > 0) entry.key: entry.value,
     };
+  }
+
+  static List<DecorItem> _mergeInventory(
+    List<DecorItem> inventory,
+    Map<String, int> legacyStash,
+  ) {
+    if (inventory.isNotEmpty) return inventory;
+    final stash = _sanitizeStash(legacyStash);
+    if (stash.isEmpty) return inventory;
+    final migrated = <DecorItem>[];
+    var seed = 0;
+    for (final entry in stash.entries) {
+      for (var i = 0; i < entry.value; i++) {
+        migrated.add(
+          DecorItem(
+            id: 'inv_legacy_${entry.key}_$seed',
+            themeId: VisualThemeId.zenGarden,
+            kind: entry.key,
+          ),
+        );
+        seed++;
+      }
+    }
+    return migrated;
   }
 }

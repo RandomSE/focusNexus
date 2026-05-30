@@ -15,6 +15,8 @@ class GardenPersistedPayload with _$GardenPersistedPayload {
     @Default(<DecorItem>[]) List<DecorItem> decor,
     @DecorStashJsonConverter()
     @Default(<String, int>{}) Map<String, int> decorStash,
+    @Default(<DecorItem>[]) List<DecorItem> decorInventory,
+    @Default(<GardenItem>[]) List<GardenItem> plantInventory,
     @Default(false) bool freeFirstGrowthEverConsumed,
     String? freeFirstGrowthEligibleItemId,
     bool? legacyFreeFirst,

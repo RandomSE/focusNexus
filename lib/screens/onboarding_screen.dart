@@ -6,6 +6,7 @@ import '../utils/common_utils.dart';
 import '../utils/onboarding_assets.dart';
 import '../models/classes/theme_bundle.dart';
 import '../utils/screen_theme.dart';
+import '../widgets/appearance_settings_section.dart';
 import '../widgets/skeleton_loaders.dart';
 import '../widgets/deferred_screen.dart';
 
@@ -52,6 +53,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     final notificationsGranted =
         await GoalNotifier.checkNotificationsPermissionsGranted();
+    if (!mounted) return;
 
     if (_settings.notificationsEnabled && !notificationsGranted) {
       final shouldEnable = await CommonUtils.showInteractableAlertDialog(
@@ -81,9 +83,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
         ],
       );
+      if (!mounted) return;
 
       if (shouldEnable == true) {
         await GoalNotifier.requestNotificationPermission();
+        if (!mounted) return;
       }
     }
 
@@ -175,6 +179,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 },
               ),
             ),
+            if (_currentPage == lastIndex) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: AppearanceSettingsSection(
+                  bundle: bundle,
+                  showBottomDivider: false,
+                  showDyslexiaSwitch: true,
+                  showHighContrastSwitch: true,
+                  overflowSafe: true,
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
             Padding(
               padding: const EdgeInsets.symmetric(
                 vertical: 16,

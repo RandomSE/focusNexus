@@ -123,18 +123,3 @@ void main() {
     });
   });
 }
-
-extension on Achievement {
-  Achievement copyWith({bool? isCompleted, double? progress, String? reward}) {
-    return Achievement(
-      id: id,
-      title: title,
-      reward: reward ?? this.reward,
-      task: task,
-      dateCompleted: dateCompleted,
-      isCompleted: isCompleted ?? this.isCompleted,
-      isSecret: isSecret,
-      progress: progress ?? this.progress,
-    );
-  }
-}

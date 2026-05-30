@@ -20,30 +20,37 @@ TextStyle controlTextStyle(TextStyle live) {
   );
 }
 
-/// Font size + theme controls for Settings / Registration (no custom colour pickers).
-class VisualSettingsPanel extends StatelessWidget {
+/// Font size + dark-mode controls for Settings / Registration / Onboarding.
+class VisualSettingsPanel extends StatefulWidget {
   const VisualSettingsPanel({
     super.key,
     required this.bundle,
     this.overflowSafe = false,
     this.showDyslexiaSwitch = false,
     this.showHighContrastSwitch = false,
+    required this.onAppearanceChange,
   });
 
   final ThemeBundle bundle;
   final bool overflowSafe;
   final bool showDyslexiaSwitch;
   final bool showHighContrastSwitch;
+  final Future<void> Function(Future<void> Function() apply) onAppearanceChange;
 
+  @override
+  State<VisualSettingsPanel> createState() => _VisualSettingsPanelState();
+}
+
+class _VisualSettingsPanelState extends State<VisualSettingsPanel> {
   AppSettings get _settings => AppRepositories.instance.settings;
 
   @override
   Widget build(BuildContext context) {
-    final textStyle = overflowSafe
-        ? controlTextStyle(bundle.textStyle)
-        : bundle.textStyle;
-    final secondaryColor = bundle.secondaryColor;
-    final primaryColor = bundle.primaryColor;
+    final textStyle = widget.overflowSafe
+        ? controlTextStyle(widget.bundle.textStyle)
+        : widget.bundle.textStyle;
+    final secondaryColor = widget.bundle.secondaryColor;
+    final primaryColor = widget.bundle.primaryColor;
     final fontSizeValue = kFontSizeOptions.contains(_settings.userFontSize)
         ? _settings.userFontSize
         : 14.0;
@@ -58,37 +65,46 @@ class VisualSettingsPanel extends StatelessWidget {
           textStyle,
           secondaryColor,
           (val) {
-            if (val != null) _settings.setUserFontSize(val);
+            if (val == null) return;
+            widget.onAppearanceChange(() => _settings.setUserFontSize(val));
           },
           displayText: _fontSizeLabel,
         ),
-        CommonUtils.buildDropdownButtonFormField(
-          'Theme',
-          _settings.userTheme,
-          const ['light', 'dark'],
+        CommonUtils.buildSwitchListTile(
+          'Dark mode',
           textStyle,
-          secondaryColor,
-          (val) => _settings.setUserTheme(val ?? 'light'),
+          _settings.snapshot.isDark,
+          (val) {
+            widget.onAppearanceChange(
+              () => _settings.setUserTheme(val ? 'dark' : 'light'),
+            );
+          },
+          primaryColor,
+          dense: widget.overflowSafe,
+          titleMaxLines: widget.overflowSafe ? 2 : 1,
         ),
-        if (showDyslexiaSwitch)
+        if (widget.showDyslexiaSwitch)
           CommonUtils.buildSwitchListTile(
             'Dyslexia-friendly Font',
             textStyle,
             _settings.useDyslexiaFont,
-            _settings.setUseDyslexiaFont,
+            (val) =>
+                widget.onAppearanceChange(() => _settings.setUseDyslexiaFont(val)),
             primaryColor,
-            dense: overflowSafe,
-            titleMaxLines: overflowSafe ? 2 : 1,
+            dense: widget.overflowSafe,
+            titleMaxLines: widget.overflowSafe ? 2 : 1,
           ),
-        if (showHighContrastSwitch)
+        if (widget.showHighContrastSwitch)
           CommonUtils.buildSwitchListTile(
             'High Contrast Mode',
             textStyle,
             _settings.highContrastMode,
-            _settings.setHighContrastMode,
+            (val) => widget.onAppearanceChange(
+              () => _settings.setHighContrastMode(val),
+            ),
             primaryColor,
-            dense: overflowSafe,
-            titleMaxLines: overflowSafe ? 2 : 1,
+            dense: widget.overflowSafe,
+            titleMaxLines: widget.overflowSafe ? 2 : 1,
           ),
       ],
     );
@@ -114,23 +130,17 @@ class AppearanceSettingsSection extends StatelessWidget {
 
   AppSettings get _settings => AppRepositories.instance.settings;
 
+  Future<void> _onAppearanceChange(Future<void> Function() apply) async {
+    FocusManager.instance.primaryFocus?.unfocus();
+    await Future<void>.delayed(Duration.zero);
+    await apply();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final textStyle = bundle.textStyle;
-    final secondaryColor = bundle.secondaryColor;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          color: secondaryColor,
-          child: CommonUtils.buildText(
-            'This is a live preview of your visual settings.',
-            textStyle,
-          ),
-        ),
-        const Divider(),
         ListenableBuilder(
           listenable: _settings,
           builder: (context, _) {
@@ -139,6 +149,7 @@ class AppearanceSettingsSection extends StatelessWidget {
               overflowSafe: overflowSafe,
               showDyslexiaSwitch: showDyslexiaSwitch,
               showHighContrastSwitch: showHighContrastSwitch,
+              onAppearanceChange: _onAppearanceChange,
             );
           },
         ),

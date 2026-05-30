@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'package:focusNexus/repositories/achievement_counters_repository.dart';
-import 'package:focusNexus/repositories/user_prefs_repository.dart';
 import 'package:focusNexus/services/storage/key_value_storage.dart';
 import 'package:focusNexus/services/storage/storage_keys.dart';
 import 'package:focusNexus/utils/theme_codec.dart';

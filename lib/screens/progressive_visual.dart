@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:focusNexus/progressive_visuals/visual_theme_id.dart';
-import 'package:focusNexus/screens/progressive_visual_section.dart';
-import '../utils/screen_theme.dart';
+import 'package:focusNexus/utils/screen_theme.dart';
 
 /// Entry point for progressive visuals: choose a metaphor, then open its section.
 class ProgressiveVisualScreen extends StatefulWidget {
