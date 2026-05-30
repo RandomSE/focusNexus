@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import 'package:focusNexus/models/theme_persisted_snapshot.dart';
+import 'package:focusNexus/utils/color_argb.dart';
 
 export 'package:focusNexus/models/theme_persisted_snapshot.dart';
 
@@ -23,8 +24,8 @@ String encodeThemeData({
 }) {
   final snapshot = ThemePersistedSnapshot(
     isDark: isDark,
-    primaryColorArgb: primaryColor.value,
-    secondaryColorArgb: secondaryColor.value,
+    primaryColorArgb: colorToArgb32(primaryColor),
+    secondaryColorArgb: colorToArgb32(secondaryColor),
     userFontSize: userFontSize,
     useDyslexiaFont: useDyslexiaFont,
   );

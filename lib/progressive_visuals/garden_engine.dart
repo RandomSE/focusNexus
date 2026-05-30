@@ -5,6 +5,7 @@ import 'decor_item.dart';
 import 'garden_item.dart';
 import 'garden_op_result.dart';
 import 'garden_state.dart';
+import 'garden_valuation.dart';
 import 'mutation_kind.dart';
 import 'stage_transition_rule.dart';
 import 'visual_theme_id.dart';
@@ -86,36 +87,11 @@ class ProgressiveGardenEngine {
     return GardenOpResult.success(next);
   }
 
-  GardenOpResult removeItem(GardenState state, String id) {
-    final nextItems = state.items.where((e) => e.id != id).toList();
-    if (nextItems.length == state.items.length) {
-      return GardenOpResult.failure('Item not found');
-    }
-    var next = state.copyWith(items: nextItems);
-    if (state.freeFirstGrowthEligibleItemId == id) {
-      next = next.withoutFreeFirstEligible();
-    }
-    return GardenOpResult.success(next);
-  }
+  GardenOpResult removeItem(GardenState state, String id) =>
+      stashPlantToInventory(state, id);
 
-  GardenOpResult removeItemsBulk(GardenState state, Set<String> ids) {
-    if (ids.isEmpty) {
-      return GardenOpResult.failure('Nothing selected');
-    }
-    var next = state;
-    var removed = 0;
-    for (final id in ids) {
-      final r = removeItem(next, id);
-      if (r.isSuccess) {
-        next = r.state!;
-        removed++;
-      }
-    }
-    if (removed == 0) {
-      return GardenOpResult.failure('No matching plants to remove');
-    }
-    return GardenOpResult.success(next);
-  }
+  GardenOpResult removeItemsBulk(GardenState state, Set<String> ids) =>
+      stashPlantsToInventoryBulk(state, ids);
 
   GardenOpResult moveItem(
     GardenState state,
@@ -144,14 +120,24 @@ class ProgressiveGardenEngine {
     if (state.pointsBalance < total) {
       return GardenOpResult.failure('Not enough points');
     }
-    final stash = Map<String, int>.from(state.decorStash);
-    stash[kind] = (stash[kind] ?? 0) + quantity;
+    final baseMs = DateTime.now().microsecondsSinceEpoch;
+    final added = List<DecorItem>.generate(quantity, (i) {
+      return DecorItem(
+        id: 'inv_${baseMs}_$i',
+        themeId: VisualThemeId.zenGarden,
+        kind: kind,
+      );
+    });
     return GardenOpResult.success(
       state.copyWith(
         pointsBalance: state.pointsBalance - total,
-        decorStash: stash,
+        decorInventory: [...state.decorInventory, ...added],
       ),
     );
+  }
+
+  int _inventoryCount(GardenState state, String kind) {
+    return state.decorInventory.where((d) => d.kind == kind).length;
   }
 
   GardenOpResult placeDecorFromStash({
@@ -165,52 +151,183 @@ class ProgressiveGardenEngine {
     if (decorEntryByKind(kind) == null) {
       return GardenOpResult.failure('Unknown decoration');
     }
-    final count = state.decorStash[kind] ?? 0;
-    if (count <= 0) {
+    if (_inventoryCount(state, kind) <= 0) {
       return GardenOpResult.failure('Buy this decoration first, or none left in inventory');
     }
     if (state.decor.any((d) => d.id == id)) {
       return GardenOpResult.failure('Decoration id already exists');
     }
-    final stash = Map<String, int>.from(state.decorStash);
-    if (count <= 1) {
-      stash.remove(kind);
-    } else {
-      stash[kind] = count - 1;
-    }
-    final decor = DecorItem(
+    final invIdx = state.decorInventory.indexWhere((d) => d.kind == kind);
+    final inv = state.decorInventory[invIdx];
+    final decor = inv.copyWith(
       id: id,
       themeId: themeId,
-      kind: kind,
       positionX: x,
       positionY: y,
-      stageIndex: 0,
     );
+    final nextInv = [...state.decorInventory]..removeAt(invIdx);
     return GardenOpResult.success(
       state.copyWith(
         decor: [...state.decor, decor],
-        decorStash: stash,
+        decorInventory: nextInv,
       ),
     );
   }
 
-  GardenOpResult removeDecor(GardenState state, String id) {
-    final nextDecor = state.decor.where((e) => e.id != id).toList();
-    if (nextDecor.length == state.decor.length) {
-      return GardenOpResult.failure('Decoration not found');
+  GardenOpResult placeDecorFromInventory({
+    required GardenState state,
+    required String inventoryItemId,
+    required double x,
+    required double y,
+  }) {
+    final invIdx = state.decorInventory.indexWhere((d) => d.id == inventoryItemId);
+    if (invIdx < 0) {
+      return GardenOpResult.failure('Item not in inventory');
     }
-    return GardenOpResult.success(state.copyWith(decor: nextDecor));
+    final inv = state.decorInventory[invIdx];
+    if (state.decor.any((d) => d.id == inventoryItemId)) {
+      return GardenOpResult.failure('Decoration already placed');
+    }
+    final decor = inv.copyWith(positionX: x, positionY: y);
+    final nextInv = [...state.decorInventory]..removeAt(invIdx);
+    return GardenOpResult.success(
+      state.copyWith(
+        decor: [...state.decor, decor],
+        decorInventory: nextInv,
+      ),
+    );
   }
 
-  GardenOpResult removeDecorsBulk(GardenState state, Set<String> ids) {
+  GardenOpResult stashDecorToInventory(GardenState state, String id) {
+    final idx = state.decor.indexWhere((e) => e.id == id);
+    if (idx < 0) {
+      return GardenOpResult.failure('Decoration not found');
+    }
+    final item = state.decor[idx];
+    final nextDecor = [...state.decor]..removeAt(idx);
+    return GardenOpResult.success(
+      state.copyWith(
+        decor: nextDecor,
+        decorInventory: [...state.decorInventory, item],
+      ),
+    );
+  }
+
+  GardenOpResult stashDecorsToInventoryBulk(GardenState state, Set<String> ids) {
     if (ids.isEmpty) {
       return GardenOpResult.failure('Nothing selected');
     }
-    final nextDecor = state.decor.where((e) => !ids.contains(e.id)).toList();
-    if (nextDecor.length == state.decor.length) {
+    var next = state;
+    var moved = 0;
+    for (final id in ids) {
+      final r = stashDecorToInventory(next, id);
+      if (r.isSuccess) {
+        next = r.state!;
+        moved++;
+      }
+    }
+    if (moved == 0) {
       return GardenOpResult.failure('No matching decorations to remove');
     }
-    return GardenOpResult.success(state.copyWith(decor: nextDecor));
+    return GardenOpResult.success(next);
+  }
+
+  GardenOpResult sellDecorInventoryItem(GardenState state, String inventoryItemId) {
+    final idx = state.decorInventory.indexWhere((d) => d.id == inventoryItemId);
+    if (idx < 0) {
+      return GardenOpResult.failure('Item not in inventory');
+    }
+    final item = state.decorInventory[idx];
+    final value = decorSellValue(item);
+    final nextInv = [...state.decorInventory]..removeAt(idx);
+    return GardenOpResult.success(
+      state.copyWith(
+        decorInventory: nextInv,
+        pointsBalance: state.pointsBalance + value,
+      ),
+    );
+  }
+
+  GardenOpResult stashPlantToInventory(GardenState state, String id) {
+    final idx = state.items.indexWhere((e) => e.id == id);
+    if (idx < 0) {
+      return GardenOpResult.failure('Item not found');
+    }
+    final item = state.items[idx];
+    final nextItems = [...state.items]..removeAt(idx);
+    var next = state.copyWith(
+      items: nextItems,
+      plantInventory: [...state.plantInventory, item],
+    );
+    if (state.freeFirstGrowthEligibleItemId == id) {
+      next = next.withoutFreeFirstEligible();
+    }
+    return GardenOpResult.success(next);
+  }
+
+  GardenOpResult stashPlantsToInventoryBulk(GardenState state, Set<String> ids) {
+    if (ids.isEmpty) {
+      return GardenOpResult.failure('Nothing selected');
+    }
+    var next = state;
+    var moved = 0;
+    for (final id in ids) {
+      final r = stashPlantToInventory(next, id);
+      if (r.isSuccess) {
+        next = r.state!;
+        moved++;
+      }
+    }
+    if (moved == 0) {
+      return GardenOpResult.failure('No matching plants to remove');
+    }
+    return GardenOpResult.success(next);
+  }
+
+  GardenOpResult sellPlantInventoryItem(GardenState state, String inventoryItemId) {
+    final idx = state.plantInventory.indexWhere((p) => p.id == inventoryItemId);
+    if (idx < 0) {
+      return GardenOpResult.failure('Item not in inventory');
+    }
+    final item = state.plantInventory[idx];
+    final value = plantSellValue(item);
+    final nextInv = [...state.plantInventory]..removeAt(idx);
+    return GardenOpResult.success(
+      state.copyWith(
+        plantInventory: nextInv,
+        pointsBalance: state.pointsBalance + value,
+      ),
+    );
+  }
+
+  GardenOpResult removeDecor(GardenState state, String id) =>
+      stashDecorToInventory(state, id);
+
+  GardenOpResult removeDecorsBulk(GardenState state, Set<String> ids) =>
+      stashDecorsToInventoryBulk(state, ids);
+
+  GardenOpResult placePlantFromInventory({
+    required GardenState state,
+    required String inventoryItemId,
+    required double x,
+    required double y,
+  }) {
+    final idx = state.plantInventory.indexWhere((p) => p.id == inventoryItemId);
+    if (idx < 0) {
+      return GardenOpResult.failure('Item not in inventory');
+    }
+    if (state.items.any((p) => p.id == inventoryItemId)) {
+      return GardenOpResult.failure('Plant already placed');
+    }
+    final inv = state.plantInventory[idx];
+    final placed = inv.copyWith(positionX: x, positionY: y);
+    final nextInv = [...state.plantInventory]..removeAt(idx);
+    return GardenOpResult.success(
+      state.copyWith(
+        items: [...state.items, placed],
+        plantInventory: nextInv,
+      ),
+    );
   }
 
   GardenOpResult moveDecor(
@@ -226,6 +343,36 @@ class ProgressiveGardenEngine {
     final updated = state.decor[idx].copyWith(positionX: x, positionY: y);
     final next = [...state.decor]..[idx] = updated;
     return GardenOpResult.success(state.copyWith(decor: next));
+  }
+
+  GardenOpResult moveItemsBulk(
+    GardenState state,
+    Map<String, ({double x, double y})> plantPositions,
+  ) {
+    if (plantPositions.isEmpty) {
+      return GardenOpResult.failure('Nothing to move');
+    }
+    var next = state;
+    for (final entry in plantPositions.entries) {
+      final r = moveItem(next, entry.key, x: entry.value.x, y: entry.value.y);
+      if (r.isSuccess) next = r.state!;
+    }
+    return GardenOpResult.success(next);
+  }
+
+  GardenOpResult moveDecorsBulk(
+    GardenState state,
+    Map<String, ({double x, double y})> decorPositions,
+  ) {
+    if (decorPositions.isEmpty) {
+      return GardenOpResult.failure('Nothing to move');
+    }
+    var next = state;
+    for (final entry in decorPositions.entries) {
+      final r = moveDecor(next, entry.key, x: entry.value.x, y: entry.value.y);
+      if (r.isSuccess) next = r.state!;
+    }
+    return GardenOpResult.success(next);
   }
 
   GardenOpResult skipGrowthWait(

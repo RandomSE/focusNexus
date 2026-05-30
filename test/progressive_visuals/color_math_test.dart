@@ -33,10 +33,10 @@ void main() {
         base: base,
         mutation: MutationKind.invertedColors,
       );
-      expect(tinted.red, 0xEE);
-      expect(tinted.green, 0xDD);
-      expect(tinted.blue, 0xCC);
-      expect(tinted.alpha, base.alpha);
+      expect((tinted.r * 255).round(), 0xEE);
+      expect((tinted.g * 255).round(), 0xDD);
+      expect((tinted.b * 255).round(), 0xCC);
+      expect(tinted.a, base.a);
     });
   });
 }

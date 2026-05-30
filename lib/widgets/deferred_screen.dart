@@ -9,12 +9,14 @@ class DeferredScreen<T> extends StatefulWidget {
     required this.loading,
     required this.builder,
     this.errorBuilder,
+    this.minLoadingMs = 0,
   });
 
   final Future<T> Function() load;
   final Widget Function(BuildContext context) loading;
   final Widget Function(BuildContext context, T data) builder;
   final Widget Function(BuildContext context, Object error)? errorBuilder;
+  final int minLoadingMs;
 
   @override
   State<DeferredScreen<T>> createState() => _DeferredScreenState<T>();
@@ -22,20 +24,33 @@ class DeferredScreen<T> extends StatefulWidget {
 
 class _DeferredScreenState<T> extends State<DeferredScreen<T>> {
   Future<T>? _future;
+  Widget? _stableLoading;
 
   @override
   Widget build(BuildContext context) {
-    _future ??= widget.load();
+    _future ??= () async {
+      final startedAt = DateTime.now();
+      final data = await widget.load();
+      final elapsedMs = DateTime.now().difference(startedAt).inMilliseconds;
+      final remainingMs = widget.minLoadingMs - elapsedMs;
+      if (remainingMs > 0) {
+        await Future<void>.delayed(Duration(milliseconds: remainingMs));
+      }
+      return data;
+    }();
     return FutureBuilder<T>(
       future: _future,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
+          _stableLoading = null;
           return widget.errorBuilder?.call(context, snapshot.error!) ??
               Center(child: Text('${snapshot.error}'));
         }
         if (snapshot.connectionState != ConnectionState.done) {
-          return widget.loading(context);
+          _stableLoading ??= widget.loading(context);
+          return _stableLoading!;
         }
+        _stableLoading = null;
         return widget.builder(context, snapshot.data as T);
       },
     );

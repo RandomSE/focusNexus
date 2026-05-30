@@ -1,19 +1,9 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import '../utils/common_utils.dart';
-
-import '../models/classes/achievement.dart';
-import '../services/achievement_service.dart';
+import 'package:focusNexus/models/classes/achievement.dart';
+import 'package:focusNexus/services/achievement_service.dart';
+import 'package:focusNexus/utils/common_utils.dart';
 
 class AchievementDetailView extends StatefulWidget {
-  final Achievement achievement;
-  final ThemeData themeData;
-  final Color primaryColor;
-  final Color secondaryColor;
-  final TextStyle textStyle;
-  final ButtonStyle buttonStyle;
-  final AchievementService achievementService;
-
   const AchievementDetailView({
     super.key,
     required this.achievement,
@@ -24,6 +14,14 @@ class AchievementDetailView extends StatefulWidget {
     required this.buttonStyle,
     required this.achievementService,
   });
+
+  final Achievement achievement;
+  final ThemeData themeData;
+  final Color primaryColor;
+  final Color secondaryColor;
+  final TextStyle textStyle;
+  final ButtonStyle buttonStyle;
+  final AchievementService achievementService;
 
   @override
   State<AchievementDetailView> createState() => _AchievementDetailViewState();
@@ -37,24 +35,11 @@ class _AchievementDetailViewState extends State<AchievementDetailView> {
   Widget build(BuildContext context) {
     final achievement = widget.achievement;
 
-    return PopScope<Object?>(
-      canPop: true,
-      onPopInvokedWithResult: (bool didPop, Object? result) async {
-        debugPrint(
-          "Should page refresh? didPop: $didPop, toRefresh: $_toRefresh",
-        );
-        if ((didPop) && _toRefresh) {
-          Future.microtask(() async {
-            Navigator.of(context).pushReplacementNamed('achievements');
-            debugPrint(
-              "Achievements re-opened after completing an achievement",
-            ); // When completing achievements, you update points. This is to reflect that visually.
-          });
-        }
-      },
-
-      child: Scaffold(
+    return Scaffold(
         appBar: AppBar(
+          leading: BackButton(
+            onPressed: () => Navigator.of(context).pop(_toRefresh),
+          ),
           title: Text(achievement.title, style: widget.textStyle),
           backgroundColor: widget.secondaryColor,
           iconTheme: IconThemeData(color: widget.primaryColor),
@@ -95,10 +80,8 @@ class _AchievementDetailViewState extends State<AchievementDetailView> {
                     await widget.achievementService.completeAchievement(
                       achievement.id,
                     );
-                    setState(() {
-                      _buttonDisabled = true; // disable after one click
-                      _toRefresh = true;
-                    });
+                    if (!context.mounted) return;
+                    setState(() => _buttonDisabled = true);
                     CommonUtils.showSnackBar(
                       context,
                       'Achievement completed! Well done on completing ${achievement.title}',
@@ -111,14 +94,13 @@ class _AchievementDetailViewState extends State<AchievementDetailView> {
               ],
               const SizedBox(height: 12),
               ElevatedButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => Navigator.pop(context, _toRefresh),
                 style: widget.buttonStyle,
                 child: const Text('Close'),
               ),
             ],
           ),
         ),
-      ),
     );
   }
 }

@@ -7,7 +7,7 @@ import 'package:focusNexus/services/storage/flutter_secure_key_value_storage.dar
 import 'package:focusNexus/services/storage/key_value_storage.dart';
 import '../models/classes/achievement.dart';
 import '../models/classes/achievement_tracking_variables.dart';
-import '../views/AchievementDetailView.dart';
+import 'package:focusNexus/views/achievement_detail_view.dart';
 
 class AchievementService {
   static const _key = 'achievements';
@@ -226,9 +226,9 @@ class AchievementService {
   }
 
   Future<void> bulkSetAchievementVariablesInStorage(List<String> variables) async {
-    variables.forEach(
-        (variable) async => await storage.write(key: variable, value: '0') // update progress throws errors when these haven't been set as they are then null. 0 means zero here, so it's fine to directly set it upon creation.
-    );
+    for (final variable in variables) {
+      await storage.write(key: variable, value: '0');
+    }
   }
 
   /// Mark an achievement as completed

@@ -15,6 +15,8 @@ class GardenState with _$GardenState {
     @Default(<GardenItem>[]) List<GardenItem> items,
     @Default(<DecorItem>[]) List<DecorItem> decor,
     @Default(<String, int>{}) Map<String, int> decorStash,
+    @Default(<DecorItem>[]) List<DecorItem> decorInventory,
+    @Default(<GardenItem>[]) List<GardenItem> plantInventory,
     @Default(false) bool freeFirstGrowthEverConsumed,
     String? freeFirstGrowthEligibleItemId,
   }) = _GardenState;

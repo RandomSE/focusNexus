@@ -1,7 +1,7 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:focusNexus/repositories/theme_repository.dart';
+import 'package:focusNexus/utils/color_argb.dart';
 import 'package:focusNexus/repositories/user_prefs_repository.dart';
 import 'package:focusNexus/services/storage/storage_keys.dart';
 import 'package:focusNexus/utils/theme_styles.dart';
@@ -135,11 +135,11 @@ class AppSettings extends ChangeNotifier {
   }) async {
     await _prefs.writeString(
       StorageKeys.customizedPrimaryColor,
-      primaryColor.value.toString(),
+      colorToArgb32(primaryColor).toString(),
     );
     await _prefs.writeString(
       StorageKeys.customizedSecondaryColor,
-      secondaryColor.value.toString(),
+      colorToArgb32(secondaryColor).toString(),
     );
     var next = _snapshot.copyWith(
       customizedPrimary: primaryColor,
@@ -222,9 +222,10 @@ class AppSettings extends ChangeNotifier {
     _apply(_snapshot.copyWith(soundEnabled: value));
   }
 
-  Future<void> setSoundVolume(double value) async {
-    await _prefs.writeString(StorageKeys.soundVolume, value.toString());
-    _apply(_snapshot.copyWith(soundVolume: value));
+  Future<void> setSoundVolume(int value) async {
+    final clamped = value.clamp(0, 100);
+    await _prefs.writeString(StorageKeys.soundVolume, clamped.toString());
+    _apply(_snapshot.copyWith(soundVolume: clamped.toDouble()));
   }
 
   Future<void> setDailyAffirmationsTime(String value) async {
@@ -291,7 +292,7 @@ class AppSettings extends ChangeNotifier {
     await setRegistrationComplete(false);
     await setOnboardingCompleted(false);
     await setSoundEnabled(false);
-    await setSoundVolume(0.0);
+    await setSoundVolume(0);
     await setCustomizationEnabled(false);
     await setUseCustomColorPalette(false);
     await _prefs.writeAllowedColors([]);

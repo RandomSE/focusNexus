@@ -23,6 +23,16 @@ _$GardenPersistedPayloadImpl _$$GardenPersistedPayloadImplFromJson(
       json['decorStash'] == null
           ? const <String, int>{}
           : const DecorStashJsonConverter().fromJson(json['decorStash']),
+  decorInventory:
+      (json['decorInventory'] as List<dynamic>?)
+          ?.map((e) => DecorItem.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const <DecorItem>[],
+  plantInventory:
+      (json['plantInventory'] as List<dynamic>?)
+          ?.map((e) => GardenItem.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const <GardenItem>[],
   freeFirstGrowthEverConsumed:
       json['freeFirstGrowthEverConsumed'] as bool? ?? false,
   freeFirstGrowthEligibleItemId:
@@ -36,6 +46,8 @@ Map<String, dynamic> _$$GardenPersistedPayloadImplToJson(
   'items': instance.items,
   'decor': instance.decor,
   'decorStash': const DecorStashJsonConverter().toJson(instance.decorStash),
+  'decorInventory': instance.decorInventory,
+  'plantInventory': instance.plantInventory,
   'freeFirstGrowthEverConsumed': instance.freeFirstGrowthEverConsumed,
   'freeFirstGrowthEligibleItemId': instance.freeFirstGrowthEligibleItemId,
   'legacyFreeFirst': instance.legacyFreeFirst,

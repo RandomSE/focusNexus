@@ -13,6 +13,7 @@ import '../models/classes/theme_bundle.dart';
 import '../models/classes/goal_set.dart';
 import '../utils/common_utils.dart';
 import '../utils/screen_theme.dart';
+import '../widgets/deferred_screen.dart';
 import '../widgets/skeleton_loaders.dart';
 import '../widgets/settings_themed_builder.dart';
 import '../utils/goal_points.dart';
@@ -47,8 +48,6 @@ class _GoalsScreenState extends State<GoalsScreen> {
   String _category = 'Productivity';
   String _complexity = 'Low';
   String _effort = 'Low';
-  String _time = '1';
-  String _steps = '1';
   final String today = DateFormat('dd MM yyyy').format(DateTime.now());
   int goalsCompletedToday = 0;
   String _motivation = 'Low';
@@ -117,7 +116,6 @@ class _GoalsScreenState extends State<GoalsScreen> {
   String _notificationStyle = 'Minimal';
   String _notificationFrequency = 'Low';
   late ConfettiController _confettiController;
-  Future<void>? _pageFuture;
 
   @override
   void initState() {
@@ -570,7 +568,6 @@ class _GoalsScreenState extends State<GoalsScreen> {
   }
 
   void _removeGoalWithoutRemovingNotifications(int index) {
-    final goal = _activeGoals[index];
     setState(() {
       _activeGoals.removeAt(index);
     });
@@ -579,7 +576,6 @@ class _GoalsScreenState extends State<GoalsScreen> {
   }
 
   void _removeCompletedGoal(int index) {
-    final goal = _completedGoals[index];
     setState(() {
       _completedGoals.removeAt(index);
     });
@@ -757,9 +753,9 @@ class _GoalsScreenState extends State<GoalsScreen> {
                       ..._templateDetails.keys,
                       ..._userTemplates.keys,
                     ].map(
-                          (name) => ListTile(
-                        title: Text(name),
-                        titleTextStyle: themeBundle.textStyle,
+                          (name) => CommonUtils.buildListTile(
+                        title: name,
+                        textStyle: themeBundle.textStyle,
                         trailing: _userTemplates.containsKey(name)
                             ? IconButton(
                           icon: const Icon(Icons.delete),
@@ -894,8 +890,9 @@ class _GoalsScreenState extends State<GoalsScreen> {
                   Text('Select Templates to Create Goals:', style: themeBundle.textStyle),
                   ...[..._templateDetails.keys, ..._userTemplates.keys].map((templateName) {
                     final selected = selectedTemplates.contains(templateName);
-                    return CheckboxListTile(
-                      title: Text(templateName, style: themeBundle.textStyle),
+                    return CommonUtils.buildCheckboxListTile(
+                      title: templateName,
+                      textStyle: themeBundle.textStyle,
                       value: selected,
                       activeColor: themeBundle.primaryColor,
                       checkColor: themeBundle.secondaryColor,
@@ -913,8 +910,9 @@ class _GoalsScreenState extends State<GoalsScreen> {
                   const Divider(),
                   Text('Existing Groups:', style: themeBundle.textStyle),
                   ..._templateGroups.keys.map((name) {
-                    return ListTile(
-                      title: Text(name, style: themeBundle.textStyle),
+                    return CommonUtils.buildListTile(
+                      title: name,
+                      textStyle: themeBundle.textStyle,
                       trailing: IconButton(
                         icon: const Icon(Icons.delete),
                         color: themeBundle.primaryColor,
@@ -981,22 +979,17 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    _pageFuture ??= _loadGoalsPage();
-
     return SettingsThemedBuilder(
       builder: (context, bundle) {
-        return FutureBuilder<void>(
-          future: _pageFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return themedLoadingShell(
-                bundle,
-                title: 'Goals',
-                body: GoalsSkeleton(bundle: bundle),
-              );
-            }
-            return _buildGoalsScaffold(context, bundle);
-          },
+        return DeferredScreen<void>(
+          load: _loadGoalsPage,
+          minLoadingMs: 120,
+          loading: (_) => themedLoadingShell(
+            bundle,
+            title: 'Goals',
+            body: GoalsSkeleton(bundle: bundle),
+          ),
+          builder: (context, _) => _buildGoalsScaffold(context, bundle),
         );
       },
     );
@@ -1048,8 +1041,6 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                   _category = data['category'];
                                   _complexity = data['complexity'];
                                   _effort = data['effort'];
-                                  _time = data['time'];
-                                  _steps = data['steps'];
                                   _motivation = data['motivation'];
                                   });
                                   _timeController.text = data['time'];

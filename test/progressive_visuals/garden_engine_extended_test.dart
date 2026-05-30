@@ -3,7 +3,6 @@ import 'dart:math';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:focusNexus/progressive_visuals/decor_item.dart';
 import 'package:focusNexus/progressive_visuals/garden_engine.dart';
-import 'package:focusNexus/progressive_visuals/garden_item.dart';
 import 'package:focusNexus/progressive_visuals/garden_state.dart';
 import 'package:focusNexus/progressive_visuals/mutation_kind.dart';
 import 'package:focusNexus/progressive_visuals/stage_transition_rule.dart';
@@ -184,11 +183,12 @@ void main() {
   });
 
   group('decor lifecycle', () {
-    test('purchaseDecor adds to stash and deducts points', () {
+    test('purchaseDecor adds to inventory and deducts points', () {
       final r = engine.purchaseDecor(emptyGarden(points: 200), 'zen.moss_rock');
       expect(r.isSuccess, isTrue);
       expect(r.state!.pointsBalance, 150);
-      expect(r.state!.decorStash['zen.moss_rock'], 1);
+      expect(r.state!.decorInventory.length, 1);
+      expect(r.state!.decorInventory.single.kind, 'zen.moss_rock');
     });
 
     test('purchaseDecor rejects unknown kind, bad quantity, insufficient points', () {
@@ -197,7 +197,7 @@ void main() {
       expect(engine.purchaseDecor(emptyGarden(points: 10), 'zen.moss_rock').isSuccess, isFalse);
     });
 
-    test('placeDecorFromStash places decor and decrements stash', () {
+    test('placeDecorFromStash places decor and removes from inventory', () {
       var state = engine.purchaseDecor(emptyGarden(points: 200), 'zen.moss_rock', quantity: 2).state!;
       final placed = engine.placeDecorFromStash(
         state: state,
@@ -209,7 +209,7 @@ void main() {
       );
       expect(placed.isSuccess, isTrue);
       expect(placed.state!.decor.single.kind, 'zen.moss_rock');
-      expect(placed.state!.decorStash['zen.moss_rock'], 1);
+      expect(placed.state!.decorInventory.length, 1);
 
       final last = engine.placeDecorFromStash(
         state: placed.state!,
@@ -219,7 +219,7 @@ void main() {
         y: 0.3,
         themeId: VisualThemeId.zenGarden,
       );
-      expect(last.state!.decorStash.containsKey('zen.moss_rock'), isFalse);
+      expect(last.state!.decorInventory, isEmpty);
     });
 
     test('placeDecorFromStash failure paths', () {
@@ -257,7 +257,7 @@ void main() {
       );
     });
 
-    test('removeDecor and bulk remove', () {
+    test('removeDecor returns decor to inventory', () {
       var state = engine.purchaseDecor(emptyGarden(points: 200), 'zen.moss_rock', quantity: 2).state!;
       state = engine.placeDecorFromStash(
         state: state,
@@ -278,6 +278,8 @@ void main() {
 
       final removed = engine.removeDecor(state, 'd1');
       expect(removed.state!.decor.single.id, 'd2');
+      expect(removed.state!.decorInventory.length, 1);
+      expect(removed.state!.decorInventory.single.id, 'd1');
 
       expect(engine.removeDecor(state, 'ghost').isSuccess, isFalse);
       expect(engine.removeDecorsBulk(state, {}).isSuccess, isFalse);
@@ -285,6 +287,7 @@ void main() {
 
       final bulk = engine.removeDecorsBulk(state, {'d1', 'd2'});
       expect(bulk.state!.decor, isEmpty);
+      expect(bulk.state!.decorInventory.length, 2);
     });
 
     test('moveDecor updates coordinates', () {

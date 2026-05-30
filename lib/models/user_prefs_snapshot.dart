@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import 'package:focusNexus/utils/color_argb.dart';
+
 part 'user_prefs_snapshot.freezed.dart';
 
 /// In-memory snapshot of user preferences loaded from per-key secure storage.
@@ -63,6 +65,6 @@ class UserPrefsSnapshot with _$UserPrefsSnapshot {
   }
 
   static String encodeAllowedColors(List<Color> colors) {
-    return jsonEncode(colors.map((c) => c.value).toList());
+    return jsonEncode(colors.map(colorToArgb32).toList());
   }
 }

@@ -1,9 +1,11 @@
 // lib/screens/dashboard_screen.dart
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../repositories/app_repositories.dart';
 import '../utils/common_utils.dart';
 import '../utils/screen_theme.dart';
+import '../widgets/deferred_screen.dart';
 import '../widgets/skeleton_loaders.dart';
 import '../widgets/settings_themed_builder.dart';
 
@@ -16,31 +18,29 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   final _settings = AppRepositories.instance.settings;
-  Future<int>? _pointsFuture;
+  int _pointsLoadGeneration = 0;
 
   void _refreshPoints() {
-    setState(() {
-      _pointsFuture = AppRepositories.instance.points.readBalance();
-    });
+    setState(() => _pointsLoadGeneration++);
   }
+
+  Future<int> _loadPoints() =>
+      AppRepositories.instance.points.readBalance();
 
   @override
   Widget build(BuildContext context) {
-    _pointsFuture ??= AppRepositories.instance.points.readBalance();
-
     return SettingsThemedBuilder(
       builder: (context, bundle) {
-        return FutureBuilder<int>(
-          future: _pointsFuture,
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) {
-              return themedLoadingShell(
-                bundle,
-                title: 'Dashboard',
-                body: DashboardSkeleton(bundle: bundle),
-              );
-            }
-            final points = snapshot.data!;
+        return DeferredScreen<int>(
+          key: ValueKey(_pointsLoadGeneration),
+          load: _loadPoints,
+          minLoadingMs: 120,
+          loading: (_) => themedLoadingShell(
+            bundle,
+            title: 'Dashboard',
+            body: DashboardSkeleton(bundle: bundle),
+          ),
+          builder: (context, points) {
             final rewardType = _settings.rewardType;
 
             return Theme(
@@ -68,6 +68,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           textAlign: TextAlign.left,
                         ),
                       ),
+                      if (kDebugMode) ...[
+                        const SizedBox(height: 16),
+                        CommonUtils.buildCenteredButton(
+                          context,
+                          'Test: Set points to 10000',
+                          () async {
+                            await AppRepositories.instance.points
+                                .writeBalance(10000);
+                            _refreshPoints();
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Points set to 10000'),
+                                ),
+                              );
+                            }
+                          },
+                          bundle.textStyle,
+                          bundle.secondaryColor,
+                        ),
+                      ],
                       const SizedBox(height: 60),
                       CommonUtils.buildCenteredButton(
                         context,

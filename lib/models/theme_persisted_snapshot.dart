@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import 'package:focusNexus/utils/color_argb.dart';
 import 'package:focusNexus/utils/theme_styles.dart';
-
 part 'theme_persisted_snapshot.freezed.dart';
 part 'theme_persisted_snapshot.g.dart';
 
@@ -25,14 +25,12 @@ class ThemePersistedSnapshot with _$ThemePersistedSnapshot {
   factory ThemePersistedSnapshot.fromThemeData(ThemeData theme) {
     return ThemePersistedSnapshot(
       isDark: theme.brightness == Brightness.dark,
-      primaryColorArgb: theme.primaryColor.value,
-      secondaryColorArgb: theme.scaffoldBackgroundColor?.value ??
-          theme.colorScheme.surface.value,
+      primaryColorArgb: colorToArgb32(theme.colorScheme.primary),
+      secondaryColorArgb: colorToArgb32(theme.colorScheme.surface),
       userFontSize: theme.textTheme.bodyMedium?.fontSize ?? 14.0,
       useDyslexiaFont: theme.textTheme.bodyMedium?.fontFamily == 'OpenDyslexic',
     );
   }
-
   ThemeData toThemeData() {
     return ThemeStyles.buildThemeData(
       isDark: isDark,

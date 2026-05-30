@@ -41,6 +41,9 @@ class ThemeStyles {
       fontWeight: FontWeight.bold,
       color: primaryColor,
       fontFamily: useDyslexiaFont ? 'OpenDyslexic' : null,
+      height: useDyslexiaFont ? 1.35 : 1.2,
+      leadingDistribution:
+          useDyslexiaFont ? TextLeadingDistribution.even : null,
     );
   }
 
@@ -67,6 +70,9 @@ class ThemeStyles {
         fontSize: baseFontSize * factor,
         color: bodyColor,
         fontFamily: fontFamily,
+        height: useDyslexiaFont ? 1.35 : style.height,
+        leadingDistribution:
+            useDyslexiaFont ? TextLeadingDistribution.even : null,
       );
     }
 
@@ -97,15 +103,34 @@ class ThemeStyles {
     required bool useDyslexiaFont,
   }) {
     final baseTheme = isDark ? ThemeData.dark() : ThemeData.light();
+    final inputPadding = EdgeInsets.symmetric(
+      horizontal: 12,
+      vertical: useDyslexiaFont ? fontSize * 0.5 : fontSize * 0.3,
+    );
+
     return ThemeData(
       brightness: isDark ? Brightness.dark : Brightness.light,
       primaryColor: primaryColor,
       scaffoldBackgroundColor: secondaryColor,
+      visualDensity:
+          useDyslexiaFont ? VisualDensity.standard : VisualDensity.compact,
       textTheme: scaledTextTheme(
         base: baseTheme.textTheme,
         fontSize: fontSize,
         bodyColor: primaryColor,
         useDyslexiaFont: useDyslexiaFont,
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        isDense: false,
+        alignLabelWithHint: !useDyslexiaFont,
+        contentPadding: inputPadding,
+        floatingLabelBehavior: useDyslexiaFont
+            ? FloatingLabelBehavior.never
+            : FloatingLabelBehavior.auto,
+        constraints: BoxConstraints(
+          minHeight:
+              useDyslexiaFont ? fontSize * 2.8 + 20 : kMinInteractiveDimension,
+        ),
       ),
     );
   }

@@ -69,16 +69,7 @@ class _AchievementScreenState extends State<AchievementScreen> {
             ),
           ),
           builder: (context, data) {
-            return PopScope<Object?>(
-              canPop: true,
-              onPopInvokedWithResult: (bool didPop, Object? result) async {
-                if (didPop) {
-                  Future.microtask(() {
-                    Navigator.of(context).pushReplacementNamed('dashboard');
-                  });
-                }
-              },
-              child: Theme(
+            return Theme(
                 data: bundle.themeData,
                 child: Scaffold(
                   appBar: AppBar(
@@ -164,7 +155,6 @@ class _AchievementScreenState extends State<AchievementScreen> {
                     ),
                   ),
                 ),
-              ),
             );
           },
         );

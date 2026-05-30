@@ -27,6 +27,8 @@ mixin _$GardenPersistedPayload {
   List<DecorItem> get decor => throw _privateConstructorUsedError;
   @DecorStashJsonConverter()
   Map<String, int> get decorStash => throw _privateConstructorUsedError;
+  List<DecorItem> get decorInventory => throw _privateConstructorUsedError;
+  List<GardenItem> get plantInventory => throw _privateConstructorUsedError;
   bool get freeFirstGrowthEverConsumed => throw _privateConstructorUsedError;
   String? get freeFirstGrowthEligibleItemId =>
       throw _privateConstructorUsedError;
@@ -53,6 +55,8 @@ abstract class $GardenPersistedPayloadCopyWith<$Res> {
     List<GardenItem> items,
     List<DecorItem> decor,
     @DecorStashJsonConverter() Map<String, int> decorStash,
+    List<DecorItem> decorInventory,
+    List<GardenItem> plantInventory,
     bool freeFirstGrowthEverConsumed,
     String? freeFirstGrowthEligibleItemId,
     bool? legacyFreeFirst,
@@ -80,6 +84,8 @@ class _$GardenPersistedPayloadCopyWithImpl<
     Object? items = null,
     Object? decor = null,
     Object? decorStash = null,
+    Object? decorInventory = null,
+    Object? plantInventory = null,
     Object? freeFirstGrowthEverConsumed = null,
     Object? freeFirstGrowthEligibleItemId = freezed,
     Object? legacyFreeFirst = freezed,
@@ -101,6 +107,16 @@ class _$GardenPersistedPayloadCopyWithImpl<
                     ? _value.decorStash
                     : decorStash // ignore: cast_nullable_to_non_nullable
                         as Map<String, int>,
+            decorInventory:
+                null == decorInventory
+                    ? _value.decorInventory
+                    : decorInventory // ignore: cast_nullable_to_non_nullable
+                        as List<DecorItem>,
+            plantInventory:
+                null == plantInventory
+                    ? _value.plantInventory
+                    : plantInventory // ignore: cast_nullable_to_non_nullable
+                        as List<GardenItem>,
             freeFirstGrowthEverConsumed:
                 null == freeFirstGrowthEverConsumed
                     ? _value.freeFirstGrowthEverConsumed
@@ -135,6 +151,8 @@ abstract class _$$GardenPersistedPayloadImplCopyWith<$Res>
     List<GardenItem> items,
     List<DecorItem> decor,
     @DecorStashJsonConverter() Map<String, int> decorStash,
+    List<DecorItem> decorInventory,
+    List<GardenItem> plantInventory,
     bool freeFirstGrowthEverConsumed,
     String? freeFirstGrowthEligibleItemId,
     bool? legacyFreeFirst,
@@ -159,6 +177,8 @@ class __$$GardenPersistedPayloadImplCopyWithImpl<$Res>
     Object? items = null,
     Object? decor = null,
     Object? decorStash = null,
+    Object? decorInventory = null,
+    Object? plantInventory = null,
     Object? freeFirstGrowthEverConsumed = null,
     Object? freeFirstGrowthEligibleItemId = freezed,
     Object? legacyFreeFirst = freezed,
@@ -180,6 +200,16 @@ class __$$GardenPersistedPayloadImplCopyWithImpl<$Res>
                 ? _value._decorStash
                 : decorStash // ignore: cast_nullable_to_non_nullable
                     as Map<String, int>,
+        decorInventory:
+            null == decorInventory
+                ? _value._decorInventory
+                : decorInventory // ignore: cast_nullable_to_non_nullable
+                    as List<DecorItem>,
+        plantInventory:
+            null == plantInventory
+                ? _value._plantInventory
+                : plantInventory // ignore: cast_nullable_to_non_nullable
+                    as List<GardenItem>,
         freeFirstGrowthEverConsumed:
             null == freeFirstGrowthEverConsumed
                 ? _value.freeFirstGrowthEverConsumed
@@ -208,12 +238,16 @@ class _$GardenPersistedPayloadImpl implements _GardenPersistedPayload {
     final List<DecorItem> decor = const <DecorItem>[],
     @DecorStashJsonConverter()
     final Map<String, int> decorStash = const <String, int>{},
+    final List<DecorItem> decorInventory = const <DecorItem>[],
+    final List<GardenItem> plantInventory = const <GardenItem>[],
     this.freeFirstGrowthEverConsumed = false,
     this.freeFirstGrowthEligibleItemId,
     this.legacyFreeFirst,
   }) : _items = items,
        _decor = decor,
-       _decorStash = decorStash;
+       _decorStash = decorStash,
+       _decorInventory = decorInventory,
+       _plantInventory = plantInventory;
 
   factory _$GardenPersistedPayloadImpl.fromJson(Map<String, dynamic> json) =>
       _$$GardenPersistedPayloadImplFromJson(json);
@@ -246,6 +280,24 @@ class _$GardenPersistedPayloadImpl implements _GardenPersistedPayload {
     return EqualUnmodifiableMapView(_decorStash);
   }
 
+  final List<DecorItem> _decorInventory;
+  @override
+  @JsonKey()
+  List<DecorItem> get decorInventory {
+    if (_decorInventory is EqualUnmodifiableListView) return _decorInventory;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_decorInventory);
+  }
+
+  final List<GardenItem> _plantInventory;
+  @override
+  @JsonKey()
+  List<GardenItem> get plantInventory {
+    if (_plantInventory is EqualUnmodifiableListView) return _plantInventory;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_plantInventory);
+  }
+
   @override
   @JsonKey()
   final bool freeFirstGrowthEverConsumed;
@@ -256,7 +308,7 @@ class _$GardenPersistedPayloadImpl implements _GardenPersistedPayload {
 
   @override
   String toString() {
-    return 'GardenPersistedPayload(items: $items, decor: $decor, decorStash: $decorStash, freeFirstGrowthEverConsumed: $freeFirstGrowthEverConsumed, freeFirstGrowthEligibleItemId: $freeFirstGrowthEligibleItemId, legacyFreeFirst: $legacyFreeFirst)';
+    return 'GardenPersistedPayload(items: $items, decor: $decor, decorStash: $decorStash, decorInventory: $decorInventory, plantInventory: $plantInventory, freeFirstGrowthEverConsumed: $freeFirstGrowthEverConsumed, freeFirstGrowthEligibleItemId: $freeFirstGrowthEligibleItemId, legacyFreeFirst: $legacyFreeFirst)';
   }
 
   @override
@@ -269,6 +321,14 @@ class _$GardenPersistedPayloadImpl implements _GardenPersistedPayload {
             const DeepCollectionEquality().equals(
               other._decorStash,
               _decorStash,
+            ) &&
+            const DeepCollectionEquality().equals(
+              other._decorInventory,
+              _decorInventory,
+            ) &&
+            const DeepCollectionEquality().equals(
+              other._plantInventory,
+              _plantInventory,
             ) &&
             (identical(
                   other.freeFirstGrowthEverConsumed,
@@ -293,6 +353,8 @@ class _$GardenPersistedPayloadImpl implements _GardenPersistedPayload {
     const DeepCollectionEquality().hash(_items),
     const DeepCollectionEquality().hash(_decor),
     const DeepCollectionEquality().hash(_decorStash),
+    const DeepCollectionEquality().hash(_decorInventory),
+    const DeepCollectionEquality().hash(_plantInventory),
     freeFirstGrowthEverConsumed,
     freeFirstGrowthEligibleItemId,
     legacyFreeFirst,
@@ -321,6 +383,8 @@ abstract class _GardenPersistedPayload implements GardenPersistedPayload {
     final List<GardenItem> items,
     final List<DecorItem> decor,
     @DecorStashJsonConverter() final Map<String, int> decorStash,
+    final List<DecorItem> decorInventory,
+    final List<GardenItem> plantInventory,
     final bool freeFirstGrowthEverConsumed,
     final String? freeFirstGrowthEligibleItemId,
     final bool? legacyFreeFirst,
@@ -336,6 +400,10 @@ abstract class _GardenPersistedPayload implements GardenPersistedPayload {
   @override
   @DecorStashJsonConverter()
   Map<String, int> get decorStash;
+  @override
+  List<DecorItem> get decorInventory;
+  @override
+  List<GardenItem> get plantInventory;
   @override
   bool get freeFirstGrowthEverConsumed;
   @override

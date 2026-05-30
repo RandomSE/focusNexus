@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:timezone/timezone.dart' as tz;
 
+import 'form_field_metrics.dart';
 import 'notification_schedule_utils.dart';
 
 class CommonUtils {
@@ -108,23 +109,31 @@ class CommonUtils {
     ValueChanged<T?> onChanged, {
     String Function(T)? displayText,
   }) {
-    return DropdownButton<T>(
-      value: value,
-      dropdownColor: dropdownColor,
-      isExpanded: true,
-      onChanged: onChanged,
-      items:
-          options.map((e) {
-            final text = displayText != null ? displayText(e) : e.toString();
-            return DropdownMenuItem<T>(
-              value: e,
-              child: Text(
-                text,
-                style: textStyle,
-                overflow: TextOverflow.ellipsis,
-              ),
-            );
-          }).toList(),
+    final itemLabels = options
+        .map((e) => displayText != null ? displayText(e) : e.toString())
+        .toList();
+
+    return wrapFormField(
+      DropdownButton<T>(
+        value: value,
+        dropdownColor: dropdownColor,
+        isExpanded: true,
+        itemHeight: dropdownItemHeight(textStyle),
+        onChanged: onChanged,
+        selectedItemBuilder: (context) {
+          return itemLabels
+              .map((text) => formDropdownSelectedValue(text, textStyle))
+              .toList();
+        },
+        items: options.map((e) {
+          final text = displayText != null ? displayText(e) : e.toString();
+          return DropdownMenuItem<T>(
+            value: e,
+            child: formMenuItemText(text, textStyle),
+          );
+        }).toList(),
+      ),
+      textStyle,
     );
   }
 
@@ -138,25 +147,43 @@ class CommonUtils {
     String? Function(String?)? validator,
     String Function(T)? displayText,
   }) {
-    return DropdownButtonFormField<T>(
-      isExpanded: true,
-      dropdownColor: dropdownColor,
-      value: value,
-      decoration: InputDecoration(labelText: label, labelStyle: textStyle),
-      items:
-          options
-              .map(
-                (e) => DropdownMenuItem<T>(
-                  value: e,
-                  child: Text(
-                    displayText != null ? displayText(e) : e.toString(),
-                    style: textStyle,
-                  ),
+    final itemLabels = options
+        .map((e) => displayText != null ? displayText(e) : e.toString())
+        .toList();
+
+    return labeledFormField(
+      label: label,
+      textStyle: textStyle,
+      field: DropdownButtonFormField<T>(
+        isExpanded: true,
+        isDense: false,
+        dropdownColor: dropdownColor,
+        value: value,
+        itemHeight: dropdownButtonClosedHeight(textStyle),
+        decoration: formInputDecoration(
+          label: label,
+          textStyle: textStyle,
+          isDropdown: true,
+        ),
+        selectedItemBuilder: (context) {
+          return itemLabels
+              .map((text) => formDropdownSelectedValue(text, textStyle))
+              .toList();
+        },
+        items: options
+            .map(
+              (e) => DropdownMenuItem<T>(
+                value: e,
+                child: formMenuItemText(
+                  displayText != null ? displayText(e) : e.toString(),
+                  textStyle,
                 ),
-              )
-              .toList(),
-      style: textStyle,
-      onChanged: onChanged,
+              ),
+            )
+            .toList(),
+        style: textStyle,
+        onChanged: onChanged,
+      ),
     );
   }
 
@@ -200,14 +227,20 @@ class CommonUtils {
     bool dense = false,
     int titleMaxLines = 1,
   }) {
+    final dyslexia = usesOpenDyslexic(textStyle);
     return SwitchListTile(
-      dense: dense,
-      contentPadding: dense ? EdgeInsets.zero : null,
+      dense: dyslexia ? false : dense,
+      contentPadding: dyslexia
+          ? EdgeInsets.symmetric(
+              vertical: (textStyle.fontSize ?? 14) * 0.2,
+            )
+          : (dense ? EdgeInsets.zero : null),
       title: Text(
         text,
         style: textStyle,
-        maxLines: titleMaxLines,
-        overflow: TextOverflow.ellipsis,
+        maxLines: dyslexia ? 4 : titleMaxLines,
+        softWrap: true,
+        overflow: dyslexia ? TextOverflow.visible : TextOverflow.ellipsis,
       ),
       value: value,
       onChanged: onChanged,
@@ -219,17 +252,81 @@ class CommonUtils {
     return Text(text, style: style);
   }
 
+  static Widget buildListTile({
+    required String title,
+    required TextStyle textStyle,
+    Widget? trailing,
+    VoidCallback? onTap,
+  }) {
+    final dyslexia = usesOpenDyslexic(textStyle);
+    final size = textStyle.fontSize ?? 14;
+    return outlinedFormRow(
+      ListTile(
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: dyslexia ? size * 0.15 : 0,
+        ),
+        minVerticalPadding: dyslexia ? size * 0.35 : 12,
+        title: Text(
+          title,
+          style: textStyle,
+          maxLines: dyslexia ? 3 : 1,
+          softWrap: true,
+          overflow: dyslexia ? TextOverflow.visible : TextOverflow.ellipsis,
+        ),
+        trailing: trailing,
+        onTap: onTap,
+      ),
+      textStyle,
+    );
+  }
+
+  static Widget buildCheckboxListTile({
+    required String title,
+    required TextStyle textStyle,
+    required bool value,
+    required Color activeColor,
+    required Color checkColor,
+    required ValueChanged<bool?>? onChanged,
+  }) {
+    final dyslexia = usesOpenDyslexic(textStyle);
+    return outlinedFormRow(
+      CheckboxListTile(
+        contentPadding: EdgeInsets.zero,
+        controlAffinity: ListTileControlAffinity.leading,
+        title: Text(
+          title,
+          style: textStyle,
+          maxLines: dyslexia ? 4 : 1,
+          softWrap: true,
+          overflow: dyslexia ? TextOverflow.visible : TextOverflow.ellipsis,
+        ),
+        value: value,
+        activeColor: activeColor,
+        checkColor: checkColor,
+        onChanged: onChanged,
+      ),
+      textStyle,
+    );
+  }
+
   static Widget buildTextField(
       TextEditingController? controller,
       String text,
       TextStyle textStyle, {
       bool hideText = false,
   }) {
-    return TextField(
-      style: textStyle,
-      controller: controller,
-      decoration: InputDecoration(labelText: text, labelStyle: textStyle),
-      obscureText: hideText
+    return labeledFormField(
+      label: text,
+      textStyle: textStyle,
+      field: TextField(
+        style: textStyle,
+        controller: controller,
+        decoration: formInputDecoration(label: text, textStyle: textStyle),
+        obscureText: hideText,
+        minLines: usesOpenDyslexic(textStyle) ? 1 : null,
+        maxLines: usesOpenDyslexic(textStyle) ? 3 : 1,
+      ),
     );
   }
 
@@ -244,19 +341,25 @@ class CommonUtils {
     TextInputType? keyboardType,
   }) {
     keyboardType ??= TextInputType.text;
-    return TextFormField(
-      controller: controller,
-      style: textStyle,
-      keyboardType: keyboardType,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: textStyle,
-        filled: filled,
-        fillColor: fillColor,
-        border: const OutlineInputBorder(),
+    final fieldStyle = textStyle ?? getDefaultTextStyle();
+    return labeledFormField(
+      label: label,
+      textStyle: fieldStyle,
+      field: TextFormField(
+        controller: controller,
+        style: fieldStyle,
+        keyboardType: keyboardType,
+        decoration: formInputDecoration(
+          label: label,
+          textStyle: fieldStyle,
+          filled: filled,
+          fillColor: fillColor,
+        ),
+        validator: validator,
+        obscureText: hideText,
+        minLines: usesOpenDyslexic(fieldStyle) ? 1 : null,
+        maxLines: usesOpenDyslexic(fieldStyle) ? 3 : 1,
       ),
-      validator: validator,
-      obscureText: hideText,
     );
   }
 
