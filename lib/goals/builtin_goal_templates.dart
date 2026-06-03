@@ -1,0 +1,48 @@
+/// Built-in goal templates shown on the goals screen.
+const Map<String, Map<String, dynamic>> builtinGoalTemplates = {
+  'Clean your room': {
+    'category': 'Productivity',
+    'complexity': 'Low',
+    'effort': 'Low',
+    'motivation': 'Medium',
+    'time': '10',
+    'Hours to complete': '24',
+    'steps': '1',
+  },
+  '5-minute walk': {
+    'category': 'Health',
+    'complexity': 'Low',
+    'effort': 'Low',
+    'motivation': 'Low',
+    'time': '5',
+    'Hours to complete': '24',
+    'steps': '1',
+  },
+  'Make a meal': {
+    'category': 'Health',
+    'complexity': 'Medium',
+    'effort': 'Medium',
+    'motivation': 'Medium',
+    'time': '30',
+    'Hours to complete': '24',
+    'steps': '2',
+  },
+  'Take a shower': {
+    'category': 'Health',
+    'complexity': 'Low',
+    'effort': 'Low',
+    'motivation': 'Low',
+    'time': '10',
+    'Hours to complete': '24',
+    'steps': '1',
+  },
+  'Compliment someone': {
+    'category': 'Social',
+    'complexity': 'Low',
+    'effort': 'Low',
+    'motivation': 'Low',
+    'time': '1',
+    'Hours to complete': '24',
+    'steps': '1',
+  },
+};

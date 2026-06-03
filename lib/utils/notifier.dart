@@ -18,6 +18,7 @@ import '../models/classes/goal_set.dart';
 import '../utils/text_utils.dart';
 import 'affirmation_selector.dart';
 import 'common_utils.dart';
+import 'goal_notification_android.dart';
 import 'notification_schedule_utils.dart';
 import 'theme_styles.dart';
 
@@ -40,19 +41,15 @@ class GoalNotifier {
 
   // Track active timers per goal
   static final _encouragementThreshold = 6;
+  static const _aiEncouragementSlotOffsets = [4, 50, 51, 52];
   static final Map<String, List<Timer>> _activeTimers = {};
   static final DateFormat _formatter = DateFormat('dd MMMM yyyy HH:mm');
   static var _now = tz.TZDateTime.now(tz.local);
-  static var _mostRecentTimeGoal = DateTime.now().subtract(
-    Duration(seconds: 10),
-  ); // Set in the past to ensure it's overwritten.
-  static var _mostRecentTimeRepeatingGoal = DateTime.now().subtract(
-    Duration(seconds: 10),
-  ); // Set in the past to ensure it's overwritten.
   static final _goalGroupId = 1;
   static final _goalRepeatingGroupId = 2;
   static final _aiEncouragementGroupId = 3;
   static final _dailyAffirmationsGroupId = 4;
+
   /// Legacy repeating id; kept for cancel compatibility.
   static const _dailyAffirmationsScheduleBaseId = 500000;
   static int get _dailyAffirmationsHorizonDays =>
@@ -109,7 +106,9 @@ class GoalNotifier {
       return;
     }
 
-    final storedTime = await storage.read(key: StorageKeys.dailyAffirmationsTime);
+    final storedTime = await storage.read(
+      key: StorageKeys.dailyAffirmationsTime,
+    );
     final effectiveTime = NotificationScheduleUtils.normalizeHHmm(storedTime);
     final scheduledUntilRaw = await storage.read(
       key: StorageKeys.dailyAffirmationsScheduledUntil,
@@ -119,7 +118,8 @@ class GoalNotifier {
     );
     final now = tz.TZDateTime.now(tz.local);
 
-    final needsRefresh = forceReschedule ||
+    final needsRefresh =
+        forceReschedule ||
         NotificationScheduleUtils.shouldRefreshAffirmationSchedule(
           scheduledUntil: scheduledUntil,
           now: DateTime(now.year, now.month, now.day),
@@ -222,10 +222,6 @@ class GoalNotifier {
     final oneHourBeforeDeadline = CommonUtils.newTimeMinusHours(deadline, 1);
     final twoHourBeforeDeadline = CommonUtils.newTimeMinusHours(deadline, 2);
     final fourHourBeforeDeadline = CommonUtils.newTimeMinusHours(deadline, 4);
-    final twelveHourBeforeDeadline = CommonUtils.newTimeMinusHours(
-      deadline,
-      12,
-    );
     final dayBeforeDeadline = CommonUtils.newTimeMinusHours(deadline, 24);
 
     // Shared reminder for Low, Medium & High frequency.
@@ -319,9 +315,14 @@ class GoalNotifier {
       }
 
       final totalDays = hoursToExpire ~/ 24;
-      if (totalDays > 1) {
-        for (int i = 1; i <= totalDays; i++) {
+      final dailyOffsets =
+          NotificationScheduleUtils.highFrequencyDailyReminderDayOffsets(
+            hoursToExpire,
+          );
+      if (dailyOffsets.isNotEmpty) {
+        for (final i in dailyOffsets) {
           final dailyTime = deadline.subtract(Duration(days: i));
+          if (!dailyTime.isAfter(_now)) continue;
           await scheduleReminder(
             goalId + 10 + i,
             'Daily Goal Reminder',
@@ -343,7 +344,9 @@ class GoalNotifier {
           );
         }
       }
-      if (totalDays == 1 && hoursToExpire > 24) {
+      if (totalDays == 1 &&
+          hoursToExpire > 24 &&
+          dayBeforeDeadline.isAfter(_now)) {
         await scheduleReminder(
           goalId + 3,
           'Goal Reminder',
@@ -366,57 +369,94 @@ class GoalNotifier {
       }
     }
 
-    if (_aiEncouragement & (hoursToExpire > 24)) {
-      // so it doesn't trigger unnecessarily if someone sets a deadline of say, 13 hours.
-      final (score, reasons, biggest) = getEncouragementValue(goalSet);
-      if (score >= _encouragementThreshold || biggest > 3) {
-        // goalId + 4
-        int timeScore = getScoreByTypeAndString(
-          'Time',
-          goalSet.time.toString(),
-        );
-        int stepScore = getScoreByTypeAndString(
-          'Steps',
-          goalSet.steps.toString(),
-        );
-        int complexityScore = getScoreByTypeAndString(
-          'Levels',
-          goalSet.complexity,
-        );
-        int effortScore = getScoreByTypeAndString('Levels', goalSet.effort);
-        int motivationScore = getScoreByTypeAndString(
-          'Levels',
-          goalSet.motivation,
-        );
-        final message = TextUtils.buildEncouragementMessage(
-          goalName,
-          goalId,
-          goalSet.deadline,
-          reasons,
-          score,
-          biggest,
-          timeScore,
-          stepScore,
-          complexityScore,
-          effortScore,
-          motivationScore,
-          notificationStyle,
-        );
-        await scheduleReminder(
-          goalId + 4,
-          'AI encouragement',
-          message,
-          twelveHourBeforeDeadline,
-          _scheduleMode,
-          _aiEncouragementGroupId,
-          'AI encouragement',
-          'Encouragement for more intense goals',
-          'ai_encouragement_group',
-          'AI encouragement',
-          'AI encouragement',
-          'Encouragement for more intense goals',
-        );
+    if (_aiEncouragement && hoursToExpire > 6) {
+      await _scheduleAiEncouragementSuite(
+        goalSet: goalSet,
+        goalName: goalName,
+        goalId: goalId,
+        notificationStyle: notificationStyle,
+        now: _now,
+        deadline: deadline,
+        hoursToExpire: hoursToExpire,
+      );
+    }
+  }
+
+  /// Check-ins for demanding goals: early nudge, midpoint, and pre-deadline support.
+  static Future<void> _scheduleAiEncouragementSuite({
+    required GoalSet goalSet,
+    required String goalName,
+    required int goalId,
+    required String notificationStyle,
+    required tz.TZDateTime now,
+    required tz.TZDateTime deadline,
+    required int hoursToExpire,
+  }) async {
+    final (score, reasons, biggest) = getEncouragementValue(goalSet);
+    if (score < _encouragementThreshold && biggest <= 3) {
+      return;
+    }
+
+    final timeScore = getScoreByTypeAndString('Time', goalSet.time.toString());
+    final stepScore = getScoreByTypeAndString(
+      'Steps',
+      goalSet.steps.toString(),
+    );
+    final complexityScore = getScoreByTypeAndString(
+      'Levels',
+      goalSet.complexity,
+    );
+    final effortScore = getScoreByTypeAndString('Levels', goalSet.effort);
+    final motivationScore = getScoreByTypeAndString(
+      'Levels',
+      goalSet.motivation,
+    );
+
+    final triggers = <DateTime>{
+      now.add(const Duration(hours: 2)),
+      now.add(Duration(hours: hoursToExpire ~/ 2)),
+      deadline.subtract(const Duration(hours: 12)),
+    }..removeWhere((time) => !time.isAfter(now) || !time.isBefore(deadline));
+
+    final sortedTriggers = <DateTime>[];
+    for (final candidate in (triggers.toList()..sort())) {
+      if (sortedTriggers.isEmpty ||
+          candidate.difference(sortedTriggers.last).inMinutes.abs() >= 30) {
+        sortedTriggers.add(candidate);
       }
+    }
+
+    for (var i = 0; i < sortedTriggers.length && i < 3; i++) {
+      final trigger = sortedTriggers[i];
+      final message = TextUtils.buildEncouragementMessage(
+        goalName,
+        goalId,
+        goalSet.deadline,
+        reasons,
+        score,
+        biggest,
+        timeScore,
+        stepScore,
+        complexityScore,
+        effortScore,
+        motivationScore,
+        notificationStyle,
+        phase: i,
+      );
+      await scheduleReminder(
+        goalId + _aiEncouragementSlotOffsets[i],
+        'AI encouragement',
+        message,
+        trigger,
+        _scheduleMode,
+        _aiEncouragementGroupId,
+        'AI encouragement',
+        'Encouragement for more intense goals',
+        'ai_encouragement_group',
+        'AI encouragement',
+        'AI encouragement',
+        'Encouragement for more intense goals',
+      );
     }
   }
 
@@ -433,7 +473,9 @@ class GoalNotifier {
     }
 
     await initialize(); // ensure plugin + timezone are ready
-    final effectiveTime = NotificationScheduleUtils.normalizeHHmm(timeToTrigger);
+    final effectiveTime = NotificationScheduleUtils.normalizeHHmm(
+      timeToTrigger,
+    );
     final firstTrigger = NotificationScheduleUtils.nextTriggerFromHHmm(
       effectiveTime,
     );
@@ -444,9 +486,8 @@ class GoalNotifier {
     }
 
     final styleRaw = await storage.read(key: StorageKeys.notificationStyle);
-    final notificationStyle = (styleRaw ?? 'Minimal').trim().isEmpty
-        ? 'Minimal'
-        : styleRaw!.trim();
+    final notificationStyle =
+        (styleRaw ?? 'Minimal').trim().isEmpty ? 'Minimal' : styleRaw!.trim();
 
     await cancelDailyAffirmationsNotification();
 
@@ -513,9 +554,9 @@ class GoalNotifier {
           await _plugin.cancel(goalId + 10 + i);
         }
         await _plugin.cancel(goalId + 2); // 1 day before - medium, High
-        await _plugin.cancel(
-          goalId + 4,
-        ); // 12-hours before, all -  AI encouragement
+        for (final offset in _aiEncouragementSlotOffsets) {
+          await _plugin.cancel(goalId + offset);
+        }
       }
     }
 
@@ -531,9 +572,9 @@ class GoalNotifier {
   }
 
   static Future<void> cancelAiEncouragementNotification(int goalId) async {
-    await _plugin.cancel(
-      goalId + 4,
-    ); // 12-hours before, all -  AI encouragement
+    for (final offset in _aiEncouragementSlotOffsets) {
+      await _plugin.cancel(goalId + offset);
+    }
     debugPrint(
       'AI encouragement for goal canceled due to step progress addition.',
     );
@@ -642,18 +683,17 @@ class GoalNotifier {
     required String title,
     required String body,
   }) async {
+    final preview = GoalNotificationAndroid.collapsedPreview(body);
     await _plugin.show(
       id,
       title,
-      body,
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'instant_notification_channel',
-          'Instant Notifications',
-          channelDescription: 'Instant Notification channel',
-          importance: Importance.max,
-          priority: Priority.high,
-        ),
+      preview,
+      GoalNotificationAndroid.platformDetails(
+        channelId: 'instant_notification_channel',
+        channelName: 'Instant Notifications',
+        channelDescription: 'Instant Notification channel',
+        title: title,
+        fullBody: body,
       ),
     );
   }
@@ -711,26 +751,38 @@ class GoalNotifier {
       );
     }
 
+    final trigger = tz.TZDateTime.from(scheduledTime, tz.local);
+    if (!trigger.isAfter(tz.TZDateTime.now(tz.local))) {
+      debugPrint(
+        'Skipping reminder id=$id: scheduled time $trigger is not in the future.',
+      );
+      return;
+    }
+
+    final preview = GoalNotificationAndroid.collapsedPreview(body);
     await _plugin.zonedSchedule(
       id,
       title,
-      body,
-      tz.TZDateTime.from(scheduledTime, tz.local),
-      NotificationDetails(
-        android: AndroidNotificationDetails(
-          channelId,
-          channelName,
-          channelDescription: channelDescription,
-          importance: Importance.max,
-          priority: Priority.high,
-          groupKey: groupKey,
-          setAsGroupSummary: false,
-        ),
+      preview,
+      trigger,
+      GoalNotificationAndroid.platformDetails(
+        channelId: channelId,
+        channelName: channelName,
+        channelDescription: channelDescription,
+        title: title,
+        fullBody: body,
+        groupKey: groupKey,
       ),
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
       androidScheduleMode: mode,
     );
+  }
+
+  @visibleForTesting
+  static int summaryNotificationIdFor(int baseGroupId, DateTime triggerTime) {
+    final minuteBucket = triggerTime.millisecondsSinceEpoch ~/ 60000;
+    return baseGroupId * 100000 + (minuteBucket % 99999);
   }
 
   static Future<void> scheduleSummaryNotification(
@@ -745,50 +797,34 @@ class GoalNotifier {
     String body,
   ) async {
     setNow();
-    debugPrint(
-      'Now: $_now. Trigger time: $triggerTime. Most recent time: $_mostRecentTimeGoal',
-    );
-    if (triggerTime.isAfter(_mostRecentTimeGoal) &
-        !_mostRecentTimeGoal.isBefore(_now)) {
-      // triggerTime: passed in, e.g 10 seconds from now. mostRecentTimeGoal - 1 hour in the future.  if passed in time < mostRecent: set mostRecent to passed in time.
-      debugPrint(
-        'A summary notification is already scheduled. No more will be scheduled currently.',
-      );
+    if (!triggerTime.isAfter(_now)) {
       return;
-    } else if (_mostRecentTimeGoal.isAfter(triggerTime) ||
-        _mostRecentTimeGoal.isBefore(_now)) {
-      _mostRecentTimeGoal = triggerTime;
-      debugPrint(
-        'Updated summary trigger time to: $_mostRecentTimeGoal. Triggering summary at that time.',
-      );
-      AndroidNotificationDetails summaryDetails = AndroidNotificationDetails(
-        channelId,
-        channelName,
+    }
+
+    final summaryId = summaryNotificationIdFor(id, triggerTime);
+    final preview = GoalNotificationAndroid.collapsedPreview(body);
+
+    await _plugin.zonedSchedule(
+      summaryId,
+      title,
+      preview,
+      tz.TZDateTime.from(triggerTime, tz.local),
+      GoalNotificationAndroid.platformDetails(
+        channelId: channelId,
+        channelName: channelName,
         channelDescription: channelDescription,
-        importance: Importance.max,
-        priority: Priority.high,
+        title: title,
+        fullBody: body,
         groupKey: groupKey,
         setAsGroupSummary: true,
-      );
-
-      NotificationDetails summaryPlatformDetails = NotificationDetails(
-        android: summaryDetails,
-      );
-
-      debugPrint(summaryDetails.toString());
-
-      await _plugin.zonedSchedule(
-        id,
-        title,
-        body,
-        tz.TZDateTime.from(triggerTime, tz.local),
-        summaryPlatformDetails,
-        androidScheduleMode: mode,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-      );
-      debugPrint('summary notification sent.');
-    }
+      ),
+      androidScheduleMode: mode,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+    );
+    debugPrint(
+      'Group summary scheduled at $triggerTime (id: $summaryId, group: $groupKey).',
+    );
   }
 
   static Future<void> scheduleRepeatingGoalSummaryNotification(
@@ -802,48 +838,38 @@ class GoalNotifier {
     String body,
   ) async {
     setNow();
-    debugPrint(
-      'Now: $_now. Trigger time: $triggerTime. Most recent time: $_mostRecentTimeRepeatingGoal',
-    );
-    if (triggerTime.isAfter(_mostRecentTimeRepeatingGoal) &
-        !_mostRecentTimeRepeatingGoal.isBefore(_now)) {
-      debugPrint(
-        'A repeating summary notification is already scheduled. No more will be scheduled currently.',
-      );
+    if (!triggerTime.isAfter(_now)) {
       return;
-    } else if (_mostRecentTimeRepeatingGoal.isAfter(triggerTime) ||
-        _mostRecentTimeRepeatingGoal.isBefore(_now)) {
-      _mostRecentTimeRepeatingGoal = triggerTime;
-      debugPrint(
-        'Updated repeating summary trigger time to: $_mostRecentTimeRepeatingGoal. Triggering summary at that time.',
-      );
-      AndroidNotificationDetails summaryDetails = AndroidNotificationDetails(
-        channelId,
-        channelName,
+    }
+
+    final summaryId = summaryNotificationIdFor(
+      _goalRepeatingGroupId,
+      triggerTime,
+    );
+    final preview = GoalNotificationAndroid.collapsedPreview(body);
+
+    await _plugin.zonedSchedule(
+      summaryId,
+      title,
+      preview,
+      tz.TZDateTime.from(triggerTime, tz.local),
+      GoalNotificationAndroid.platformDetails(
+        channelId: channelId,
+        channelName: channelName,
         channelDescription: channelDescription,
-        importance: Importance.max,
-        priority: Priority.high,
+        title: title,
+        fullBody: body,
         groupKey: groupKey,
         setAsGroupSummary: true,
-      );
-
-      NotificationDetails summaryPlatformDetails = NotificationDetails(
-        android: summaryDetails,
-      );
-
-      await _plugin.zonedSchedule(
-        _goalRepeatingGroupId,
-        title,
-        body,
-        tz.TZDateTime.from(triggerTime, tz.local),
-        summaryPlatformDetails,
-        androidScheduleMode: mode,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-        matchDateTimeComponents: DateTimeComponents.time,
-      );
-      debugPrint('summary notification sent.');
-    }
+      ),
+      androidScheduleMode: mode,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: DateTimeComponents.time,
+    );
+    debugPrint(
+      'Repeating group summary scheduled at $triggerTime (id: $summaryId).',
+    );
   }
 
   static Future<void> scheduleDailyAffirmations(
@@ -853,27 +879,23 @@ class GoalNotifier {
     String body, {
     int? notificationId,
   }) async {
-    AndroidNotificationDetails summaryDetails = AndroidNotificationDetails(
-      'daily_affirmations_channel',
-      'Daily Affirmations',
+    final preview = GoalNotificationAndroid.collapsedPreview(body);
+    final platformDetails = GoalNotificationAndroid.platformDetails(
+      channelId: 'daily_affirmations_channel',
+      channelName: 'Daily Affirmations',
       channelDescription:
           'Daily affirmations to improve your mood and stay motivated.',
-      importance: Importance.max,
-      priority: Priority.high,
-      groupKey:
-          'daily_affirmations', // doesn't need group summary since only 1 notification, done every day.
-    );
-
-    NotificationDetails summaryPlatformDetails = NotificationDetails(
-      android: summaryDetails,
+      title: title,
+      fullBody: body,
+      groupKey: 'daily_affirmations',
     );
 
     await _plugin.zonedSchedule(
       notificationId ?? _dailyAffirmationsGroupId,
       title,
-      body,
+      preview,
       triggerTime,
-      summaryPlatformDetails,
+      platformDetails,
       androidScheduleMode: mode,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,

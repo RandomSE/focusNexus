@@ -117,8 +117,9 @@ class TextUtils {
     int complexityScore,
     int effortScore,
     int motivationScore,
-    String notificationStyle,
-  ) {
+    String notificationStyle, {
+    int phase = 0,
+  }) {
     // determine dominant factor among the five scores
     final Map<String, int> factorScores = {
       'time': timeScore,
@@ -268,8 +269,15 @@ class TextUtils {
             ? '\n\nWhy this matters:\n• ${reasonsToShow.join('\n• ')}'
             : '';
 
+    final phaseLead = switch (phase) {
+      0 => 'Early check-in — ',
+      1 => 'Halfway there — ',
+      2 => 'Approaching deadline — ',
+      _ => '',
+    };
+
     // produce final message: variantPrefix + a short core sentence + reasons + deadline info
-    final String finalCore = '$variantPrefix $coreMessage';
+    final String finalCore = '$phaseLead$variantPrefix $coreMessage';
     final String deadlineText =
         deadline.isNotEmpty ? '\n\nDeadline: $deadline' : '';
 

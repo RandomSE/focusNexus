@@ -1,14 +1,14 @@
 // lib/screens/goals_screen.dart
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:confetti/confetti.dart';
 
+import '../goals/builtin_goal_templates.dart';
+import '../goals/goals_controller.dart';
+import '../goals/goals_filter_sort.dart';
+import '../goals/goals_use_case.dart';
 import '../repositories/app_repositories.dart';
 import '../services/sound_service.dart';
-import '../settings/app_settings.dart';
-import '../services/achievement_streak_service.dart';
 import '../models/classes/theme_bundle.dart';
 import '../models/classes/goal_set.dart';
 import '../utils/common_utils.dart';
@@ -16,8 +16,6 @@ import '../utils/screen_theme.dart';
 import '../widgets/deferred_screen.dart';
 import '../widgets/skeleton_loaders.dart';
 import '../widgets/settings_themed_builder.dart';
-import '../utils/goal_points.dart';
-import '../utils/notifier.dart';
 
 class GoalsScreen extends StatefulWidget {
   const GoalsScreen({super.key});
@@ -28,10 +26,9 @@ class GoalsScreen extends StatefulWidget {
 
 class _GoalsScreenState extends State<GoalsScreen> {
   AppRepositories get _repos => AppRepositories.instance;
-  AppSettings get _settings => _repos.settings;
-  AchievementStreakService get _streaks => _repos.streaks;
+  GoalsController get _goals => _repos.goalsController;
   ThemeBundle get themeBundle =>
-      _repos.theme.bundleFromSnapshot(_settings.snapshot);
+      _repos.theme.bundleFromSnapshot(_repos.settings.snapshot);
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _timeController = TextEditingController();
@@ -51,122 +48,57 @@ class _GoalsScreenState extends State<GoalsScreen> {
   final String today = DateFormat('dd MM yyyy').format(DateTime.now());
   int goalsCompletedToday = 0;
   String _motivation = 'Low';
-  final _categories = ['Productivity', 'Health', 'Learning', 'Social', 'Self-care', 'Work', 'Relationships', 'Other'];
+  final _categories = [
+    'Productivity',
+    'Health',
+    'Learning',
+    'Social',
+    'Self-care',
+    'Work',
+    'Relationships',
+    'Other',
+  ];
   final _levels = ['Low', 'Medium', 'High'];
-  final Map<String, Map<String, dynamic>> _templateDetails = {
-    'Clean your room': {
-      'category': 'Productivity',
-      'complexity': 'Low',
-      'effort': 'Low',
-      'motivation': 'Medium',
-      'time': '10',
-      'Hours to complete': '24',
-      'steps': '1',
-    },
-    '5-minute walk': {
-      'category': 'Health',
-      'complexity': 'Low',
-      'effort': 'Low',
-      'motivation': 'Low',
-      'time': '5',
-      'Hours to complete': '24',
-      'steps': '1',
-    },
-    'Make a meal': {
-      'category': 'Health',
-      'complexity': 'Medium',
-      'effort': 'Medium',
-      'motivation': 'Medium',
-      'time': '30',
-      'Hours to complete': '24',
-      'steps': '2',
-    },
-    'Take a shower': {
-      'category': 'Health',
-      'complexity': 'Low',
-      'effort': 'Low',
-      'motivation': 'Low',
-      'time': '10',
-      'Hours to complete': '24',
-      'steps': '1',
-    },
-    'Compliment someone': {
-      'category': 'Social',
-      'complexity': 'Low',
-      'effort': 'Low',
-      'motivation': 'Low',
-      'time': '1',
-      'Hours to complete': '24',
-      'steps': '1',
-    },
-  };
-  List<Map<String, dynamic>> _activeGoals = [];
-  List<Map<String, dynamic>> _completedGoals = [];
+  final Map<String, Map<String, dynamic>> _templateDetails =
+      Map<String, Map<String, dynamic>>.from(builtinGoalTemplates);
   final DateTime _currentDate = DateTime(
     DateTime.now().year,
     DateTime.now().month,
     DateTime.now().day,
     DateTime.now().hour,
-    DateTime.now().minute
+    DateTime.now().minute,
   );
   final DateFormat formatter = DateFormat('dd MMMM yyyy HH:mm');
   Map<String, Map<String, dynamic>> _userTemplates = {};
   Map<String, List<String>> _templateGroups = {};
-  bool _notificationsEnabled = false;
-  String _notificationStyle = 'Minimal';
-  String _notificationFrequency = 'Low';
   late ConfettiController _confettiController;
 
   @override
   void initState() {
     super.initState();
-    _confettiController = ConfettiController(duration: const Duration(seconds: 1));
+    _confettiController = ConfettiController(
+      duration: const Duration(seconds: 1),
+    );
   }
 
-  @override void dispose() {
+  @override
+  void dispose() {
     _confettiController.dispose();
     super.dispose();
   }
 
-  Future<void> loadNotificationStyleAndFrequency() async {
-    _notificationsEnabled = _settings.notificationsEnabled;
-    _notificationStyle = _settings.notificationStyle;
-    _notificationFrequency = _settings.notificationFrequency;
-  }
-
-
   Future<void> _loadGoalsPage() async {
     _stepsController.text = '1';
     _templateSteps.text = '1';
-    await _loadGoals();
+    await _goals.load(now: _currentDate);
     await _loadTemplates();
     await _loadTemplateGroups();
-    await loadNotificationStyleAndFrequency();
+    goalsCompletedToday = _goals.goalsCompletedToday;
   }
 
-
-  Future<int> getTotalAmount(int amount) async {
-    final count = await _repos.goals.nextCompletedTodayCount(today);
-    await _repos.goals.writeCompletedToday(today: today, count: count);
-    debugPrint('today: $today, count: $count');
-    goalsCompletedToday = count;
-
-    double reward = amount.toDouble();
-
-    if (count == 1) {
-      reward = amount * 2 + 100;
-
-    } else if (count <= 5) {
-      reward = amount * 1.5 + 20;
-    }
-
-    else if (count <= 10) {
-      reward = amount * 1.25 + 5;
-    }
-
-    // Round up to nearest multiple of 5
-    final int rounded = GoalPoints.roundUpToNearestFive(reward);
-    return rounded;
+  void _dismissDialog(BuildContext dialogContext) {
+    CommonUtils.dismissKeyboard();
+    Navigator.pop(dialogContext);
   }
 
   Future<void> _loadTemplates() async {
@@ -181,226 +113,41 @@ class _GoalsScreenState extends State<GoalsScreen> {
     setState(() {});
   }
 
-  Future<void> _loadGoals() async {
-    final active = await _repos.goals.readActiveGoals();
-    final complete = await _repos.goals.readCompletedGoals();
-    setState(() {
-      _activeGoals = active;
-      _completedGoals = complete;
-    });
+  List<GoalSet> get _filteredSortedGoals => filterAndSortGoals(
+    source:
+        _selectedStatusFilter == 'Active'
+            ? _goals.activeGoals
+            : _goals.completedGoals,
+    categoryFilter: _selectedCategoryFilter,
+    complexityFilter: _selectedComplexityFilter,
+    sortBy: _sortBy,
+    deadlineFormat: formatter,
+  );
 
-    if (!await _repos.goals.areDeadlinesPaused()) {
-      _checkForExpiredGoals();
-    }
-  }
+  Future<void> _clearGoals() => _goals.clearActiveGoals();
 
-  List<Map<String, dynamic>> get _filteredSortedGoals {
-    List<Map<String, dynamic>> source =
-        _selectedStatusFilter == 'Active' ? _activeGoals : _completedGoals;
-    var goals = List<Map<String, dynamic>>.from(source);
-
-    if (_selectedCategoryFilter != 'All') {
-      goals =
-          goals.where((g) => g['category'] == _selectedCategoryFilter).toList();
-    }
-    if (_selectedComplexityFilter != 'All') {
-      goals =
-          goals
-              .where((g) => g['complexity'] == _selectedComplexityFilter)
-              .toList();
-    }
-
-    switch (_sortBy) {
-      case 'Title A-Z':
-        goals.sort((a, b) => a['title'].compareTo(b['title']));
-        break;
-      case 'Title Z-A':
-        goals.sort((a, b) => b['title'].compareTo(a['title']));
-        break;
-      case 'Time ↑':
-        goals.sort(
-          (a, b) => int.tryParse(
-            a['time'] ?? '0',
-          )!.compareTo(int.tryParse(b['time'] ?? '0')!),
-        );
-        break;
-      case 'Time ↓':
-        goals.sort(
-          (a, b) => int.tryParse(
-            b['time'] ?? '0',
-          )!.compareTo(int.tryParse(a['time'] ?? '0')!),
-        );
-        break;
-      case 'Steps ↑':
-        goals.sort((a, b) => a['steps'].length.compareTo(b['steps'].length));
-        break;
-      case 'Steps ↓':
-        goals.sort((a, b) => b['steps'].length.compareTo(a['steps'].length));
-        break;
-
-      case 'Closest deadline':
-        final DateFormat deadlineFormat = formatter;
-
-        // Separate goals into two groups: valid and invalid deadlines
-        final List<Map<String, dynamic>> withDeadline = [];
-        final List<Map<String, dynamic>> withoutDeadline = [];
-
-        for (final goal in goals) {
-          final deadlineString = goal['Deadline'];
-          try {
-            // Try parsing the deadline
-            final DateTime parsed = deadlineFormat.parseStrict(deadlineString);
-            goal['_parsedDeadline'] = parsed; // Temporarily store for sorting
-            withDeadline.add(goal);
-          } catch (_) {
-            // Not parseable or missing
-            withoutDeadline.add(goal);
-          }
-        }
-
-        // Sort only those with valid deadlines by soonest first
-        withDeadline.sort((a, b) =>
-            a['_parsedDeadline'].compareTo(b['_parsedDeadline']));
-
-        // Remove temporary field after sorting (optional)
-        for (final goal in withDeadline) {
-          goal.remove('_parsedDeadline');
-        }
-
-        // Merge lists: valid deadlines first, then the rest
-        goals
-          ..clear()
-          ..addAll(withDeadline)
-          ..addAll(withoutDeadline);
-        break;
-    }
-    return goals;
-  }
-
-  void _clearGoals() {
-    while (_activeGoals.isNotEmpty) {
-      _removeGoalWithoutRemovingNotifications(0);
-    }
-    GoalNotifier.cancelAllGoalNotifications(); // Handled here separately.
-    _streaks.setInt('totalGoalsActive', 0);
-  }
-
-  void _clearCompleteGoals () {
-    while (_completedGoals.isNotEmpty) {
-      _removeCompletedGoal(0);
-    }
-  }
-
-  int _calculatePointsFromTemplate({
-    required String complexity,
-    required String effort,
-    required String motivation,
-    required String time,
-    required String steps,
-    required String deadline,
-  }) {
-    return GoalPoints.calculatePointsFromTemplate(
-      complexity: complexity,
-      effort: effort,
-      motivation: motivation,
-      time: time,
-      steps: steps,
-      deadline: deadline,
-    );
-  }
-
-
-
-  Future<void> _saveGoals() async {
-    await _repos.goals.writeActiveGoals(_activeGoals);
-    await _repos.goals.writeCompletedGoals(_completedGoals);
-  }
-
-  Future<void> _addPoints(int amount, String source) async {
-    final value = await _repos.points.readBalance();
-    final totalAmount = await getTotalAmount(amount);
-    await _repos.points.writeBalance(value + totalAmount);
-  }
-
-  Map<String, dynamic> buildAndSaveGoal({
-    required String title,
-    required String category,
-    required String complexity,
-    required String effort,
-    required String motivation,
-    required String time,
-    required String steps,
-    required String deadline,
-    required String goalId,
-  }) {
-
-    final goal = {
-      'title': title,
-      'category': category,
-      'complexity': complexity,
-      'effort': effort,
-      'motivation': motivation,
-      'time': time,
-      'Deadline': deadline,
-      'steps': steps,
-      'points': _calculatePointsFromTemplate(
-        complexity: complexity,
-        effort: effort,
-        motivation: motivation,
-        time: time,
-        steps: steps,
-        deadline: deadline,
-      ),
-      'stepProgress': 0,
-      'Id': goalId,
-    };
-
-    setState(() {
-      _activeGoals.add(goal);
-    });
-    _saveGoals();
-    return goal;
-
-
-  }
-
+  Future<void> _clearCompleteGoals() => _goals.clearCompletedGoals();
 
   Future<void> _createGoal() async {
     if (_stepsController.text == '') {
-      _stepsController.text = '1'; // default.
+      _stepsController.text = '1';
     }
-    if (_formKey.currentState!.validate()) {
-      final goalId = generateGoalId(_titleController.text);
-      final int hours = int.tryParse(_deadlineController.text.trim()) ?? 0;
-      final String deadline = _deadlineController.text.trim().isEmpty
-          ? 'no deadline'
-          : formatter.format(_currentDate.add(Duration(hours: hours)));
-      debugPrint('Current deadline: $deadline');
-      loadNotificationStyleAndFrequency();
+    if (!_formKey.currentState!.validate()) return;
 
-      final goal = buildAndSaveGoal(
-        title: _titleController.text,
-        category: _category,
-        complexity: _complexity,
-        effort: _effort,
-        motivation: _motivation,
-        time: _timeController.text,
-        steps: _stepsController.text,
-        deadline: deadline,
-        goalId: goalId.toString(),
-      );
-
-      if (_notificationsEnabled && hours > 0 && !_settings.pauseGoals) {
-        final goalSet = GoalSet.fromMap(goal);
-        GoalNotifier.startGoalCheck(goalSet, _notificationStyle, _notificationFrequency, hours);
-      } else {
-        debugPrint('Notifications not enabled — skipping goal check scheduling');
-      }
-      _resetControllers();
-      await _streaks.increment('totalGoalsCreated');
-      await _streaks.increment('totalGoalsActive');
-    }
-
+    final hours = int.tryParse(_deadlineController.text.trim()) ?? 0;
+    await _goals.createGoal(
+      title: _titleController.text,
+      category: _category,
+      complexity: _complexity,
+      effort: _effort,
+      motivation: _motivation,
+      time: _timeController.text,
+      steps: _stepsController.text,
+      deadlineHours: hours,
+      anchor: _currentDate,
+    );
+    _resetControllers();
+    goalsCompletedToday = _goals.goalsCompletedToday;
     SoundService.playGoalCreated();
   }
 
@@ -411,16 +158,10 @@ class _GoalsScreenState extends State<GoalsScreen> {
     _stepsController.text = '1';
   }
 
-  void _incrementStepProgress(int index) {
-    final goal = _activeGoals[index];
-    GoalNotifier.cancelAiEncouragementNotification(int.parse(goal['Id']));
-    final max = int.tryParse(goal['steps']) ?? 1;
-    if (goal['stepProgress'] < max) {
-      setState(() {
-        goal['stepProgress']++;
-      });
-      if (goal['stepProgress'] >= max) _completeGoal(index);
-      _saveGoals();
+  Future<void> _incrementStepProgress(int goalId) async {
+    final result = await _goals.incrementStepProgress(goalId);
+    if (result?.completed != null) {
+      await _showGoalCompletedFeedback(result!.completed!);
     }
   }
 
@@ -434,15 +175,8 @@ class _GoalsScreenState extends State<GoalsScreen> {
     required String steps,
     required String deadlineHours,
   }) async {
-    final goalId = GoalNotifier.generateGoalId(title);
-    final int hours = int.tryParse(deadlineHours) ?? 0;
-    final String deadline = deadlineHours.isEmpty
-        ? 'no deadline'
-        : formatter.format(_currentDate.add(Duration(hours: hours)));
-    debugPrint('Current deadline: $deadline');
-    loadNotificationStyleAndFrequency();
-
-    final goal = buildAndSaveGoal(
+    final hours = int.tryParse(deadlineHours) ?? 0;
+    await _goals.createGoal(
       title: title,
       category: category,
       complexity: complexity,
@@ -450,27 +184,10 @@ class _GoalsScreenState extends State<GoalsScreen> {
       motivation: motivation,
       time: time,
       steps: steps,
-      deadline: deadline,
-      goalId: goalId.toString(),
+      deadlineHours: hours,
+      anchor: _currentDate,
     );
-
-    if (_notificationsEnabled && hours > 0 && !_settings.pauseGoals) {
-      final goalSet = GoalSet.fromMap(goal);
-      GoalNotifier.startGoalCheck(goalSet, _notificationStyle, _notificationFrequency, hours);
-    } else {
-      debugPrint('Notifications not enabled — skipping goal check scheduling');
-    }
-
-    await _streaks.increment('totalGoalsCreated');
-    await _streaks.increment('totalGoalsActive');
-    SoundService.playGoalCreated();
-  }
-
-  Future<void> _checkGoalCompletionAchievementVariables(GoalSet goalSet) async {
-    await _streaks.decrement('totalGoalsActive');
-    await _streaks.increment('totalGoalsCompleted');
-    await _streaks.checkOrAddDate();
-    await _streaks.updateGoalAchievementStats(goalSet);
+    goalsCompletedToday = _goals.goalsCompletedToday;
   }
 
   Future<void> _createGoalsFromTemplatesBulk(List<String> templateNames) async {
@@ -489,16 +206,17 @@ class _GoalsScreenState extends State<GoalsScreen> {
     showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => Dialog(
-        backgroundColor: themeBundle.secondaryColor,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Text(
-            'Goals are being created.',
-            style: themeBundle.textStyle,
+      builder:
+          (ctx) => Dialog(
+            backgroundColor: themeBundle.secondaryColor,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                'Goals are being created.',
+                style: themeBundle.textStyle,
+              ),
+            ),
           ),
-        ),
-      ),
     );
 
     try {
@@ -508,22 +226,25 @@ class _GoalsScreenState extends State<GoalsScreen> {
         final data =
             _templateDetails[templateName] ?? _userTemplates[templateName]!;
 
-        futures.add(_createGoalFromTemplates(
-          title: templateName,
-          category: data['category'],
-          complexity: data['complexity'],
-          effort: data['effort'],
-          motivation: data['motivation'],
-          time: data['time'],
-          steps: data['steps'],
-          deadlineHours: data['Hours to complete'],
-        ));
+        futures.add(
+          _createGoalFromTemplates(
+            title: templateName,
+            category: data['category'],
+            complexity: data['complexity'],
+            effort: data['effort'],
+            motivation: data['motivation'],
+            time: data['time'],
+            steps: data['steps'],
+            deadlineHours: data['Hours to complete'],
+          ),
+        );
       }
 
       await Future.wait(futures);
       SoundService.playGoalCreated();
     } finally {
       if (mounted) {
+        CommonUtils.dismissKeyboard();
         final navigator = Navigator.of(context, rootNavigator: true);
         if (navigator.canPop()) {
           navigator.pop();
@@ -540,73 +261,43 @@ class _GoalsScreenState extends State<GoalsScreen> {
     );
   }
 
+  Future<void> _completeGoal(int goalId) async {
+    final result = await _goals.completeGoal(goalId);
+    if (result == null) return;
+    await _showGoalCompletedFeedback(result);
+  }
 
-
-  void _completeGoal(int index) {
-    final goal = _activeGoals.removeAt(index);
-    final goalSet = GoalSet.fromMap(goal);
-    GoalNotifier.cancelGoalNotification(goalSet); // Cancel notifications
-    _completedGoals.add(goal);
-    _addPoints(goal['points'], 'goal:${goal['title']}');
-    _saveGoals();
-    setState(() {});
-    _checkGoalCompletionAchievementVariables(goalSet);
+  Future<void> _showGoalCompletedFeedback(CompleteGoalResult result) async {
+    if (!mounted) return;
+    goalsCompletedToday = result.goalsCompletedToday;
     SoundService.playGoalCompleted();
     _confettiController.play();
-    CommonUtils.showSnackBar(context, '${goal['title']} completed! +${goal['points']} points. ' 'Goals completed today: $goalsCompletedToday', themeBundle.textStyle, 2000, 5);
+    CommonUtils.showSnackBar(
+      context,
+      '${result.goal.title} completed! +${result.pointsAwarded} points. '
+      'Goals completed today: $goalsCompletedToday',
+      themeBundle.textStyle,
+      2000,
+      5,
+      backgroundColor: themeBundle.secondaryColor,
+      labelColor: themeBundle.primaryColor,
+    );
   }
 
-  void _removeGoal(int index) {
-    final goal = _activeGoals[index];
-    final goalSet = GoalSet.fromMap(goal);
-    GoalNotifier.cancelGoalNotification(goalSet); // Cancel notifications
-    setState(() {
-      _activeGoals.removeAt(index);
-    });
-    _saveGoals();
-    _streaks.decrement('totalGoalsActive');
-  }
+  Future<void> _removeGoal(int goalId) => _goals.removeGoal(goalId);
 
-  void _removeGoalWithoutRemovingNotifications(int index) {
-    setState(() {
-      _activeGoals.removeAt(index);
-    });
-    _saveGoals();
-    _streaks.decrement('totalGoalsActive');
-  }
-
-  void _removeCompletedGoal(int index) {
-    setState(() {
-      _completedGoals.removeAt(index);
-    });
-    _saveGoals();
-  }
-
-  void _checkForExpiredGoals() {
-    final DateTime now = DateTime.now();
-
-    // Reverse index scan to safely remove while iterating
-    for (int i = _activeGoals.length - 1; i >= 0; i--) {
-      final goal = _activeGoals[i];
-      final deadlineStr = goal['Deadline'];
-      if (deadlineStr == null || deadlineStr.toString().trim().isEmpty) continue;
-
-      try {
-        final parsed = formatter.parseStrict(deadlineStr);
-        if (!parsed.isAfter(now)) {
-          _removeGoal(i); // ✅ Remove expired goal
-        }
-      } catch (_) {
-        // Invalid date format, skip
-      }
-    }
-  }
-
-  void _preSaveTemplate(String templateCategory, String templateComplexity, String templateEffort, String templateMotivation, GlobalKey<FormState> templateFormKey) {
+  Future<void> _preSaveTemplate(
+    String templateCategory,
+    String templateComplexity,
+    String templateEffort,
+    String templateMotivation,
+    GlobalKey<FormState> templateFormKey, {
+    StateSetter? dialogSetState,
+  }) async {
     if (!templateFormKey.currentState!.validate()) {
       return; // stop if validation fails
     }
-    if(_templateSteps.text.trim() == '') {
+    if (_templateSteps.text.trim() == '') {
       _templateSteps.text = '1';
     }
     final name = _templateName.text.trim();
@@ -620,12 +311,15 @@ class _GoalsScreenState extends State<GoalsScreen> {
       'Hours to complete': _templateDeadline.text.trim(),
     };
 
-    if (_templateDetails.containsKey(name)) {
-      setState(() => _templateDetails[name] = data);
-    } else {
-      setState(() => _userTemplates[name] = data);
-    }
-    _saveTemplates();
+    setState(() {
+      if (_templateDetails.containsKey(name)) {
+        _templateDetails[name] = data;
+      } else {
+        _userTemplates[name] = data;
+      }
+    });
+    await _saveTemplates();
+    dialogSetState?.call(() {});
 
     _templateName.clear();
     _templateTime.clear();
@@ -633,7 +327,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
     _templateDeadline.clear();
   }
 
-  void _viewGoalDetails(Map<String, dynamic> goal) {
+  void _viewGoalDetails(GoalSet goal) {
     showDialog(
       context: context,
       barrierColor: themeBundle.secondaryColor, // ✅ Sets overlay color
@@ -641,22 +335,40 @@ class _GoalsScreenState extends State<GoalsScreen> {
           (_) => AlertDialog(
             backgroundColor: themeBundle.secondaryColor,
             iconColor: themeBundle.primaryColor,
-            title: Text(goal['title'], style: themeBundle.textStyle),
+            title: Text(goal.title, style: themeBundle.textStyle),
             content: Container(
               color: themeBundle.secondaryColor,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Category: ${goal['category']}', style: themeBundle.textStyle),
-                  Text('Complexity: ${goal['complexity']}', style: themeBundle.textStyle),
-                  Text('Effort: ${goal['effort']}', style: themeBundle.textStyle),
-                  Text('Motivation: ${goal['motivation']}', style: themeBundle.textStyle),
-                  Text('Time Needed in minutes: ${goal['time']}', style: themeBundle.textStyle),
-                  Text('Deadline: ${goal['Deadline']}', style: themeBundle.textStyle),
-                  Text('Steps: ${goal['steps']}', style: themeBundle.textStyle),
-                  Text('Points: ${goal['points']}', style: themeBundle.textStyle),
-                  Text('Id: ${goal['Id']}', style: themeBundle.textStyle),
+                  Text(
+                    'Category: ${goal.category}',
+                    style: themeBundle.textStyle,
+                  ),
+                  Text(
+                    'Complexity: ${goal.complexity}',
+                    style: themeBundle.textStyle,
+                  ),
+                  Text('Effort: ${goal.effort}', style: themeBundle.textStyle),
+                  Text(
+                    'Motivation: ${goal.motivation}',
+                    style: themeBundle.textStyle,
+                  ),
+                  Text(
+                    'Time Needed in minutes: ${goal.time}',
+                    style: themeBundle.textStyle,
+                  ),
+                  Text(
+                    'Deadline: ${goal.deadline}',
+                    style: themeBundle.textStyle,
+                  ),
+                  Text('Steps: ${goal.steps}', style: themeBundle.textStyle),
+                  Text(
+                    'Points: ${goal.points}',
+                    style: themeBundle.textStyle,
+                  ),
+                  Text('Id: ${goal.goalId}', style: themeBundle.textStyle),
                 ],
               ),
             ),
@@ -665,10 +377,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                 color: themeBundle.secondaryColor,
                 child: TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: Text(
-                    'Close',
-                    style: themeBundle.textStyle,
-                  ),
+                  child: Text('Close', style: themeBundle.textStyle),
                 ),
               ),
             ],
@@ -689,131 +398,210 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
     showDialog(
       context: context,
-      builder: (_) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          backgroundColor: themeBundle.secondaryColor,
-          title: Text('Manage Templates', style: themeBundle.textStyle),
-          content: SingleChildScrollView(
-            child: Container(
-              color: themeBundle.secondaryColor,
-              child: Form(
-                key: templateFormKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CommonUtils.buildTextFormField(
-                      _templateName, 'Template Name (required)', themeBundle.textStyle, themeBundle.secondaryColor, true, (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Template name is required';
-                        }
-                        return null;
-                        },
-                    ),
-                    CommonUtils.buildDropdownButtonFormField('Category', templateCategory, _categories, themeBundle.textStyle, themeBundle.secondaryColor, (v) => setState(() => templateCategory = v!)),
-                    CommonUtils.buildDropdownButtonFormField('Complexity', templateComplexity, _levels, themeBundle.textStyle, themeBundle.secondaryColor, (v) => setState(() => templateComplexity = v!)),
-                    CommonUtils.buildDropdownButtonFormField('Effort', templateEffort, _levels, themeBundle.textStyle, themeBundle.secondaryColor, (v) => setState(() => templateEffort = v!)),
-                    CommonUtils.buildDropdownButtonFormField('Motivation', templateMotivation, _levels, themeBundle.textStyle, themeBundle.secondaryColor, (v) => setState(() => templateMotivation = v!)),
-                    CommonUtils.buildTextFormField(_templateTime, 'Time (minutes, required)', themeBundle.textStyle, themeBundle.secondaryColor, true, (v) {
-                      final parsed = int.tryParse(v?.trim() ?? '');
-                      if (parsed == null || parsed < 1 || parsed > 999) {
-                        return 'Please enter a whole number > 0 and < 1000';
-                      }
-                      minutesRequired = parsed;
-                      return null;
-                      }, keyboardType: TextInputType.number
-                    ),
+      builder:
+          (dialogContext) => StatefulBuilder(
+            builder:
+                (context, dialogSetState) => AlertDialog(
+                  backgroundColor: themeBundle.secondaryColor,
+                  title: Text('Manage Templates', style: themeBundle.textStyle),
+                  content: SingleChildScrollView(
+                    child: Container(
+                      color: themeBundle.secondaryColor,
+                      child: Form(
+                        key: templateFormKey,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CommonUtils.buildTextFormField(
+                              _templateName,
+                              'Template Name (required)',
+                              themeBundle.textStyle,
+                              themeBundle.secondaryColor,
+                              true,
+                              (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Template name is required';
+                                }
+                                return null;
+                              },
+                            ),
+                            CommonUtils.buildDropdownButtonFormField(
+                              'Category',
+                              templateCategory,
+                              _categories,
+                              themeBundle.textStyle,
+                              themeBundle.secondaryColor,
+                              (v) =>
+                                  dialogSetState(() => templateCategory = v!),
+                            ),
+                            CommonUtils.buildDropdownButtonFormField(
+                              'Complexity',
+                              templateComplexity,
+                              _levels,
+                              themeBundle.textStyle,
+                              themeBundle.secondaryColor,
+                              (v) =>
+                                  dialogSetState(() => templateComplexity = v!),
+                            ),
+                            CommonUtils.buildDropdownButtonFormField(
+                              'Effort',
+                              templateEffort,
+                              _levels,
+                              themeBundle.textStyle,
+                              themeBundle.secondaryColor,
+                              (v) => dialogSetState(() => templateEffort = v!),
+                            ),
+                            CommonUtils.buildDropdownButtonFormField(
+                              'Motivation',
+                              templateMotivation,
+                              _levels,
+                              themeBundle.textStyle,
+                              themeBundle.secondaryColor,
+                              (v) =>
+                                  dialogSetState(() => templateMotivation = v!),
+                            ),
+                            CommonUtils.buildTextFormField(
+                              _templateTime,
+                              'Time (minutes, required)',
+                              themeBundle.textStyle,
+                              themeBundle.secondaryColor,
+                              true,
+                              (v) {
+                                final parsed = int.tryParse(v?.trim() ?? '');
+                                if (parsed == null ||
+                                    parsed < 1 ||
+                                    parsed > 999) {
+                                  return 'Please enter a whole number > 0 and < 1000';
+                                }
+                                minutesRequired = parsed;
+                                return null;
+                              },
+                              keyboardType: TextInputType.number,
+                            ),
 
-                    CommonUtils.buildTextFormField(_templateDeadline, 'Hours to complete (optional)', themeBundle.textStyle, themeBundle.secondaryColor, true, (v) {
-                      if (v == null || v.trim().isEmpty) return null; // optional
-                      final parsed = int.tryParse(v.trim());
-                      if (parsed == null || parsed <= 0 || parsed > 10000) {
-                        return 'Must be a whole number > 0 and < 10000';
-                      }
-                      minutesToDeadline = parsed * 60;
-                      if (minutesRequired > minutesToDeadline) {
-                        return 'Deadline must be greater than time required.';
-                      }
-                      return null;
-                      }, keyboardType: TextInputType.number
-                    ),
+                            CommonUtils.buildTextFormField(
+                              _templateDeadline,
+                              'Hours to complete (optional)',
+                              themeBundle.textStyle,
+                              themeBundle.secondaryColor,
+                              true,
+                              (v) {
+                                if (v == null || v.trim().isEmpty)
+                                  return null; // optional
+                                final parsed = int.tryParse(v.trim());
+                                if (parsed == null ||
+                                    parsed <= 0 ||
+                                    parsed > 10000) {
+                                  return 'Must be a whole number > 0 and < 10000';
+                                }
+                                minutesToDeadline = parsed * 60;
+                                if (minutesRequired > minutesToDeadline) {
+                                  return 'Deadline must be greater than time required.';
+                                }
+                                return null;
+                              },
+                              keyboardType: TextInputType.number,
+                            ),
 
-                    CommonUtils.buildTextFormField(_templateSteps, 'Steps (Required)', themeBundle.textStyle, themeBundle.secondaryColor, true, (v) {
-                      final trimmed = v?.trim();
-                      final parsed = int.tryParse(trimmed?.isEmpty ?? true ? '1' : trimmed!);
-                      if (parsed == null || parsed < 1 || parsed > 999) {
-                        return 'Please enter a valid whole number > 0 and smaller than 1000';
-                      }
-                      return null;
-                      },
-                    ),
-                    CommonUtils.buildElevatedButton('Save Template', themeBundle.primaryColor, themeBundle.secondaryColor, themeBundle.textStyle, 14, 10, () => _preSaveTemplate(templateCategory, templateComplexity, templateEffort, templateMotivation, templateFormKey)),
-                    const Divider(),
-                    Text('Templates:', style: themeBundle.textStyle),
-                    ...[
-                      ..._templateDetails.keys,
-                      ..._userTemplates.keys,
-                    ].map(
-                          (name) => CommonUtils.buildListTile(
-                        title: name,
-                        textStyle: themeBundle.textStyle,
-                        trailing: _userTemplates.containsKey(name)
-                            ? IconButton(
-                          icon: const Icon(Icons.delete),
-                          onPressed: () {
-                            setState(() {
-                              _userTemplates.remove(name);
-                              _saveTemplates();
-                              _validateTemplateGroups(); // check that no multi-templates were effected by this deletion.
-                            });
-                          },
-                        )
-                            : null,
-                        onTap: () {
-                          final t = _templateDetails[name] ?? _userTemplates[name]!;
-                          setState(() {
-                            _templateName.text = name;
-                            templateCategory = t['category'];
-                            templateComplexity = t['complexity'];
-                            templateEffort = t['effort'];
-                            templateMotivation = t['motivation'];
-                            _templateTime.text = t['time'];
-                            _templateDeadline.text = t['Hours to complete'];
-                            _templateSteps.text = t['steps'];
-                          });
-                        },
+                            CommonUtils.buildTextFormField(
+                              _templateSteps,
+                              'Steps (Required)',
+                              themeBundle.textStyle,
+                              themeBundle.secondaryColor,
+                              true,
+                              (v) {
+                                final trimmed = v?.trim();
+                                final parsed = int.tryParse(
+                                  trimmed?.isEmpty ?? true ? '1' : trimmed!,
+                                );
+                                if (parsed == null ||
+                                    parsed < 1 ||
+                                    parsed > 999) {
+                                  return 'Please enter a valid whole number > 0 and smaller than 1000';
+                                }
+                                return null;
+                              },
+                            ),
+                            CommonUtils.buildElevatedButton(
+                              'Save Template',
+                              themeBundle.primaryColor,
+                              themeBundle.secondaryColor,
+                              themeBundle.textStyle,
+                              14,
+                              10,
+                              () => _preSaveTemplate(
+                                templateCategory,
+                                templateComplexity,
+                                templateEffort,
+                                templateMotivation,
+                                templateFormKey,
+                                dialogSetState: dialogSetState,
+                              ),
+                              borderColor: themeBundle.accentColor,
+                            ),
+                            const Divider(),
+                            Text('Templates:', style: themeBundle.textStyle),
+                            ...[
+                              ..._templateDetails.keys,
+                              ..._userTemplates.keys,
+                            ].map(
+                              (name) => CommonUtils.buildListTile(
+                                title: name,
+                                textStyle: themeBundle.textStyle,
+                                trailing:
+                                    _userTemplates.containsKey(name)
+                                        ? IconButton(
+                                          icon: const Icon(Icons.delete),
+                                          onPressed: () async {
+                                            setState(() {
+                                              _userTemplates.remove(name);
+                                            });
+                                            await _saveTemplates();
+                                            await _validateTemplateGroups();
+                                            dialogSetState(() {});
+                                          },
+                                        )
+                                        : null,
+                                onTap: () {
+                                  final t =
+                                      _templateDetails[name] ??
+                                      _userTemplates[name]!;
+                                  dialogSetState(() {
+                                    _templateName.text = name;
+                                    templateCategory = t['category'];
+                                    templateComplexity = t['complexity'];
+                                    templateEffort = t['effort'];
+                                    templateMotivation = t['motivation'];
+                                    _templateTime.text = t['time'];
+                                    _templateDeadline.text =
+                                        t['Hours to complete'];
+                                    _templateSteps.text = t['steps'];
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => _dismissDialog(dialogContext),
+                      child: Text('Close', style: themeBundle.textStyle),
                     ),
                   ],
                 ),
-              ),
-            ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Close', style: themeBundle.textStyle),
-            ),
-          ],
-        ),
-      ),
     );
-  }
-
-  static int generateGoalId(String goalName) {
-    final random = Random();
-    final randomPart = random.nextInt(100000);
-    final hashPart = goalName.hashCode.abs();
-
-    // Combine safely within 32-bit int range
-    final combined = (hashPart % 1000000) * 100000 + randomPart;
-    return combined & 0x7FFFFFFF;
   }
 
   Future<void> _saveTemplateGroups() async {
     await _repos.templates.writeTemplateGroups(_templateGroups);
   }
 
-  Future<void> _validateTemplateGroups() async { // Cleans up template groups with deleted templates.
+  Future<void> _validateTemplateGroups() async {
+    // Cleans up template groups with deleted templates.
     // Collect all valid template names
     final validTemplateNames = _userTemplates.keys.toSet();
 
@@ -821,15 +609,32 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
     _templateGroups.forEach((groupName, templates) {
       // Keep only templates that still exist
-      final validTemplates = templates.where((t) => validTemplateNames.contains(t)).toList();
+      final validTemplates =
+          templates.where((t) => validTemplateNames.contains(t)).toList();
 
       if (validTemplates.isEmpty) {
-        debugPrint('Group "$groupName" only contained deleted templates. Removing group.');
-        CommonUtils.showBasicAlertDialog(context, 'Multi-template using deleted template(s)', '$groupName contained only deleted templates. Removing group.', themeBundle.textStyle, themeBundle.secondaryColor);
+        debugPrint(
+          'Group "$groupName" only contained deleted templates. Removing group.',
+        );
+        CommonUtils.showBasicAlertDialog(
+          context,
+          'Multi-template using deleted template(s)',
+          '$groupName contained only deleted templates. Removing group.',
+          themeBundle.textStyle,
+          themeBundle.secondaryColor,
+        );
         // skip this group entirely
       } else if (validTemplates.length < templates.length) {
-        debugPrint('Group "$groupName" had some deleted templates. Rebuilding with valid ones: $validTemplates');
-        CommonUtils.showBasicAlertDialog(context, 'Multi-template using deleted template(s)', 'Group "$groupName" had some deleted templates. Rebuilding with valid ones: $validTemplates', themeBundle.textStyle, themeBundle.secondaryColor);
+        debugPrint(
+          'Group "$groupName" had some deleted templates. Rebuilding with valid ones: $validTemplates',
+        );
+        CommonUtils.showBasicAlertDialog(
+          context,
+          'Multi-template using deleted template(s)',
+          'Group "$groupName" had some deleted templates. Rebuilding with valid ones: $validTemplates',
+          themeBundle.textStyle,
+          themeBundle.secondaryColor,
+        );
         updatedGroups[groupName] = validTemplates;
       } else {
         // all templates still valid
@@ -844,8 +649,6 @@ class _GoalsScreenState extends State<GoalsScreen> {
     // persist the cleaned-up groups
     await _repos.templates.writeTemplateGroups(_templateGroups);
   }
-
-
 
   Future<void> _loadTemplateGroups() async {
     final groups = await _repos.templates.readTemplateGroups();
@@ -863,119 +666,195 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
     showDialog(
       context: context,
-      builder: (_) => StatefulBuilder(
-        builder: (context, setState) {
-          return AlertDialog(
-            backgroundColor: themeBundle.secondaryColor,
-            title: Text('Select Multiple Templates', style: themeBundle.textStyle),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CommonUtils.buildDropdownButtonFormField('Load Saved Group', selectedGroup, _templateGroups.keys.toList(), themeBundle.textStyle, themeBundle.secondaryColor, (groupName){
-                    setState(() {
-                      selectedGroup = groupName;
-                      selectedTemplates = List.from(_templateGroups[groupName!] ?? []);
-                      groupNameController.text = groupName; // auto-fill name when loading group
-                    });
-                  }),
-                  const SizedBox(height: 10),
-                  CommonUtils.buildTextFormField(groupNameController, 'Group Name (required to save/update)', themeBundle.textStyle, themeBundle.secondaryColor, false, (v) {
-                    if (v == null || v.trim().isEmpty) {
-                      return 'Group name is required';
-                    }
-                    return null;
-                  }),
-                  const SizedBox(height: 10),
-                  Text('Select Templates to Create Goals:', style: themeBundle.textStyle),
-                  ...[..._templateDetails.keys, ..._userTemplates.keys].map((templateName) {
-                    final selected = selectedTemplates.contains(templateName);
-                    return CommonUtils.buildCheckboxListTile(
-                      title: templateName,
-                      textStyle: themeBundle.textStyle,
-                      value: selected,
-                      activeColor: themeBundle.primaryColor,
-                      checkColor: themeBundle.secondaryColor,
-                      onChanged: (bool? value) {
-                        setState(() {
-                          if (value == true) {
-                            selectedTemplates.add(templateName);
-                          } else {
-                            selectedTemplates.remove(templateName);
+      builder:
+          (dialogContext) => StatefulBuilder(
+            builder: (context, dialogSetState) {
+              return AlertDialog(
+                backgroundColor: themeBundle.secondaryColor,
+                title: Text(
+                  'Select Multiple Templates',
+                  style: themeBundle.textStyle,
+                ),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      KeyedSubtree(
+                        key: ValueKey(
+                          'template-groups-${_templateGroups.keys.join('|')}',
+                        ),
+                        child: CommonUtils.buildDropdownButtonFormField(
+                          'Load Saved Group',
+                          selectedGroup,
+                          _templateGroups.keys.toList(),
+                          themeBundle.textStyle,
+                          themeBundle.secondaryColor,
+                          (groupName) {
+                            dialogSetState(() {
+                              selectedGroup = groupName;
+                              selectedTemplates = List.from(
+                                _templateGroups[groupName!] ?? [],
+                              );
+                              groupNameController.text =
+                                  groupName; // auto-fill name when loading group
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      CommonUtils.buildTextFormField(
+                        groupNameController,
+                        'Group Name (required to save/update)',
+                        themeBundle.textStyle,
+                        themeBundle.secondaryColor,
+                        false,
+                        (v) {
+                          if (v == null || v.trim().isEmpty) {
+                            return 'Group name is required';
                           }
-                        });
-                      },
-                    );
-                  }),
-                  const Divider(),
-                  Text('Existing Groups:', style: themeBundle.textStyle),
-                  ..._templateGroups.keys.map((name) {
-                    return CommonUtils.buildListTile(
-                      title: name,
-                      textStyle: themeBundle.textStyle,
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete),
-                        color: themeBundle.primaryColor,
-                        onPressed: () {
-                          setState(() {
-                            _templateGroups.remove(name);
-                          });
-                          _saveTemplateGroups();
+                          return null;
                         },
                       ),
-                      onTap: () async {
-                        setState(() {
-                          selectedGroup = name;
-                          selectedTemplates = List.from(_templateGroups[name]!);
-                          groupNameController.text = name; // auto-fill name when selecting existing group
-                        });
-                      },
-                    );
-                  }),
-                ],
-              ),
-            ),
-            actions: [
-              CommonUtils.buildTextButton( () => Navigator.pop(context), 'Cancel', themeBundle.textStyle),
-              CommonUtils.buildTextButton( () {
-                  final groupName = groupNameController.text.trim();
-                  if (groupName.isEmpty || selectedTemplates.isEmpty) {
-                    setState(() {
-                      validationMessage = 'Please enter a group name and select at least one template.';
-                    });
-                    return;
-                  }
-
-                  setState(() {
-                    _templateGroups[groupName] = List.from(selectedTemplates);
-                    validationMessage = null; // clear message on success
-                  });
-                  _saveTemplateGroups();
-                  CommonUtils.showDialogWidget(context, '$groupName has been updated.', themeBundle.textStyle, themeBundle.secondaryColor);
-              }, 'Save/Update Group', themeBundle.textStyle ),
-              if (validationMessage != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: Text(
-                    validationMessage!,
-                    style: themeBundle.textStyle.copyWith(color: Colors.purple),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Select Templates to Create Goals:',
+                        style: themeBundle.textStyle,
+                      ),
+                      ...[..._templateDetails.keys, ..._userTemplates.keys].map(
+                        (templateName) {
+                          final selected = selectedTemplates.contains(
+                            templateName,
+                          );
+                          return CommonUtils.buildCheckboxListTile(
+                            title: templateName,
+                            textStyle: themeBundle.textStyle,
+                            value: selected,
+                            activeColor: themeBundle.primaryColor,
+                            checkColor: themeBundle.secondaryColor,
+                            onChanged: (bool? value) {
+                              dialogSetState(() {
+                                if (value == true) {
+                                  selectedTemplates.add(templateName);
+                                } else {
+                                  selectedTemplates.remove(templateName);
+                                }
+                              });
+                            },
+                          );
+                        },
+                      ),
+                      const Divider(),
+                      Text('Existing Groups:', style: themeBundle.textStyle),
+                      ..._templateGroups.keys.map((name) {
+                        return CommonUtils.buildListTile(
+                          title: name,
+                          textStyle: themeBundle.textStyle,
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete),
+                            color: themeBundle.primaryColor,
+                            onPressed: () async {
+                              setState(() {
+                                _templateGroups.remove(name);
+                              });
+                              await _saveTemplateGroups();
+                              dialogSetState(() {
+                                if (selectedGroup == name) {
+                                  selectedGroup = null;
+                                }
+                              });
+                            },
+                          ),
+                          onTap: () async {
+                            dialogSetState(() {
+                              selectedGroup = name;
+                              selectedTemplates = List.from(
+                                _templateGroups[name]!,
+                              );
+                              groupNameController.text =
+                                  name; // auto-fill name when selecting existing group
+                            });
+                          },
+                        );
+                      }),
+                    ],
                   ),
                 ),
-              CommonUtils.buildElevatedButton('Create Goals', themeBundle.primaryColor, themeBundle.secondaryColor, themeBundle.textStyle, 0, 0, () async {
-                if (selectedTemplates.isEmpty) {
-                  CommonUtils.showBasicAlertDialog(context, 'No templates Selected', 'Please select at least one template to create goals from.', themeBundle.textStyle, themeBundle.secondaryColor);
-                  return;
-                }
-                await _createGoalsFromTemplatesBulk(selectedTemplates);
-              }),
-            ],
-          );
-        },
-      ),
+                actions: [
+                  CommonUtils.buildTextButton(
+                    () => _dismissDialog(dialogContext),
+                    'Cancel',
+                    themeBundle.textStyle,
+                  ),
+                  CommonUtils.buildTextButton(
+                    () async {
+                      final groupName = groupNameController.text.trim();
+                      if (groupName.isEmpty || selectedTemplates.isEmpty) {
+                        dialogSetState(() {
+                          validationMessage =
+                              'Please enter a group name and select at least one template.';
+                        });
+                        return;
+                      }
+
+                      setState(() {
+                        _templateGroups[groupName] = List.from(
+                          selectedTemplates,
+                        );
+                      });
+                      await _saveTemplateGroups();
+                      dialogSetState(() {
+                        selectedGroup = groupName;
+                        validationMessage = null;
+                      });
+                      if (!context.mounted) return;
+                      CommonUtils.showDialogWidget(
+                        context,
+                        '$groupName has been updated.',
+                        themeBundle.textStyle,
+                        themeBundle.secondaryColor,
+                      );
+                    },
+                    'Save/Update Group',
+                    themeBundle.textStyle,
+                  ),
+                  if (validationMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        validationMessage!,
+                        style: themeBundle.textStyle.copyWith(
+                          color: Colors.purple,
+                        ),
+                      ),
+                    ),
+                  CommonUtils.buildElevatedButton(
+                    'Create Goals',
+                    themeBundle.primaryColor,
+                    themeBundle.secondaryColor,
+                    themeBundle.textStyle,
+                    0,
+                    0,
+                    () async {
+                      if (selectedTemplates.isEmpty) {
+                        CommonUtils.showBasicAlertDialog(
+                          context,
+                          'No templates Selected',
+                          'Please select at least one template to create goals from.',
+                          themeBundle.textStyle,
+                          themeBundle.secondaryColor,
+                        );
+                        return;
+                      }
+                      await _createGoalsFromTemplatesBulk(selectedTemplates);
+                    },
+                    borderColor: themeBundle.accentColor,
+                  ),
+                ],
+              );
+            },
+          ),
     );
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -984,12 +863,17 @@ class _GoalsScreenState extends State<GoalsScreen> {
         return DeferredScreen<void>(
           load: _loadGoalsPage,
           minLoadingMs: 120,
-          loading: (_) => themedLoadingShell(
-            bundle,
-            title: 'Goals',
-            body: GoalsSkeleton(bundle: bundle),
-          ),
-          builder: (context, _) => _buildGoalsScaffold(context, bundle),
+          loading:
+              (_) => themedLoadingShell(
+                bundle,
+                title: 'Goals',
+                body: GoalsSkeleton(bundle: bundle),
+              ),
+          builder:
+              (context, _) => ListenableBuilder(
+                listenable: _goals,
+                builder: (context, _) => _buildGoalsScaffold(context, bundle),
+              ),
         );
       },
     );
@@ -1004,10 +888,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
       child: Scaffold(
         resizeToAvoidBottomInset: true,
         appBar: AppBar(
-          title: Text(
-            'Goals',
-            style: bundle.textStyle,
-          ),
+          title: Text('Goals', style: bundle.textStyle),
           backgroundColor: bundle.secondaryColor,
           iconTheme: IconThemeData(color: bundle.primaryColor),
         ),
@@ -1031,68 +912,202 @@ class _GoalsScreenState extends State<GoalsScreen> {
                             key: _formKey,
                             child: Column(
                               children: [
+                                KeyedSubtree(
+                                  key: ValueKey(
+                                    'goal-templates-${_templateDetails.length}-${_userTemplates.length}-${_userTemplates.keys.join('|')}',
+                                  ),
+                                  child:
+                                      CommonUtils.buildDropdownButtonFormField(
+                                        'Template (optional)',
+                                        null,
+                                        [
+                                          ..._templateDetails.keys,
+                                          ..._userTemplates.keys,
+                                        ],
+                                        themeBundle.textStyle,
+                                        themeBundle.secondaryColor,
+                                        (val) {
+                                          if (val == null) return;
+                                          _titleController.text = val;
+                                          final data =
+                                              _templateDetails[val] ??
+                                              _userTemplates[val]!;
+                                          setState(() {
+                                            _category = data['category'];
+                                            _complexity = data['complexity'];
+                                            _effort = data['effort'];
+                                            _motivation = data['motivation'];
+                                          });
+                                          _timeController.text = data['time'];
+                                          _deadlineController.text =
+                                              data['Hours to complete'];
+                                          _stepsController.text = data['steps'];
+                                        },
+                                      ),
+                                ),
                                 CommonUtils.buildDropdownButtonFormField(
-                                'Template (optional)', null, [..._templateDetails.keys, ..._userTemplates.keys], themeBundle.textStyle, themeBundle.secondaryColor,
-                                (val) {
-                                  if (val == null) return;
-                                  _titleController.text = val;
-                                  final data = _templateDetails[val] ?? _userTemplates[val]!;
-                                  setState(() {
-                                  _category = data['category'];
-                                  _complexity = data['complexity'];
-                                  _effort = data['effort'];
-                                  _motivation = data['motivation'];
-                                  });
-                                  _timeController.text = data['time'];
-                                  _deadlineController.text = data['Hours to complete'];
-                                  _stepsController.text = data['steps'];
-                                  }),
-                                CommonUtils.buildDropdownButtonFormField('Category', _category, _categories, themeBundle.textStyle, themeBundle.secondaryColor, (val) => setState(() => _category = val ?? 'Productivity')),
-                                CommonUtils.buildDropdownButtonFormField('Complexity', _complexity, _levels, themeBundle.textStyle, themeBundle.secondaryColor, (val) => setState(() => _complexity = val ?? 'Low')),
-                                CommonUtils.buildDropdownButtonFormField('Effort Required', _effort, _levels, themeBundle.textStyle, themeBundle.secondaryColor, (val) => setState(() => _effort = val ?? 'Low')),
-                                CommonUtils.buildDropdownButtonFormField('Motivation Needed', _motivation, _levels, themeBundle.textStyle, themeBundle.secondaryColor, (val) => setState(() => _motivation = val ?? 'Low')),
-                                CommonUtils.buildTextFormField(_titleController, 'Goal Title', themeBundle.textStyle, themeBundle.secondaryColor, true, (v) =>
-                                v == null || v.isEmpty
-                                    ? 'Title required'
-                                    : null),
-                                CommonUtils.buildTextFormField(_timeController, 'Time Required in minutes', themeBundle.textStyle, themeBundle.secondaryColor, true, (v) {
-                                  final parsed = int.tryParse(v?.trim() ?? '');
-                                  if (parsed == null || parsed < 1) {
-                                    return 'Please enter a valid whole number';
-                                  }
-                                  minutesRequired = parsed;
-                                  return null;
-                                }, ),
-                                CommonUtils.buildTextFormField(_deadlineController, 'Hours to complete (optional)', themeBundle.textStyle, themeBundle.secondaryColor, true, (v) {
-                                  if (v == null || v.trim().isEmpty) return null;
-                                  final parsed = int.tryParse(v);
-                                  if (parsed == null || parsed <= 0 || parsed > 9999) {
-                                    return 'Must be a whole number > 0 and < 10000';
-                                  }
-                                  minutesToDeadline = parsed * 60;
-                                  if (minutesRequired > minutesToDeadline) {
-                                    return 'Deadline must be greater than time required.';
-                                  }
-                                  return null;
-                                },),
-                                CommonUtils.buildTextFormField(_stepsController, 'Steps (Required)', themeBundle.textStyle, themeBundle.secondaryColor, true, (v) {
-                                  final trimmed = v?.trim();
-                                  final parsed = int.tryParse(trimmed?.isEmpty ?? true ? '1' : trimmed!);
-                                  if (parsed == null || parsed < 1) {
-                                    return 'Please enter a valid whole number above 0';
-                                  }
-                                  return null;
-                                },),
+                                  'Category',
+                                  _category,
+                                  _categories,
+                                  themeBundle.textStyle,
+                                  themeBundle.secondaryColor,
+                                  (val) => setState(
+                                    () => _category = val ?? 'Productivity',
+                                  ),
+                                ),
+                                CommonUtils.buildDropdownButtonFormField(
+                                  'Complexity',
+                                  _complexity,
+                                  _levels,
+                                  themeBundle.textStyle,
+                                  themeBundle.secondaryColor,
+                                  (val) => setState(
+                                    () => _complexity = val ?? 'Low',
+                                  ),
+                                ),
+                                CommonUtils.buildDropdownButtonFormField(
+                                  'Effort Required',
+                                  _effort,
+                                  _levels,
+                                  themeBundle.textStyle,
+                                  themeBundle.secondaryColor,
+                                  (val) =>
+                                      setState(() => _effort = val ?? 'Low'),
+                                ),
+                                CommonUtils.buildDropdownButtonFormField(
+                                  'Motivation Needed',
+                                  _motivation,
+                                  _levels,
+                                  themeBundle.textStyle,
+                                  themeBundle.secondaryColor,
+                                  (val) => setState(
+                                    () => _motivation = val ?? 'Low',
+                                  ),
+                                ),
+                                CommonUtils.buildTextFormField(
+                                  _titleController,
+                                  'Goal Title',
+                                  themeBundle.textStyle,
+                                  themeBundle.secondaryColor,
+                                  true,
+                                  (v) =>
+                                      v == null || v.isEmpty
+                                          ? 'Title required'
+                                          : null,
+                                ),
+                                CommonUtils.buildTextFormField(
+                                  _timeController,
+                                  'Time Required in minutes',
+                                  themeBundle.textStyle,
+                                  themeBundle.secondaryColor,
+                                  true,
+                                  (v) {
+                                    final parsed = int.tryParse(
+                                      v?.trim() ?? '',
+                                    );
+                                    if (parsed == null || parsed < 1) {
+                                      return 'Please enter a valid whole number';
+                                    }
+                                    minutesRequired = parsed;
+                                    return null;
+                                  },
+                                ),
+                                CommonUtils.buildTextFormField(
+                                  _deadlineController,
+                                  'Hours to complete (optional)',
+                                  themeBundle.textStyle,
+                                  themeBundle.secondaryColor,
+                                  true,
+                                  (v) {
+                                    if (v == null || v.trim().isEmpty)
+                                      return null;
+                                    final parsed = int.tryParse(v);
+                                    if (parsed == null ||
+                                        parsed <= 0 ||
+                                        parsed > 9999) {
+                                      return 'Must be a whole number > 0 and < 10000';
+                                    }
+                                    minutesToDeadline = parsed * 60;
+                                    if (minutesRequired > minutesToDeadline) {
+                                      return 'Deadline must be greater than time required.';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                CommonUtils.buildTextFormField(
+                                  _stepsController,
+                                  'Steps (Required)',
+                                  themeBundle.textStyle,
+                                  themeBundle.secondaryColor,
+                                  true,
+                                  (v) {
+                                    final trimmed = v?.trim();
+                                    final parsed = int.tryParse(
+                                      trimmed?.isEmpty ?? true ? '1' : trimmed!,
+                                    );
+                                    if (parsed == null || parsed < 1) {
+                                      return 'Please enter a valid whole number above 0';
+                                    }
+                                    return null;
+                                  },
+                                ),
                                 const SizedBox(height: 10),
-                                CommonUtils.buildElevatedButton('Add Goal', themeBundle.primaryColor, themeBundle.secondaryColor, themeBundle.textStyle, 5, 5, _createGoal),
-                                CommonUtils.buildElevatedButton('Clear Active Goals', themeBundle.primaryColor, themeBundle.secondaryColor, themeBundle.textStyle, 5, 5, _clearGoals),
-                                CommonUtils.buildElevatedButton('Clear Completed Goals', themeBundle.primaryColor, themeBundle.secondaryColor, themeBundle.textStyle, 5, 5, _clearCompleteGoals),
-                                CommonUtils.buildElevatedButton('Manage Multi-templates', themeBundle.primaryColor, themeBundle.secondaryColor, themeBundle.textStyle, 5, 5, _openMultiTemplateManager),
-                                CommonUtils.buildElevatedButton('Manage Templates', themeBundle.primaryColor, themeBundle.secondaryColor, themeBundle.textStyle, 5, 5, _openTemplateManager),
+                                CommonUtils.buildElevatedButton(
+                                  'Add Goal',
+                                  themeBundle.primaryColor,
+                                  themeBundle.secondaryColor,
+                                  themeBundle.textStyle,
+                                  5,
+                                  5,
+                                  _createGoal,
+                                  borderColor: themeBundle.accentColor,
+                                ),
+                                CommonUtils.buildElevatedButton(
+                                  'Clear Active Goals',
+                                  themeBundle.primaryColor,
+                                  themeBundle.secondaryColor,
+                                  themeBundle.textStyle,
+                                  5,
+                                  5,
+                                  _clearGoals,
+                                  borderColor: themeBundle.accentColor,
+                                ),
+                                CommonUtils.buildElevatedButton(
+                                  'Clear Completed Goals',
+                                  themeBundle.primaryColor,
+                                  themeBundle.secondaryColor,
+                                  themeBundle.textStyle,
+                                  5,
+                                  5,
+                                  _clearCompleteGoals,
+                                  borderColor: themeBundle.accentColor,
+                                ),
+                                CommonUtils.buildElevatedButton(
+                                  'Manage Multi-templates',
+                                  themeBundle.primaryColor,
+                                  themeBundle.secondaryColor,
+                                  themeBundle.textStyle,
+                                  5,
+                                  5,
+                                  _openMultiTemplateManager,
+                                  borderColor: themeBundle.accentColor,
+                                ),
+                                CommonUtils.buildElevatedButton(
+                                  'Manage Templates',
+                                  themeBundle.primaryColor,
+                                  themeBundle.secondaryColor,
+                                  themeBundle.textStyle,
+                                  5,
+                                  5,
+                                  _openTemplateManager,
+                                  borderColor: themeBundle.accentColor,
+                                ),
                                 ConfettiWidget(
                                   confettiController: _confettiController,
-                                  blastDirectionality: BlastDirectionality.explosive,
-                                  shouldLoop: false),
+                                  blastDirectionality:
+                                      BlastDirectionality.explosive,
+                                  shouldLoop: false,
+                                ),
                               ],
                             ),
                           ),
@@ -1102,10 +1117,55 @@ class _GoalsScreenState extends State<GoalsScreen> {
                             spacing: 8,
                             runSpacing: 8,
                             children: [
-                              CommonUtils.buildDropdownButton(_selectedCategoryFilter, ['All', ..._categories], themeBundle.textStyle, themeBundle.secondaryColor, (val) => setState(() => _selectedCategoryFilter = val ?? 'All'), displayText: (v) => 'Category: $v',),
-                              CommonUtils.buildDropdownButton(_selectedComplexityFilter, ['All', ..._levels], themeBundle.textStyle, themeBundle.secondaryColor, (val) => setState(() => _selectedComplexityFilter = val ?? 'All'), displayText: (v) => 'Complexity: $v',),
-                              CommonUtils.buildDropdownButton(_selectedStatusFilter, ['Active', 'Completed'], themeBundle.textStyle, themeBundle.secondaryColor, (val) => setState(() => _selectedStatusFilter = val ?? 'Active'), displayText: (v) => 'Status: $v',),
-                              CommonUtils.buildDropdownButton(_sortBy, [ 'None', 'Title A-Z', 'Title Z-A', 'Time ↑', 'Time ↓', 'Steps ↑', 'Steps ↓', 'Closest deadline',], themeBundle.textStyle, themeBundle.secondaryColor, (val) => setState(() => _sortBy = val ?? 'None'), displayText: (v) => 'Sort: $v',),
+                              CommonUtils.buildDropdownButton(
+                                _selectedCategoryFilter,
+                                ['All', ..._categories],
+                                themeBundle.textStyle,
+                                themeBundle.secondaryColor,
+                                (val) => setState(
+                                  () => _selectedCategoryFilter = val ?? 'All',
+                                ),
+                                displayText: (v) => 'Category: $v',
+                              ),
+                              CommonUtils.buildDropdownButton(
+                                _selectedComplexityFilter,
+                                ['All', ..._levels],
+                                themeBundle.textStyle,
+                                themeBundle.secondaryColor,
+                                (val) => setState(
+                                  () =>
+                                      _selectedComplexityFilter = val ?? 'All',
+                                ),
+                                displayText: (v) => 'Complexity: $v',
+                              ),
+                              CommonUtils.buildDropdownButton(
+                                _selectedStatusFilter,
+                                ['Active', 'Completed'],
+                                themeBundle.textStyle,
+                                themeBundle.secondaryColor,
+                                (val) => setState(
+                                  () => _selectedStatusFilter = val ?? 'Active',
+                                ),
+                                displayText: (v) => 'Status: $v',
+                              ),
+                              CommonUtils.buildDropdownButton(
+                                _sortBy,
+                                [
+                                  'None',
+                                  'Title A-Z',
+                                  'Title Z-A',
+                                  'Time ↑',
+                                  'Time ↓',
+                                  'Steps ↑',
+                                  'Steps ↓',
+                                  'Closest deadline',
+                                ],
+                                themeBundle.textStyle,
+                                themeBundle.secondaryColor,
+                                (val) =>
+                                    setState(() => _sortBy = val ?? 'None'),
+                                displayText: (v) => 'Sort: $v',
+                              ),
                             ],
                           ),
 
@@ -1118,22 +1178,25 @@ class _GoalsScreenState extends State<GoalsScreen> {
                               itemCount: _filteredSortedGoals.length,
                               itemBuilder: (_, i) {
                                 final g = _filteredSortedGoals[i];
-                                final steps = int.tryParse(g['steps']?.toString() ?? '') ?? 1;
+                                final steps = g.steps > 0 ? g.steps : 1;
                                 return ListTile(
                                   titleTextStyle: themeBundle.textStyle,
                                   textColor: themeBundle.primaryColor,
-                                  title: Text(g['title']),
+                                  title: Text(g.title),
                                   subtitle: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        '${g['points']} pts | ${g['category']}',
+                                        '${g.points} pts | ${g.category}',
                                         style: themeBundle.textStyle,
                                       ),
                                       if (_selectedStatusFilter == 'Active' &&
                                           steps > 1)
-                                        buildStepDisplay(g, _settings.userFontSize)
+                                        buildStepDisplay(
+                                          g,
+                                          _repos.settings.userFontSize,
+                                        ),
                                     ],
                                   ),
                                   onTap: () => _viewGoalDetails(g),
@@ -1141,12 +1204,26 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                       _selectedStatusFilter == 'Active'
                                           ? Wrap(
                                             children: [
-                                              CommonUtils.buildIconButton('Add Step Progress', Icons.add_circle_outline, themeBundle.primaryColor, () =>
-                                                  _incrementStepProgress( _activeGoals.indexOf(g))),
-                                              CommonUtils.buildIconButton('Complete Goal', Icons.add_task, themeBundle.primaryColor, () =>
-                                                  _completeGoal(_activeGoals.indexOf(g))),
-                                              CommonUtils.buildIconButton('Remove Goal', Icons.delete, themeBundle.primaryColor, () => _removeGoal(
-                                                _activeGoals.indexOf(g))),
+                                              CommonUtils.buildIconButton(
+                                                'Add Step Progress',
+                                                Icons.add_circle_outline,
+                                                themeBundle.primaryColor,
+                                                () => _incrementStepProgress(
+                                                  g.goalId,
+                                                ),
+                                              ),
+                                              CommonUtils.buildIconButton(
+                                                'Complete Goal',
+                                                Icons.add_task,
+                                                themeBundle.primaryColor,
+                                                () => _completeGoal(g.goalId),
+                                              ),
+                                              CommonUtils.buildIconButton(
+                                                'Remove Goal',
+                                                Icons.delete,
+                                                themeBundle.primaryColor,
+                                                () => _removeGoal(g.goalId),
+                                              ),
                                             ],
                                           )
                                           : null,
@@ -1166,9 +1243,9 @@ class _GoalsScreenState extends State<GoalsScreen> {
   }
 }
 
-Widget buildStepDisplay(Map<String, dynamic> g, double userFontSize) {
-  final int totalSteps = int.tryParse(g['steps']?.toString() ?? '1') ?? 1;
-  final int currentProgress = (g['stepProgress'] ?? 0).clamp(0, totalSteps);
+Widget buildStepDisplay(GoalSet g, double userFontSize) {
+  final totalSteps = g.steps > 0 ? g.steps : 1;
+  final currentProgress = g.stepProgress.clamp(0, totalSteps);
 
   if (totalSteps > 10) {
     return Text(
@@ -1182,7 +1259,7 @@ Widget buildStepDisplay(Map<String, dynamic> g, double userFontSize) {
     runSpacing: 4.0,
     children: List.generate(
       totalSteps,
-          (i) => Icon(
+      (i) => Icon(
         i < currentProgress ? Icons.check_box : Icons.check_box_outline_blank,
         size: userFontSize,
       ),

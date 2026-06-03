@@ -24,8 +24,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     setState(() => _pointsLoadGeneration++);
   }
 
-  Future<int> _loadPoints() =>
-      AppRepositories.instance.points.readBalance();
+  Future<int> _loadPoints() => AppRepositories.instance.points.readBalance();
 
   @override
   Widget build(BuildContext context) {
@@ -35,11 +34,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           key: ValueKey(_pointsLoadGeneration),
           load: _loadPoints,
           minLoadingMs: 120,
-          loading: (_) => themedLoadingShell(
-            bundle,
-            title: 'Dashboard',
-            body: DashboardSkeleton(bundle: bundle),
-          ),
+          loading:
+              (_) => themedLoadingShell(
+                bundle,
+                title: 'Dashboard',
+                body: DashboardSkeleton(bundle: bundle),
+              ),
           builder: (context, points) {
             final rewardType = _settings.rewardType;
 
@@ -74,8 +74,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           context,
                           'Test: Set points to 10000',
                           () async {
-                            await AppRepositories.instance.points
-                                .writeBalance(10000);
+                            await AppRepositories.instance.points.writeBalance(
+                              10000,
+                            );
                             _refreshPoints();
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -87,16 +88,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           },
                           bundle.textStyle,
                           bundle.secondaryColor,
+                          borderColor: bundle.accentColor,
                         ),
                       ],
                       const SizedBox(height: 60),
                       CommonUtils.buildCenteredButton(
                         context,
                         'Settings',
-                        () => Navigator.pushNamed(context, 'settings')
-                            .then((_) => _refreshPoints()),
+                        () => Navigator.pushNamed(
+                          context,
+                          'settings',
+                        ).then((_) => _refreshPoints()),
                         bundle.textStyle,
                         bundle.secondaryColor,
+                        borderColor: bundle.accentColor,
                       ),
                       CommonUtils.buildCenteredButton(
                         context,
@@ -104,13 +109,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         () => Navigator.pushNamed(context, 'reward'),
                         bundle.textStyle,
                         bundle.secondaryColor,
+                        borderColor: bundle.accentColor,
                       ),
                       CommonUtils.buildCenteredButton(
                         context,
                         'AI Assistant',
                         () async {
-                          final proceed =
-                              await CommonUtils.showInteractableAlertDialog(
+                          final proceed = await CommonUtils.showInteractableAlertDialog(
                             context,
                             'AI Chat Screen',
                             '',
@@ -143,6 +148,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         },
                         bundle.textStyle,
                         bundle.secondaryColor,
+                        borderColor: bundle.accentColor,
                       ),
                       CommonUtils.buildCenteredButton(
                         context,
@@ -150,14 +156,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         () => Navigator.pushNamed(context, 'achievements'),
                         bundle.textStyle,
                         bundle.secondaryColor,
+                        borderColor: bundle.accentColor,
                       ),
                       CommonUtils.buildCenteredButton(
                         context,
                         'Goal Setting',
-                        () => Navigator.pushNamed(context, 'goals')
-                            .then((_) => _refreshPoints()),
+                        () => Navigator.pushNamed(
+                          context,
+                          'goals',
+                        ).then((_) => _refreshPoints()),
                         bundle.textStyle,
                         bundle.secondaryColor,
+                        borderColor: bundle.accentColor,
                       ),
                     ],
                   ),
