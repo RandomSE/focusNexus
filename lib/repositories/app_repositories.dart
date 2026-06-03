@@ -1,3 +1,5 @@
+import 'package:focusNexus/goals/goals_controller.dart';
+import 'package:focusNexus/goals/goals_use_case.dart';
 import 'package:focusNexus/repositories/achievement_counters_repository.dart';
 import 'package:focusNexus/repositories/garden_repository.dart';
 import 'package:focusNexus/repositories/goals_repository.dart';
@@ -25,6 +27,13 @@ class AppRepositories {
     streaks = AchievementStreakService(counters, userPrefs);
     garden = GardenRepository(storage, points: points);
     settings = AppSettings(userPrefs, theme);
+    goalsUseCase = GoalsUseCase(
+      goals: goals,
+      points: points,
+      streaks: streaks,
+      settings: settings,
+    );
+    goalsController = GoalsController(goalsUseCase);
     _wireServices();
   }
 
@@ -59,4 +68,6 @@ class AppRepositories {
   late final AchievementStreakService streaks;
   late final GardenRepository garden;
   late final AppSettings settings;
+  late final GoalsUseCase goalsUseCase;
+  late final GoalsController goalsController;
 }

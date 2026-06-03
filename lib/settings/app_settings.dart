@@ -84,9 +84,17 @@ class AppSettings extends ChangeNotifier {
   }
 
   ButtonStyle buttonStyle({Color? primary, Color? secondary}) {
+    final resolvedPrimary = primary ?? primaryColor();
+    final resolvedSecondary = secondary ?? secondaryColor();
+    final accent = ThemeStyles.resolveAccentColor(
+      isDark: _snapshot.isDark,
+      highContrast: _snapshot.highContrastMode,
+      prefs: _snapshot,
+    );
     return ThemeStyles.buildButtonStyle(
-      primary ?? primaryColor(),
-      secondary ?? secondaryColor(),
+      resolvedPrimary,
+      resolvedSecondary,
+      accent,
     );
   }
 
@@ -312,13 +320,15 @@ class AppSettings extends ChangeNotifier {
     final isDark = snap.isDark;
     final highContrast =
         ThemeStyles.usesCustomPalette(snap) ? false : snap.highContrastMode;
-    final primary = primaryOverride ??
+    final primary =
+        primaryOverride ??
         ThemeStyles.resolvePrimaryColor(
           isDark: isDark,
           highContrast: highContrast,
           prefs: snap,
         );
-    final secondary = secondaryOverride ??
+    final secondary =
+        secondaryOverride ??
         ThemeStyles.resolveSecondaryColor(
           isDark: isDark,
           highContrast: highContrast,

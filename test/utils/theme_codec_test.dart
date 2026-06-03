@@ -34,6 +34,7 @@ void main() {
           isDark: false,
           primaryColor: Colors.black,
           secondaryColor: Colors.white,
+          accentColor: Colors.blue,
           fontSize: size,
           useDyslexiaFont: false,
         ),

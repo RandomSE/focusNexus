@@ -4,12 +4,21 @@ import 'package:timezone/timezone.dart' as tz;
 
 import 'form_field_metrics.dart';
 import 'notification_schedule_utils.dart';
+import 'theme_styles.dart';
 
 class CommonUtils {
+  static Color _resolveInteractiveFill(
+    Color primaryColor,
+    Color secondaryColor,
+  ) {
+    return Color.alphaBlend(
+      primaryColor.withValues(alpha: 0.09),
+      secondaryColor,
+    );
+  }
 
   static Color getDefaultPrimaryColor() {
     return Colors.black87;
-
   }
 
   static Color getDefaultSecondaryColor() {
@@ -17,11 +26,11 @@ class CommonUtils {
   }
 
   static TextStyle getDefaultTextStyle() {
-      return TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
-          color: getDefaultPrimaryColor()
-      );
+    return TextStyle(
+      fontSize: 14,
+      fontWeight: FontWeight.bold,
+      color: getDefaultPrimaryColor(),
+    );
   }
 
   static Future<void> waitForMilliseconds(int milliseconds) async {
@@ -76,25 +85,33 @@ class CommonUtils {
   }
 
   static Widget buildCenteredButton(
-      BuildContext context,
-        String label,
-        VoidCallback onPressed,
-        TextStyle style,
-        Color backgroundColor,
-      ) {
+    BuildContext context,
+    String label,
+    VoidCallback onPressed,
+    TextStyle style,
+    Color backgroundColor, {
+    Color? borderColor,
+  }) {
+    final primaryColor = style.color ?? Colors.black87;
+    final outlineColor = borderColor ?? primaryColor;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.symmetric(vertical: 10.0),
       child: Center(
         child: SizedBox(
           width: double.infinity,
           child: ElevatedButton(
             onPressed: onPressed,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: backgroundColor,
-              padding: const EdgeInsets.symmetric(vertical: 16.0),
-              alignment: Alignment.center,
+            style: ThemeStyles.outlinedActionButtonStyle(
+              primaryColor: primaryColor,
+              secondaryColor: backgroundColor,
+              borderColor: outlineColor,
+              verticalPadding: 16,
             ),
-            child: Text(label, style: style, textAlign: TextAlign.center),
+            child: Text(
+              label,
+              style: ThemeStyles.buttonLabelStyle(style, primaryColor),
+              textAlign: TextAlign.center,
+            ),
           ),
         ),
       ),
@@ -109,9 +126,10 @@ class CommonUtils {
     ValueChanged<T?> onChanged, {
     String Function(T)? displayText,
   }) {
-    final itemLabels = options
-        .map((e) => displayText != null ? displayText(e) : e.toString())
-        .toList();
+    final itemLabels =
+        options
+            .map((e) => displayText != null ? displayText(e) : e.toString())
+            .toList();
 
     return wrapFormField(
       DropdownButton<T>(
@@ -125,13 +143,14 @@ class CommonUtils {
               .map((text) => formDropdownSelectedValue(text, textStyle))
               .toList();
         },
-        items: options.map((e) {
-          final text = displayText != null ? displayText(e) : e.toString();
-          return DropdownMenuItem<T>(
-            value: e,
-            child: formMenuItemText(text, textStyle),
-          );
-        }).toList(),
+        items:
+            options.map((e) {
+              final text = displayText != null ? displayText(e) : e.toString();
+              return DropdownMenuItem<T>(
+                value: e,
+                child: formMenuItemText(text, textStyle),
+              );
+            }).toList(),
       ),
       textStyle,
     );
@@ -147,9 +166,10 @@ class CommonUtils {
     String? Function(String?)? validator,
     String Function(T)? displayText,
   }) {
-    final itemLabels = options
-        .map((e) => displayText != null ? displayText(e) : e.toString())
-        .toList();
+    final itemLabels =
+        options
+            .map((e) => displayText != null ? displayText(e) : e.toString())
+            .toList();
 
     return labeledFormField(
       label: label,
@@ -170,51 +190,60 @@ class CommonUtils {
               .map((text) => formDropdownSelectedValue(text, textStyle))
               .toList();
         },
-        items: options
-            .map(
-              (e) => DropdownMenuItem<T>(
-                value: e,
-                child: formMenuItemText(
-                  displayText != null ? displayText(e) : e.toString(),
-                  textStyle,
-                ),
-              ),
-            )
-            .toList(),
+        items:
+            options
+                .map(
+                  (e) => DropdownMenuItem<T>(
+                    value: e,
+                    child: formMenuItemText(
+                      displayText != null ? displayText(e) : e.toString(),
+                      textStyle,
+                    ),
+                  ),
+                )
+                .toList(),
         style: textStyle,
         onChanged: onChanged,
       ),
     );
   }
 
-  static ElevatedButton buildElevatedButton(
-      String text,
-      Color primaryColor,
-      Color secondaryColor,
-      TextStyle textStyle,
-      double paddingPixels,
-      double radius,
-      VoidCallback? onPressed, //  nullable, for conditional buttons.
-      ) {
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: secondaryColor,
-        foregroundColor: primaryColor,
-        padding: EdgeInsets.symmetric(vertical: paddingPixels),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(radius),
+  static Widget buildElevatedButton(
+    String text,
+    Color primaryColor,
+    Color secondaryColor,
+    TextStyle textStyle,
+    double paddingPixels,
+    double radius,
+    VoidCallback? onPressed, {
+    Color? borderColor,
+  }) {
+    final resolvedRadius = radius == 0 ? 12.0 : radius;
+    final outlineColor = borderColor ?? primaryColor;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ThemeStyles.outlinedActionButtonStyle(
+          primaryColor: primaryColor,
+          secondaryColor: secondaryColor,
+          borderColor: outlineColor,
+          radius: resolvedRadius,
+          verticalPadding: paddingPixels + 10,
+        ),
+        child: Text(
+          text,
+          style: ThemeStyles.buttonLabelStyle(textStyle, primaryColor),
         ),
       ),
-      child: Text(text, style: textStyle),
     );
   }
 
   static Widget buildSwitch(
-      bool value,
-      void Function(bool)? onChanged,
-      Color color
-      ) {
+    bool value,
+    void Function(bool)? onChanged,
+    Color color,
+  ) {
     return Switch(value: value, onChanged: onChanged, activeColor: color);
   }
 
@@ -230,11 +259,10 @@ class CommonUtils {
     final dyslexia = usesOpenDyslexic(textStyle);
     return SwitchListTile(
       dense: dyslexia ? false : dense,
-      contentPadding: dyslexia
-          ? EdgeInsets.symmetric(
-              vertical: (textStyle.fontSize ?? 14) * 0.2,
-            )
-          : (dense ? EdgeInsets.zero : null),
+      contentPadding:
+          dyslexia
+              ? EdgeInsets.symmetric(vertical: (textStyle.fontSize ?? 14) * 0.2)
+              : (dense ? EdgeInsets.zero : null),
       title: Text(
         text,
         style: textStyle,
@@ -262,6 +290,11 @@ class CommonUtils {
     final size = textStyle.fontSize ?? 14;
     return outlinedFormRow(
       ListTile(
+        tileColor: _resolveInteractiveFill(
+          textStyle.color ?? Colors.black87,
+          Colors.transparent,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         contentPadding: EdgeInsets.symmetric(
           horizontal: 16,
           vertical: dyslexia ? size * 0.15 : 0,
@@ -311,10 +344,10 @@ class CommonUtils {
   }
 
   static Widget buildTextField(
-      TextEditingController? controller,
-      String text,
-      TextStyle textStyle, {
-      bool hideText = false,
+    TextEditingController? controller,
+    String text,
+    TextStyle textStyle, {
+    bool hideText = false,
   }) {
     return labeledFormField(
       label: text,
@@ -375,107 +408,112 @@ class CommonUtils {
   }
 
   static Widget buildIconButton(
-      String tooltipText,
-      IconData icon,
-      Color color,
-      VoidCallback? onPressed,
-      ) {
+    String tooltipText,
+    IconData icon,
+    Color color,
+    VoidCallback? onPressed,
+  ) {
     return IconButton(
       onPressed: onPressed,
-      icon: Icon(icon, color: color), tooltip: tooltipText,
+      icon: Icon(icon, color: color),
+      tooltip: tooltipText,
     );
   }
 
-
-
   static void showBasicAlertDialog(
-      BuildContext context,
-      String titleText,
-      String bodyText,
-      TextStyle textStyle,
-      Color backgroundColor,
-      ) {
+    BuildContext context,
+    String titleText,
+    String bodyText,
+    TextStyle textStyle,
+    Color backgroundColor,
+  ) {
     showDialog(
       context: context,
       builder:
           (ctx) => AlertDialog(
-        backgroundColor: backgroundColor,
-        title: Text(titleText, style: textStyle),
-        content: Text(bodyText, style: textStyle),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text('OK', style: textStyle),
+            backgroundColor: backgroundColor,
+            title: Text(titleText, style: textStyle),
+            content: Text(bodyText, style: textStyle),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: Text('OK', style: textStyle),
+              ),
+            ],
           ),
-
-        ],
-      ),
     );
   }
 
   static Future<bool?> showInteractableAlertDialog(
-      BuildContext context,
-      String titleText,
-      String bodyText,
-      TextStyle textStyle,
-      Color backgroundColor, {
-        List<Widget>? actions,
-        Widget? content,
-        bool barrierDismissible = true,
-      }) {
-    content ??= SingleChildScrollView(
-      child: Text(bodyText, style: textStyle),
-    );
+    BuildContext context,
+    String titleText,
+    String bodyText,
+    TextStyle textStyle,
+    Color backgroundColor, {
+    List<Widget>? actions,
+    Widget? content,
+    bool barrierDismissible = true,
+  }) {
+    content ??= SingleChildScrollView(child: Text(bodyText, style: textStyle));
     return showDialog<bool>(
       context: context,
       barrierDismissible: barrierDismissible,
-      builder: (ctx) => PopScope(
-        canPop: barrierDismissible,
-        child: AlertDialog(
-        backgroundColor: backgroundColor,
-        title: Text(titleText, style: textStyle),
-        content: content,
-        actions: actions,
-        ),
-      ),
+      builder:
+          (ctx) => PopScope(
+            canPop: barrierDismissible,
+            child: AlertDialog(
+              backgroundColor: backgroundColor,
+              title: Text(titleText, style: textStyle),
+              content: content,
+              actions: actions,
+            ),
+          ),
     );
   }
 
-
   static void showDialogWidget(
-      BuildContext context,
-      String titleText,
-      TextStyle textStyle,
-      Color backgroundColor,
-      ) {
+    BuildContext context,
+    String titleText,
+    TextStyle textStyle,
+    Color backgroundColor,
+  ) {
     showDialog(
       context: context,
       builder:
           (ctx) => Dialog(
-        backgroundColor: backgroundColor,
-        child: Text(
-          '$titleText Click anywhere to close this pop-up.',
-          style: textStyle,
-        ),
-      ),
+            backgroundColor: backgroundColor,
+            child: Text(
+              '$titleText Click anywhere to close this pop-up.',
+              style: textStyle,
+            ),
+          ),
     );
   }
 
   static void showSnackBar(
-      BuildContext context,
-      String text,
-      TextStyle textStyle,
-      int durationMilliseconds,
-      int margin,
-      ) {
+    BuildContext context,
+    String text,
+    TextStyle textStyle,
+    int durationMilliseconds,
+    int margin, {
+    Color? backgroundColor,
+    Color? labelColor,
+  }) {
+    final resolvedLabel = labelColor ?? textStyle.color;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(text, style: textStyle),
+        backgroundColor: backgroundColor,
+        content: Text(text, style: textStyle.copyWith(color: resolvedLabel)),
         duration: Duration(milliseconds: durationMilliseconds),
         behavior: SnackBarBehavior.floating,
         margin: EdgeInsets.all(margin.toDouble()),
+        showCloseIcon: true,
+        closeIconColor: resolvedLabel,
       ),
     );
   }
 
+  static void dismissKeyboard() {
+    FocusManager.instance.primaryFocus?.unfocus();
+  }
 }

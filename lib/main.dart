@@ -31,22 +31,34 @@ class FocusNexusApp extends StatelessWidget {
       listenable: settings,
       builder: (context, _) {
         final snap = settings.snapshot;
+        final primaryColor = ThemeStyles.resolvePrimaryColor(
+          isDark: snap.isDark,
+          highContrast: snap.highContrastMode,
+          prefs: snap,
+        );
         final scaffoldColor = ThemeStyles.resolveSecondaryColor(
           isDark: snap.isDark,
           highContrast: snap.highContrastMode,
           prefs: snap,
         );
+        final accentColor = ThemeStyles.resolveAccentColor(
+          isDark: snap.isDark,
+          highContrast: snap.highContrastMode,
+          prefs: snap,
+        );
+        final appTheme = ThemeStyles.buildThemeData(
+          isDark: snap.isDark,
+          primaryColor: primaryColor,
+          secondaryColor: scaffoldColor,
+          accentColor: accentColor,
+          fontSize: snap.fontSize,
+          useDyslexiaFont: snap.useDyslexiaFont,
+        );
 
         return MaterialApp(
           title: 'FocusNexus',
           debugShowCheckedModeBanner: false,
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: Colors.deepPurple,
-              surface: scaffoldColor,
-            ),
-            scaffoldBackgroundColor: scaffoldColor,
-            useMaterial3: true,
+          theme: appTheme.copyWith(
             pageTransitionsTheme: const PageTransitionsTheme(
               builders: {
                 TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),

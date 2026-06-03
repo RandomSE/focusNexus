@@ -32,10 +32,13 @@ class ThemePersistedSnapshot with _$ThemePersistedSnapshot {
     );
   }
   ThemeData toThemeData() {
+    final primary = Color(primaryColorArgb);
+    final secondary = Color(secondaryColorArgb);
     return ThemeStyles.buildThemeData(
       isDark: isDark,
-      primaryColor: Color(primaryColorArgb),
-      secondaryColor: Color(secondaryColorArgb),
+      primaryColor: primary,
+      secondaryColor: secondary,
+      accentColor: Color.alphaBlend(primary.withValues(alpha: 0.2), secondary),
       fontSize: userFontSize,
       useDyslexiaFont: useDyslexiaFont,
     );

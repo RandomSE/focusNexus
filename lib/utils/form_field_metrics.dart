@@ -34,8 +34,7 @@ double dropdownButtonClosedHeight(TextStyle style) {
 
 /// Dropdown menu row height.
 double dropdownItemHeight(TextStyle style) {
-  final size = _fontSize(style);
-  final line = _lineHeight(style);
+
   final dyslexia = usesOpenDyslexic(style);
   if (!dyslexia) return kMinInteractiveDimension;
   return dropdownButtonClosedHeight(style);

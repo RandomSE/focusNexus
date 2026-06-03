@@ -26,10 +26,16 @@ class ThemeRepository {
       highContrast: snap.highContrastMode,
       prefs: snap,
     );
+    final accent = ThemeStyles.resolveAccentColor(
+      isDark: isDark,
+      highContrast: snap.highContrastMode,
+      prefs: snap,
+    );
     final themeData = ThemeStyles.buildThemeData(
       isDark: isDark,
       primaryColor: primary,
       secondaryColor: secondary,
+      accentColor: accent,
       fontSize: snap.fontSize,
       useDyslexiaFont: snap.useDyslexiaFont,
     );
@@ -37,12 +43,13 @@ class ThemeRepository {
       themeData: themeData,
       primaryColor: primary,
       secondaryColor: secondary,
+      accentColor: accent,
       textStyle: ThemeStyles.buildTextStyle(
         fontSize: snap.fontSize,
         primaryColor: primary,
         useDyslexiaFont: snap.useDyslexiaFont,
       ),
-      buttonStyle: ThemeStyles.buildButtonStyle(primary, secondary),
+      buttonStyle: ThemeStyles.buildButtonStyle(primary, secondary, accent),
     );
   }
 
@@ -64,19 +71,30 @@ class ThemeRepository {
       highContrast: snap.highContrastMode,
       prefs: snap,
     );
+    final accent = ThemeStyles.resolveAccentColor(
+      isDark: isDark,
+      highContrast: snap.highContrastMode,
+      prefs: snap,
+    );
     final textStyle = ThemeStyles.buildTextStyle(
       fontSize: snap.fontSize,
       primaryColor: primary,
       useDyslexiaFont: snap.useDyslexiaFont,
     );
-    final buttonStyle = ThemeStyles.buildButtonStyle(primary, secondary);
+    final buttonStyle = ThemeStyles.buildButtonStyle(
+      primary,
+      secondary,
+      accent,
+    );
 
     final stored = await _prefs.readThemeData();
-    final themeData = stored ??
+    final themeData =
+        stored ??
         ThemeStyles.buildThemeData(
           isDark: isDark,
           primaryColor: primary,
           secondaryColor: secondary,
+          accentColor: accent,
           fontSize: snap.fontSize,
           useDyslexiaFont: snap.useDyslexiaFont,
         );
@@ -85,6 +103,7 @@ class ThemeRepository {
       themeData: themeData,
       primaryColor: primary,
       secondaryColor: secondary,
+      accentColor: accent,
       textStyle: textStyle,
       buttonStyle: buttonStyle,
     );
@@ -105,10 +124,16 @@ class ThemeRepository {
       highContrast: prefs.highContrastMode,
       prefs: prefs,
     );
+    final accent = ThemeStyles.resolveAccentColor(
+      isDark: isDark,
+      highContrast: prefs.highContrastMode,
+      prefs: prefs,
+    );
     final theme = ThemeStyles.buildThemeData(
       isDark: isDark,
       primaryColor: primary,
       secondaryColor: secondary,
+      accentColor: accent,
       fontSize: prefs.fontSize,
       useDyslexiaFont: prefs.useDyslexiaFont,
     );

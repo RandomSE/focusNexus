@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:focusNexus/progressive_visuals/decor_item.dart';
 import 'package:focusNexus/progressive_visuals/visual_theme_id.dart';
-import 'package:focusNexus/screens/zen_garden/zen_garden_decor_painters.dart';
 import 'package:focusNexus/screens/zen_garden/zen_garden_painters.dart';
 import 'package:focusNexus/screens/zen_garden/zen_garden_static_scenery.dart';
 import 'package:focusNexus/screens/zen_garden/zen_garden_waterfall.dart';

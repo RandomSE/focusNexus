@@ -8,6 +8,16 @@ abstract final class NotificationScheduleUtils {
   static const int affirmationHorizonDays = 90;
   static const int affirmationTopUpLeadDays = 14;
 
+  /// Day offsets (before deadline) for High-frequency daily goal reminders.
+  ///
+  /// For [hoursToExpire] of 48, only `1` is returned (24h before deadline),
+  /// not `2` (which would be "now" and crash the notification plugin).
+  static List<int> highFrequencyDailyReminderDayOffsets(int hoursToExpire) {
+    final totalDays = hoursToExpire ~/ 24;
+    if (totalDays <= 1) return [];
+    return [for (var i = 1; i < totalDays; i++) i];
+  }
+
   /// Normalizes user-entered clock strings to `HH:mm` (24h).
   static String normalizeHHmm(String? raw, {String fallback = defaultAffirmationTime}) {
     final trimmed = (raw ?? '').trim();

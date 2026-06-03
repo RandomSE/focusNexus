@@ -1,3 +1,4 @@
+import 'package:focusNexus/models/classes/goal_set.dart';
 import 'package:focusNexus/services/storage/key_value_storage.dart';
 import 'package:focusNexus/services/storage/storage_keys.dart';
 import 'package:focusNexus/utils/completed_today_codec.dart';
@@ -9,24 +10,24 @@ class GoalsRepository {
 
   final KeyValueStorage _storage;
 
-  Future<List<Map<String, dynamic>>> readActiveGoals() async {
+  Future<List<GoalSet>> readActiveGoals() async {
     final raw = await _storage.read(key: StorageKeys.activeGoals);
     return GoalsCodec.decodeList(raw);
   }
 
-  Future<void> writeActiveGoals(List<Map<String, dynamic>> goals) async {
+  Future<void> writeActiveGoals(List<GoalSet> goals) async {
     await _storage.write(
       key: StorageKeys.activeGoals,
       value: GoalsCodec.encodeList(goals),
     );
   }
 
-  Future<List<Map<String, dynamic>>> readCompletedGoals() async {
+  Future<List<GoalSet>> readCompletedGoals() async {
     final raw = await _storage.read(key: StorageKeys.completedGoals);
     return GoalsCodec.decodeList(raw);
   }
 
-  Future<void> writeCompletedGoals(List<Map<String, dynamic>> goals) async {
+  Future<void> writeCompletedGoals(List<GoalSet> goals) async {
     await _storage.write(
       key: StorageKeys.completedGoals,
       value: GoalsCodec.encodeList(goals),

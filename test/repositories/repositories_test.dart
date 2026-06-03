@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:focusNexus/models/classes/goal_set.dart';
 import 'package:focusNexus/repositories/goals_repository.dart';
 import 'package:focusNexus/repositories/points_repository.dart';
 import 'package:focusNexus/services/storage/storage_keys.dart';
@@ -50,11 +51,14 @@ void main() {
     });
 
     test('write and read active goals roundtrip', () async {
-      final goals = [
-        {'title': 'Walk', 'Id': '1'},
+      const goals = [
+        GoalSet(title: 'Walk', goalId: 1),
       ];
       await repo.writeActiveGoals(goals);
-      expect(await repo.readActiveGoals(), goals);
+      final loaded = await repo.readActiveGoals();
+      expect(loaded.length, 1);
+      expect(loaded.single.title, 'Walk');
+      expect(loaded.single.goalId, 1);
     });
 
     test('areDeadlinesPaused accepts legacy True casing', () async {
