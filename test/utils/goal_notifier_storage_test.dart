@@ -13,7 +13,7 @@ void main() {
     final memory = InMemoryKeyValueStorage(
       initial: {'aiEncouragement': 'true'},
     );
-    GoalNotifier.storage = memory;
+    GoalNotifier.bindStorage(memory);
 
     await GoalNotifier.checkAiEncouragement();
 
@@ -24,7 +24,7 @@ void main() {
     final memory = InMemoryKeyValueStorage(
       initial: {'dailyAffirmations': 'true'},
     );
-    GoalNotifier.storage = memory;
+    GoalNotifier.bindStorage(memory);
 
     await GoalNotifier.checkDailyAffirmations();
 
@@ -32,7 +32,7 @@ void main() {
   });
 
   test('settings default to false when storage keys are absent', () async {
-    GoalNotifier.storage = InMemoryKeyValueStorage();
+    GoalNotifier.bindStorage(InMemoryKeyValueStorage());
 
     await GoalNotifier.checkAdditionalNotificationSettings();
 
@@ -43,8 +43,10 @@ void main() {
   test(
     'notification frequency disables scheduling when set to No notifications',
     () async {
-      GoalNotifier.storage = InMemoryKeyValueStorage(
-        initial: {'notificationFrequency': 'No notifications'},
+      GoalNotifier.bindStorage(
+        InMemoryKeyValueStorage(
+          initial: {'notificationFrequency': 'No notifications'},
+        ),
       );
 
       final enabled = await GoalNotifier.areNotificationsEnabledByFrequency();
@@ -56,8 +58,10 @@ void main() {
   test(
     'notification frequency allows scheduling for valid frequencies',
     () async {
-      GoalNotifier.storage = InMemoryKeyValueStorage(
-        initial: {'notificationFrequency': 'Medium'},
+      GoalNotifier.bindStorage(
+        InMemoryKeyValueStorage(
+          initial: {'notificationFrequency': 'Medium'},
+        ),
       );
 
       final enabled = await GoalNotifier.areNotificationsEnabledByFrequency();
@@ -75,7 +79,7 @@ void main() {
           StorageKeys.dailyAffirmationsTime: '08:15',
         },
       );
-      GoalNotifier.storage = memory;
+      GoalNotifier.bindStorage(memory);
       final scheduledTimes = <String>[];
       GoalNotifier.setDailyAffirmationsSchedulerForTesting((time) async {
         scheduledTimes.add(time);
@@ -96,7 +100,7 @@ void main() {
       final memory = InMemoryKeyValueStorage(
         initial: {StorageKeys.dailyAffirmations: 'true'},
       );
-      GoalNotifier.storage = memory;
+      GoalNotifier.bindStorage(memory);
       final scheduledTimes = <String>[];
       GoalNotifier.setDailyAffirmationsSchedulerForTesting((time) async {
         scheduledTimes.add(time);
@@ -120,7 +124,7 @@ void main() {
           StorageKeys.dailyAffirmationsTime: '09:00',
         },
       );
-      GoalNotifier.storage = memory;
+      GoalNotifier.bindStorage(memory);
       var schedulerCalls = 0;
       GoalNotifier.setDailyAffirmationsSchedulerForTesting((_) async {
         schedulerCalls++;
@@ -144,7 +148,7 @@ void main() {
           StorageKeys.dailyAffirmationsTime: '09:00',
         },
       );
-      GoalNotifier.storage = memory;
+      GoalNotifier.bindStorage(memory);
       var schedulerCalls = 0;
       GoalNotifier.setDailyAffirmationsSchedulerForTesting((_) async {
         schedulerCalls++;

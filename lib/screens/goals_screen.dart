@@ -1,34 +1,44 @@
 // lib/screens/goals_screen.dart
-import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'dart:async';
+
 import 'package:confetti/confetti.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
-import '../goals/builtin_goal_templates.dart';
-import '../goals/goals_controller.dart';
-import '../goals/goals_filter_sort.dart';
-import '../goals/goals_use_case.dart';
-import '../repositories/app_repositories.dart';
-import '../services/sound_service.dart';
-import '../models/classes/theme_bundle.dart';
-import '../models/classes/goal_set.dart';
-import '../utils/common_utils.dart';
-import '../utils/screen_theme.dart';
-import '../widgets/deferred_screen.dart';
-import '../widgets/skeleton_loaders.dart';
-import '../widgets/settings_themed_builder.dart';
+import 'package:focusNexus/goals/builtin_goal_templates.dart';
+import 'package:focusNexus/goals/goal_categories.dart';
+import 'package:focusNexus/goals/goal_deadline_label.dart';
+import 'package:focusNexus/goals/goals_filter_sort.dart';
+import 'package:focusNexus/goals/goals_use_case.dart';
+import 'package:focusNexus/goals/template_group_cleanup.dart';
+import 'package:focusNexus/models/classes/goal_set.dart';
+import 'package:focusNexus/models/classes/theme_bundle.dart';
+import 'package:focusNexus/providers/app_repositories_provider.dart';
+import 'package:focusNexus/providers/app_services_provider.dart';
+import 'package:focusNexus/providers/goals_provider.dart';
+import 'package:focusNexus/providers/goals_screen_ui_provider.dart';
+import 'package:focusNexus/providers/theme_bundle_provider.dart';
+import 'package:focusNexus/repositories/app_repositories.dart';
+import 'package:focusNexus/services/sound_service.dart';
+import 'package:focusNexus/utils/common_utils.dart';
+import 'package:focusNexus/utils/screen_theme.dart';
+import 'package:focusNexus/widgets/deferred_screen.dart';
+import 'package:focusNexus/widgets/skeleton_loaders.dart';
 
-class GoalsScreen extends StatefulWidget {
+class GoalsScreen extends ConsumerStatefulWidget {
   const GoalsScreen({super.key});
 
   @override
-  State<GoalsScreen> createState() => _GoalsScreenState();
+  ConsumerState<GoalsScreen> createState() => _GoalsScreenState();
 }
 
-class _GoalsScreenState extends State<GoalsScreen> {
-  AppRepositories get _repos => AppRepositories.instance;
-  GoalsController get _goals => _repos.goalsController;
-  ThemeBundle get themeBundle =>
-      _repos.theme.bundleFromSnapshot(_repos.settings.snapshot);
+class _GoalsScreenState extends ConsumerState<GoalsScreen> {
+  GoalsNotifier get _goalsNotifier => ref.read(goalsProvider.notifier);
+  GoalsScreenUiNotifier get _uiNotifier => ref.read(goalsScreenUiProvider.notifier);
+  GoalsScreenUiState get _uiState => ref.read(goalsScreenUiProvider);
+  ThemeBundle get _themeBundle => ref.read(themeBundleProvider);
+  AppRepositories get _repos => ref.read(appRepositoriesProvider);
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _timeController = TextEditingController();
@@ -38,26 +48,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
   final TextEditingController _templateTime = TextEditingController();
   final TextEditingController _templateSteps = TextEditingController();
   final TextEditingController _templateDeadline = TextEditingController();
-  String _selectedCategoryFilter = 'All';
-  String _selectedComplexityFilter = 'All';
-  String _selectedStatusFilter = 'Active';
-  String _sortBy = 'None';
-  String _category = 'Productivity';
-  String _complexity = 'Low';
-  String _effort = 'Low';
-  final String today = DateFormat('dd MM yyyy').format(DateTime.now());
-  int goalsCompletedToday = 0;
-  String _motivation = 'Low';
-  final _categories = [
-    'Productivity',
-    'Health',
-    'Learning',
-    'Social',
-    'Self-care',
-    'Work',
-    'Relationships',
-    'Other',
-  ];
+  final _categories = kGoalCategories;
   final _levels = ['Low', 'Medium', 'High'];
   final Map<String, Map<String, dynamic>> _templateDetails =
       Map<String, Map<String, dynamic>>.from(builtinGoalTemplates);
@@ -69,8 +60,6 @@ class _GoalsScreenState extends State<GoalsScreen> {
     DateTime.now().minute,
   );
   final DateFormat formatter = DateFormat('dd MMMM yyyy HH:mm');
-  Map<String, Map<String, dynamic>> _userTemplates = {};
-  Map<String, List<String>> _templateGroups = {};
   late ConfettiController _confettiController;
 
   @override
@@ -83,6 +72,14 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
   @override
   void dispose() {
+    _titleController.dispose();
+    _timeController.dispose();
+    _deadlineController.dispose();
+    _stepsController.dispose();
+    _templateName.dispose();
+    _templateTime.dispose();
+    _templateSteps.dispose();
+    _templateDeadline.dispose();
     _confettiController.dispose();
     super.dispose();
   }
@@ -90,10 +87,11 @@ class _GoalsScreenState extends State<GoalsScreen> {
   Future<void> _loadGoalsPage() async {
     _stepsController.text = '1';
     _templateSteps.text = '1';
-    await _goals.load(now: _currentDate);
+    await _goalsNotifier.load(now: _currentDate);
     await _loadTemplates();
     await _loadTemplateGroups();
-    goalsCompletedToday = _goals.goalsCompletedToday;
+    _syncGoalsCompletedToday();
+    unawaited(ref.read(soundServiceProvider).warmPlaybackCache());
   }
 
   void _dismissDialog(BuildContext dialogContext) {
@@ -103,30 +101,28 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
   Future<void> _loadTemplates() async {
     final templates = await _repos.templates.readUserTemplates();
-    setState(() {
-      _userTemplates = templates;
-    });
+    _uiNotifier.update(
+      (state) => state.copyWith(
+        userTemplates: Map<String, Map<String, dynamic>>.from(templates),
+      ),
+    );
   }
 
-  Future<void> _saveTemplates() async {
-    await _repos.templates.writeUserTemplates(_userTemplates);
-    setState(() {});
+  Future<void> _saveTemplates([Map<String, Map<String, dynamic>>? templates]) async {
+    await _repos.templates.writeUserTemplates(templates ?? _uiState.userTemplates);
   }
 
-  List<GoalSet> get _filteredSortedGoals => filterAndSortGoals(
-    source:
-        _selectedStatusFilter == 'Active'
-            ? _goals.activeGoals
-            : _goals.completedGoals,
-    categoryFilter: _selectedCategoryFilter,
-    complexityFilter: _selectedComplexityFilter,
-    sortBy: _sortBy,
-    deadlineFormat: formatter,
-  );
+  void _syncGoalsCompletedToday() {
+    _uiNotifier.update(
+      (state) => state.copyWith(
+        goalsCompletedToday: ref.read(goalsProvider).goalsCompletedToday,
+      ),
+    );
+  }
 
-  Future<void> _clearGoals() => _goals.clearActiveGoals();
+  Future<void> _clearGoals() => _goalsNotifier.clearActiveGoals();
 
-  Future<void> _clearCompleteGoals() => _goals.clearCompletedGoals();
+  Future<void> _clearCompleteGoals() => _goalsNotifier.clearCompletedGoals();
 
   Future<void> _createGoal() async {
     if (_stepsController.text == '') {
@@ -135,20 +131,35 @@ class _GoalsScreenState extends State<GoalsScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final hours = int.tryParse(_deadlineController.text.trim()) ?? 0;
-    await _goals.createGoal(
-      title: _titleController.text,
-      category: _category,
-      complexity: _complexity,
-      effort: _effort,
-      motivation: _motivation,
+    final ui = _uiState;
+    final title = _titleController.text.trim();
+    await _goalsNotifier.createGoal(
+      title: title,
+      category: ui.category,
+      complexity: ui.complexity,
+      effort: ui.effort,
+      motivation: ui.motivation,
       time: _timeController.text,
       steps: _stepsController.text,
       deadlineHours: hours,
       anchor: _currentDate,
     );
     _resetControllers();
-    goalsCompletedToday = _goals.goalsCompletedToday;
-    SoundService.playGoalCreated();
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _syncGoalsCompletedToday();
+      ref.read(soundServiceProvider).playGoalCreated();
+      CommonUtils.showSnackBar(
+        context,
+        'Goal "$title" created!',
+        _themeBundle.textStyle,
+        2500,
+        12,
+        backgroundColor: _themeBundle.secondaryColor,
+        labelColor: _themeBundle.primaryColor,
+      );
+    });
   }
 
   void _resetControllers() {
@@ -159,9 +170,9 @@ class _GoalsScreenState extends State<GoalsScreen> {
   }
 
   Future<void> _incrementStepProgress(int goalId) async {
-    final result = await _goals.incrementStepProgress(goalId);
+    final result = await _goalsNotifier.incrementStepProgress(goalId);
     if (result?.completed != null) {
-      await _showGoalCompletedFeedback(result!.completed!);
+      _scheduleGoalCompletedFeedback(result!.completed!);
     }
   }
 
@@ -176,7 +187,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
     required String deadlineHours,
   }) async {
     final hours = int.tryParse(deadlineHours) ?? 0;
-    await _goals.createGoal(
+    await _goalsNotifier.createGoal(
       title: title,
       category: category,
       complexity: complexity,
@@ -187,7 +198,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
       deadlineHours: hours,
       anchor: _currentDate,
     );
-    goalsCompletedToday = _goals.goalsCompletedToday;
+    _syncGoalsCompletedToday();
   }
 
   Future<void> _createGoalsFromTemplatesBulk(List<String> templateNames) async {
@@ -196,8 +207,8 @@ class _GoalsScreenState extends State<GoalsScreen> {
         context,
         'No templates Selected',
         'Please select at least one template to create goals from.',
-        themeBundle.textStyle,
-        themeBundle.secondaryColor,
+        _themeBundle.textStyle,
+        _themeBundle.secondaryColor,
       );
       return;
     }
@@ -208,40 +219,46 @@ class _GoalsScreenState extends State<GoalsScreen> {
       barrierDismissible: false,
       builder:
           (ctx) => Dialog(
-            backgroundColor: themeBundle.secondaryColor,
+            backgroundColor: _themeBundle.secondaryColor,
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(
                 'Goals are being created.',
-                style: themeBundle.textStyle,
+                style: _themeBundle.textStyle,
               ),
             ),
           ),
     );
 
     try {
-      final futures = <Future<void>>[];
+      final inputs = <CreateGoalInput>[
+        for (final templateName in templateNames)
+          () {
+            final data =
+                _templateDetails[templateName] ??
+                _uiState.userTemplates[templateName]!;
+            return CreateGoalInput(
+              title: templateName,
+              category: data['category'] as String,
+              complexity: data['complexity'] as String,
+              effort: data['effort'] as String,
+              motivation: data['motivation'] as String,
+              time: data['time'] as String,
+              steps: data['steps'] as String,
+              deadlineHours: int.tryParse(
+                    (data['Hours to complete'] as String?) ?? '',
+                  ) ??
+                  0,
+            );
+          }(),
+      ];
 
-      for (final templateName in templateNames) {
-        final data =
-            _templateDetails[templateName] ?? _userTemplates[templateName]!;
-
-        futures.add(
-          _createGoalFromTemplates(
-            title: templateName,
-            category: data['category'],
-            complexity: data['complexity'],
-            effort: data['effort'],
-            motivation: data['motivation'],
-            time: data['time'],
-            steps: data['steps'],
-            deadlineHours: data['Hours to complete'],
-          ),
-        );
-      }
-
-      await Future.wait(futures);
-      SoundService.playGoalCreated();
+      await _goalsNotifier.createGoals(
+        inputs: inputs,
+        anchor: _currentDate,
+      );
+      _syncGoalsCompletedToday();
+      ref.read(soundServiceProvider).playGoalCreated();
     } finally {
       if (mounted) {
         CommonUtils.dismissKeyboard();
@@ -256,128 +273,117 @@ class _GoalsScreenState extends State<GoalsScreen> {
     CommonUtils.showDialogWidget(
       context,
       'Goals created from selected templates.',
-      themeBundle.textStyle,
-      themeBundle.secondaryColor,
+      _themeBundle.textStyle,
+      _themeBundle.secondaryColor,
     );
   }
 
-  Future<void> _completeGoal(int goalId) async {
-    final result = await _goals.completeGoal(goalId);
-    if (result == null) return;
-    await _showGoalCompletedFeedback(result);
+  void _completeGoal(int goalId) {
+    final result = _goalsNotifier.completeGoalOptimistic(goalId);
+    if (result == null || !mounted) return;
+    _scheduleGoalCompletedFeedback(result);
   }
 
-  Future<void> _showGoalCompletedFeedback(CompleteGoalResult result) async {
+  /// List repaint first, then confetti/snackbar/sound on the next frame.
+  void _scheduleGoalCompletedFeedback(CompleteGoalResult result) {
     if (!mounted) return;
-    goalsCompletedToday = result.goalsCompletedToday;
-    SoundService.playGoalCompleted();
-    _confettiController.play();
-    CommonUtils.showSnackBar(
-      context,
-      '${result.goal.title} completed! +${result.pointsAwarded} points. '
-      'Goals completed today: $goalsCompletedToday',
-      themeBundle.textStyle,
-      2000,
-      5,
-      backgroundColor: themeBundle.secondaryColor,
-      labelColor: themeBundle.primaryColor,
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _confettiController.play();
+      CommonUtils.showSnackBar(
+        context,
+        '${result.goal.title} completed! +${result.pointsAwarded} points. '
+        'Goals completed today: ${result.goalsCompletedToday}',
+        _themeBundle.textStyle,
+        2000,
+        5,
+        backgroundColor: _themeBundle.secondaryColor,
+        labelColor: _themeBundle.primaryColor,
+      );
+      unawaited(ref.read(soundServiceProvider).playGoalCompleted());
+    });
   }
 
-  Future<void> _removeGoal(int goalId) => _goals.removeGoal(goalId);
+  Future<void> _removeGoal(int goalId) => _goalsNotifier.removeGoal(goalId);
 
   Future<void> _preSaveTemplate(
-    String templateCategory,
-    String templateComplexity,
-    String templateEffort,
-    String templateMotivation,
-    GlobalKey<FormState> templateFormKey, {
-    StateSetter? dialogSetState,
-  }) async {
+    GlobalKey<FormState> templateFormKey,
+  ) async {
     if (!templateFormKey.currentState!.validate()) {
       return; // stop if validation fails
     }
     if (_templateSteps.text.trim() == '') {
       _templateSteps.text = '1';
     }
+    final ui = _uiState;
     final name = _templateName.text.trim();
     final data = {
-      'category': templateCategory,
-      'complexity': templateComplexity,
-      'effort': templateEffort,
-      'motivation': templateMotivation,
+      'category': ui.templateDialogCategory,
+      'complexity': ui.templateDialogComplexity,
+      'effort': ui.templateDialogEffort,
+      'motivation': ui.templateDialogMotivation,
       'time': _templateTime.text.trim(),
       'steps': _templateSteps.text.trim(),
       'Hours to complete': _templateDeadline.text.trim(),
     };
+    final updatedUserTemplates = Map<String, Map<String, dynamic>>.from(
+      ui.userTemplates,
+    );
+    if (_templateDetails.containsKey(name)) {
+      _templateDetails[name] = data;
+    } else {
+      updatedUserTemplates[name] = data;
+    }
+    _uiNotifier.update((state) => state.copyWith(userTemplates: updatedUserTemplates));
+    await _saveTemplates(updatedUserTemplates);
 
-    setState(() {
-      if (_templateDetails.containsKey(name)) {
-        _templateDetails[name] = data;
-      } else {
-        _userTemplates[name] = data;
-      }
-    });
-    await _saveTemplates();
-    dialogSetState?.call(() {});
-
-    _templateName.clear();
-    _templateTime.clear();
-    _templateSteps.text = '1';
-    _templateDeadline.clear();
+    if (mounted) {
+      CommonUtils.showDialogWidget(
+        context,
+        'Template "$name" saved.',
+        _themeBundle.textStyle,
+        _themeBundle.secondaryColor,
+      );
+    }
   }
 
   void _viewGoalDetails(GoalSet goal) {
+    final bundle = _themeBundle;
     showDialog(
       context: context,
-      barrierColor: themeBundle.secondaryColor, // ✅ Sets overlay color
+      barrierColor: bundle.secondaryColor, // ✅ Sets overlay color
       builder:
           (_) => AlertDialog(
-            backgroundColor: themeBundle.secondaryColor,
-            iconColor: themeBundle.primaryColor,
-            title: Text(goal.title, style: themeBundle.textStyle),
-            content: Container(
-              color: themeBundle.secondaryColor,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Category: ${goal.category}',
-                    style: themeBundle.textStyle,
-                  ),
-                  Text(
-                    'Complexity: ${goal.complexity}',
-                    style: themeBundle.textStyle,
-                  ),
-                  Text('Effort: ${goal.effort}', style: themeBundle.textStyle),
-                  Text(
-                    'Motivation: ${goal.motivation}',
-                    style: themeBundle.textStyle,
-                  ),
-                  Text(
-                    'Time Needed in minutes: ${goal.time}',
-                    style: themeBundle.textStyle,
-                  ),
-                  Text(
-                    'Deadline: ${goal.deadline}',
-                    style: themeBundle.textStyle,
-                  ),
-                  Text('Steps: ${goal.steps}', style: themeBundle.textStyle),
-                  Text(
-                    'Points: ${goal.points}',
-                    style: themeBundle.textStyle,
-                  ),
-                  Text('Id: ${goal.goalId}', style: themeBundle.textStyle),
-                ],
-              ),
+            backgroundColor: bundle.secondaryColor,
+            iconColor: bundle.primaryColor,
+            title: Text(goal.title, style: bundle.textStyle),
+            content: CommonUtils.scrollableDialogBody(
+              context: context,
+              heightFactor: 0.5,
+              children: [
+                Text('Category: ${goal.category}', style: bundle.textStyle),
+                Text('Complexity: ${goal.complexity}', style: bundle.textStyle),
+                Text('Effort: ${goal.effort}', style: bundle.textStyle),
+                Text('Motivation: ${goal.motivation}', style: bundle.textStyle),
+                Text(
+                  'Time Needed in minutes: ${goal.time}',
+                  style: bundle.textStyle,
+                ),
+                Text(
+                  'Deadline: ${goalDeadlineLabel(goal.deadline)}',
+                  style: bundle.textStyle,
+                ),
+                Text('Steps: ${goal.steps}', style: bundle.textStyle),
+                Text('Points: ${goal.points}', style: bundle.textStyle),
+                Text('Id: ${goal.goalId}', style: bundle.textStyle),
+              ],
             ),
             actions: [
               Container(
-                color: themeBundle.secondaryColor,
+                color: bundle.secondaryColor,
                 child: TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: Text('Close', style: themeBundle.textStyle),
+                  child: Text('Close', style: bundle.textStyle),
                 ),
               ),
             ],
@@ -386,11 +392,14 @@ class _GoalsScreenState extends State<GoalsScreen> {
   }
 
   void _openTemplateManager() {
-    String templateCategory = _categories.first;
-    String templateComplexity = _levels.first;
-    String templateEffort = _levels.first;
-    String templateMotivation = _levels.first;
-
+    _uiNotifier.update(
+      (state) => state.copyWith(
+        templateDialogCategory: _categories.first,
+        templateDialogComplexity: _levels.first,
+        templateDialogEffort: _levels.first,
+        templateDialogMotivation: _levels.first,
+      ),
+    );
     int minutesRequired = 0;
     int minutesToDeadline = 0;
 
@@ -398,16 +407,25 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
     showDialog(
       context: context,
-      builder:
-          (dialogContext) => StatefulBuilder(
-            builder:
-                (context, dialogSetState) => AlertDialog(
-                  backgroundColor: themeBundle.secondaryColor,
-                  title: Text('Manage Templates', style: themeBundle.textStyle),
-                  content: SingleChildScrollView(
-                    child: Container(
-                      color: themeBundle.secondaryColor,
-                      child: Form(
+      builder: (dialogContext) => Consumer(
+            builder: (context, ref, _) {
+              final bundle = ref.watch(themeBundleProvider);
+              final ui = ref.watch(goalsScreenUiProvider);
+              final allTemplateNames = [
+                ..._templateDetails.keys,
+                ...ui.userTemplates.keys,
+              ];
+              return AlertDialog(
+                  backgroundColor: bundle.secondaryColor,
+                  insetPadding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 24,
+                  ),
+                  title: Text('Manage Templates', style: bundle.textStyle),
+                  content: CommonUtils.scrollableDialogBody(
+                    context: context,
+                    children: [
+                      Form(
                         key: templateFormKey,
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -415,8 +433,8 @@ class _GoalsScreenState extends State<GoalsScreen> {
                             CommonUtils.buildTextFormField(
                               _templateName,
                               'Template Name (required)',
-                              themeBundle.textStyle,
-                              themeBundle.secondaryColor,
+                              bundle.textStyle,
+                              bundle.secondaryColor,
                               true,
                               (value) {
                                 if (value == null || value.trim().isEmpty) {
@@ -427,44 +445,57 @@ class _GoalsScreenState extends State<GoalsScreen> {
                             ),
                             CommonUtils.buildDropdownButtonFormField(
                               'Category',
-                              templateCategory,
+                              ui.templateDialogCategory,
                               _categories,
-                              themeBundle.textStyle,
-                              themeBundle.secondaryColor,
-                              (v) =>
-                                  dialogSetState(() => templateCategory = v!),
+                              bundle.textStyle,
+                              bundle.secondaryColor,
+                              (v) => _uiNotifier.update(
+                                (state) => state.copyWith(
+                                  templateDialogCategory: v ?? _categories.first,
+                                ),
+                              ),
                             ),
                             CommonUtils.buildDropdownButtonFormField(
                               'Complexity',
-                              templateComplexity,
+                              ui.templateDialogComplexity,
                               _levels,
-                              themeBundle.textStyle,
-                              themeBundle.secondaryColor,
-                              (v) =>
-                                  dialogSetState(() => templateComplexity = v!),
+                              bundle.textStyle,
+                              bundle.secondaryColor,
+                              (v) => _uiNotifier.update(
+                                (state) => state.copyWith(
+                                  templateDialogComplexity: v ?? _levels.first,
+                                ),
+                              ),
                             ),
                             CommonUtils.buildDropdownButtonFormField(
                               'Effort',
-                              templateEffort,
+                              ui.templateDialogEffort,
                               _levels,
-                              themeBundle.textStyle,
-                              themeBundle.secondaryColor,
-                              (v) => dialogSetState(() => templateEffort = v!),
+                              bundle.textStyle,
+                              bundle.secondaryColor,
+                              (v) => _uiNotifier.update(
+                                (state) => state.copyWith(
+                                  templateDialogEffort: v ?? _levels.first,
+                                ),
+                              ),
                             ),
                             CommonUtils.buildDropdownButtonFormField(
                               'Motivation',
-                              templateMotivation,
+                              ui.templateDialogMotivation,
                               _levels,
-                              themeBundle.textStyle,
-                              themeBundle.secondaryColor,
-                              (v) =>
-                                  dialogSetState(() => templateMotivation = v!),
+                              bundle.textStyle,
+                              bundle.secondaryColor,
+                              (v) => _uiNotifier.update(
+                                (state) => state.copyWith(
+                                  templateDialogMotivation: v ?? _levels.first,
+                                ),
+                              ),
                             ),
                             CommonUtils.buildTextFormField(
                               _templateTime,
                               'Time (minutes, required)',
-                              themeBundle.textStyle,
-                              themeBundle.secondaryColor,
+                              bundle.textStyle,
+                              bundle.secondaryColor,
                               true,
                               (v) {
                                 final parsed = int.tryParse(v?.trim() ?? '');
@@ -482,12 +513,13 @@ class _GoalsScreenState extends State<GoalsScreen> {
                             CommonUtils.buildTextFormField(
                               _templateDeadline,
                               'Hours to complete (optional)',
-                              themeBundle.textStyle,
-                              themeBundle.secondaryColor,
+                              bundle.textStyle,
+                              bundle.secondaryColor,
                               true,
                               (v) {
-                                if (v == null || v.trim().isEmpty)
+                                if (v == null || v.trim().isEmpty) {
                                   return null; // optional
+                                }
                                 final parsed = int.tryParse(v.trim());
                                 if (parsed == null ||
                                     parsed <= 0 ||
@@ -506,8 +538,8 @@ class _GoalsScreenState extends State<GoalsScreen> {
                             CommonUtils.buildTextFormField(
                               _templateSteps,
                               'Steps (Required)',
-                              themeBundle.textStyle,
-                              themeBundle.secondaryColor,
+                              bundle.textStyle,
+                              bundle.secondaryColor,
                               true,
                               (v) {
                                 final trimmed = v?.trim();
@@ -524,364 +556,155 @@ class _GoalsScreenState extends State<GoalsScreen> {
                             ),
                             CommonUtils.buildElevatedButton(
                               'Save Template',
-                              themeBundle.primaryColor,
-                              themeBundle.secondaryColor,
-                              themeBundle.textStyle,
+                              bundle.primaryColor,
+                              bundle.secondaryColor,
+                              bundle.textStyle,
                               14,
                               10,
-                              () => _preSaveTemplate(
-                                templateCategory,
-                                templateComplexity,
-                                templateEffort,
-                                templateMotivation,
-                                templateFormKey,
-                                dialogSetState: dialogSetState,
-                              ),
-                              borderColor: themeBundle.accentColor,
+                              () => _preSaveTemplate(templateFormKey),
+                              borderColor: bundle.accentColor,
                             ),
                             const Divider(),
-                            Text('Templates:', style: themeBundle.textStyle),
-                            ...[
-                              ..._templateDetails.keys,
-                              ..._userTemplates.keys,
-                            ].map(
+                            Text('Templates:', style: bundle.textStyle),
+                            ...allTemplateNames.map(
                               (name) => CommonUtils.buildListTile(
                                 title: name,
-                                textStyle: themeBundle.textStyle,
+                                textStyle: bundle.textStyle,
                                 trailing:
-                                    _userTemplates.containsKey(name)
+                                    ui.userTemplates.containsKey(name)
                                         ? IconButton(
                                           icon: const Icon(Icons.delete),
                                           onPressed: () async {
-                                            setState(() {
-                                              _userTemplates.remove(name);
-                                            });
-                                            await _saveTemplates();
+                                            final updatedTemplates = Map<String, Map<String, dynamic>>.from(
+                                              ui.userTemplates,
+                                            )..remove(name);
+                                            _uiNotifier.update(
+                                              (state) => state.copyWith(
+                                                userTemplates: updatedTemplates,
+                                              ),
+                                            );
+                                            await _saveTemplates(updatedTemplates);
                                             await _validateTemplateGroups();
-                                            dialogSetState(() {});
                                           },
                                         )
                                         : null,
                                 onTap: () {
                                   final t =
                                       _templateDetails[name] ??
-                                      _userTemplates[name]!;
-                                  dialogSetState(() {
-                                    _templateName.text = name;
-                                    templateCategory = t['category'];
-                                    templateComplexity = t['complexity'];
-                                    templateEffort = t['effort'];
-                                    templateMotivation = t['motivation'];
-                                    _templateTime.text = t['time'];
-                                    _templateDeadline.text =
-                                        t['Hours to complete'];
-                                    _templateSteps.text = t['steps'];
-                                  });
+                                      ui.userTemplates[name]!;
+                                  _templateName.text = name;
+                                  _templateTime.text = t['time'];
+                                  _templateDeadline.text = t['Hours to complete'];
+                                  _templateSteps.text = t['steps'];
+                                  _uiNotifier.update(
+                                    (state) => state.copyWith(
+                                      templateDialogCategory: t['category'],
+                                      templateDialogComplexity: t['complexity'],
+                                      templateDialogEffort: t['effort'],
+                                      templateDialogMotivation: t['motivation'],
+                                    ),
+                                  );
                                 },
                               ),
                             ),
                           ],
                         ),
                       ),
-                    ),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => _dismissDialog(dialogContext),
-                      child: Text('Close', style: themeBundle.textStyle),
-                    ),
-                  ],
-                ),
-          ),
-    );
-  }
-
-  Future<void> _saveTemplateGroups() async {
-    await _repos.templates.writeTemplateGroups(_templateGroups);
-  }
-
-  Future<void> _validateTemplateGroups() async {
-    // Cleans up template groups with deleted templates.
-    // Collect all valid template names
-    final validTemplateNames = _userTemplates.keys.toSet();
-
-    final Map<String, List<String>> updatedGroups = {};
-
-    _templateGroups.forEach((groupName, templates) {
-      // Keep only templates that still exist
-      final validTemplates =
-          templates.where((t) => validTemplateNames.contains(t)).toList();
-
-      if (validTemplates.isEmpty) {
-        debugPrint(
-          'Group "$groupName" only contained deleted templates. Removing group.',
-        );
-        CommonUtils.showBasicAlertDialog(
-          context,
-          'Multi-template using deleted template(s)',
-          '$groupName contained only deleted templates. Removing group.',
-          themeBundle.textStyle,
-          themeBundle.secondaryColor,
-        );
-        // skip this group entirely
-      } else if (validTemplates.length < templates.length) {
-        debugPrint(
-          'Group "$groupName" had some deleted templates. Rebuilding with valid ones: $validTemplates',
-        );
-        CommonUtils.showBasicAlertDialog(
-          context,
-          'Multi-template using deleted template(s)',
-          'Group "$groupName" had some deleted templates. Rebuilding with valid ones: $validTemplates',
-          themeBundle.textStyle,
-          themeBundle.secondaryColor,
-        );
-        updatedGroups[groupName] = validTemplates;
-      } else {
-        // all templates still valid
-        updatedGroups[groupName] = templates;
-      }
-    });
-
-    setState(() {
-      _templateGroups = updatedGroups;
-    });
-
-    // persist the cleaned-up groups
-    await _repos.templates.writeTemplateGroups(_templateGroups);
-  }
-
-  Future<void> _loadTemplateGroups() async {
-    final groups = await _repos.templates.readTemplateGroups();
-    setState(() {
-      _templateGroups = groups;
-    });
-  }
-
-  void _openMultiTemplateManager() {
-    String? validationMessage;
-
-    final TextEditingController groupNameController = TextEditingController();
-    List<String> selectedTemplates = [];
-    String? selectedGroup;
-
-    showDialog(
-      context: context,
-      builder:
-          (dialogContext) => StatefulBuilder(
-            builder: (context, dialogSetState) {
-              return AlertDialog(
-                backgroundColor: themeBundle.secondaryColor,
-                title: Text(
-                  'Select Multiple Templates',
-                  style: themeBundle.textStyle,
-                ),
-                content: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      KeyedSubtree(
-                        key: ValueKey(
-                          'template-groups-${_templateGroups.keys.join('|')}',
-                        ),
-                        child: CommonUtils.buildDropdownButtonFormField(
-                          'Load Saved Group',
-                          selectedGroup,
-                          _templateGroups.keys.toList(),
-                          themeBundle.textStyle,
-                          themeBundle.secondaryColor,
-                          (groupName) {
-                            dialogSetState(() {
-                              selectedGroup = groupName;
-                              selectedTemplates = List.from(
-                                _templateGroups[groupName!] ?? [],
-                              );
-                              groupNameController.text =
-                                  groupName; // auto-fill name when loading group
-                            });
-                          },
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () => _dismissDialog(dialogContext),
+                          child: Text('Close', style: bundle.textStyle),
                         ),
                       ),
-                      const SizedBox(height: 10),
-                      CommonUtils.buildTextFormField(
-                        groupNameController,
-                        'Group Name (required to save/update)',
-                        themeBundle.textStyle,
-                        themeBundle.secondaryColor,
-                        false,
-                        (v) {
-                          if (v == null || v.trim().isEmpty) {
-                            return 'Group name is required';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        'Select Templates to Create Goals:',
-                        style: themeBundle.textStyle,
-                      ),
-                      ...[..._templateDetails.keys, ..._userTemplates.keys].map(
-                        (templateName) {
-                          final selected = selectedTemplates.contains(
-                            templateName,
-                          );
-                          return CommonUtils.buildCheckboxListTile(
-                            title: templateName,
-                            textStyle: themeBundle.textStyle,
-                            value: selected,
-                            activeColor: themeBundle.primaryColor,
-                            checkColor: themeBundle.secondaryColor,
-                            onChanged: (bool? value) {
-                              dialogSetState(() {
-                                if (value == true) {
-                                  selectedTemplates.add(templateName);
-                                } else {
-                                  selectedTemplates.remove(templateName);
-                                }
-                              });
-                            },
-                          );
-                        },
-                      ),
-                      const Divider(),
-                      Text('Existing Groups:', style: themeBundle.textStyle),
-                      ..._templateGroups.keys.map((name) {
-                        return CommonUtils.buildListTile(
-                          title: name,
-                          textStyle: themeBundle.textStyle,
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete),
-                            color: themeBundle.primaryColor,
-                            onPressed: () async {
-                              setState(() {
-                                _templateGroups.remove(name);
-                              });
-                              await _saveTemplateGroups();
-                              dialogSetState(() {
-                                if (selectedGroup == name) {
-                                  selectedGroup = null;
-                                }
-                              });
-                            },
-                          ),
-                          onTap: () async {
-                            dialogSetState(() {
-                              selectedGroup = name;
-                              selectedTemplates = List.from(
-                                _templateGroups[name]!,
-                              );
-                              groupNameController.text =
-                                  name; // auto-fill name when selecting existing group
-                            });
-                          },
-                        );
-                      }),
                     ],
                   ),
-                ),
-                actions: [
-                  CommonUtils.buildTextButton(
-                    () => _dismissDialog(dialogContext),
-                    'Cancel',
-                    themeBundle.textStyle,
-                  ),
-                  CommonUtils.buildTextButton(
-                    () async {
-                      final groupName = groupNameController.text.trim();
-                      if (groupName.isEmpty || selectedTemplates.isEmpty) {
-                        dialogSetState(() {
-                          validationMessage =
-                              'Please enter a group name and select at least one template.';
-                        });
-                        return;
-                      }
-
-                      setState(() {
-                        _templateGroups[groupName] = List.from(
-                          selectedTemplates,
-                        );
-                      });
-                      await _saveTemplateGroups();
-                      dialogSetState(() {
-                        selectedGroup = groupName;
-                        validationMessage = null;
-                      });
-                      if (!context.mounted) return;
-                      CommonUtils.showDialogWidget(
-                        context,
-                        '$groupName has been updated.',
-                        themeBundle.textStyle,
-                        themeBundle.secondaryColor,
-                      );
-                    },
-                    'Save/Update Group',
-                    themeBundle.textStyle,
-                  ),
-                  if (validationMessage != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: Text(
-                        validationMessage!,
-                        style: themeBundle.textStyle.copyWith(
-                          color: Colors.purple,
-                        ),
-                      ),
-                    ),
-                  CommonUtils.buildElevatedButton(
-                    'Create Goals',
-                    themeBundle.primaryColor,
-                    themeBundle.secondaryColor,
-                    themeBundle.textStyle,
-                    0,
-                    0,
-                    () async {
-                      if (selectedTemplates.isEmpty) {
-                        CommonUtils.showBasicAlertDialog(
-                          context,
-                          'No templates Selected',
-                          'Please select at least one template to create goals from.',
-                          themeBundle.textStyle,
-                          themeBundle.secondaryColor,
-                        );
-                        return;
-                      }
-                      await _createGoalsFromTemplatesBulk(selectedTemplates);
-                    },
-                    borderColor: themeBundle.accentColor,
-                  ),
-                ],
-              );
+                  actions: const [],
+                );
             },
           ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return SettingsThemedBuilder(
-      builder: (context, bundle) {
-        return DeferredScreen<void>(
-          load: _loadGoalsPage,
-          minLoadingMs: 120,
-          loading:
-              (_) => themedLoadingShell(
-                bundle,
-                title: 'Goals',
-                body: GoalsSkeleton(bundle: bundle),
-              ),
-          builder:
-              (context, _) => ListenableBuilder(
-                listenable: _goals,
-                builder: (context, _) => _buildGoalsScaffold(context, bundle),
-              ),
-        );
-      },
+  Future<void> _validateTemplateGroups() async {
+    final validTemplateNames = {
+      ..._templateDetails.keys,
+      ..._uiState.userTemplates.keys,
+    };
+
+    final result = cleanupTemplateGroups(
+      groups: _uiState.templateGroups,
+      validTemplateNames: validTemplateNames,
+    );
+
+    _uiNotifier.update(
+      (state) => state.copyWith(templateGroups: result.updatedGroups),
+    );
+    await _repos.templates.writeTemplateGroups(result.updatedGroups);
+
+    if (!mounted || !result.hasChanges) return;
+    CommonUtils.showBasicAlertDialog(
+      context,
+      'Multi-template groups updated',
+      templateGroupCleanupMessage(result),
+      _themeBundle.textStyle,
+      _themeBundle.secondaryColor,
     );
   }
 
-  Widget _buildGoalsScaffold(BuildContext context, ThemeBundle bundle) {
+  Future<void> _loadTemplateGroups() async {
+    final groups = await _repos.templates.readTemplateGroups();
+    _uiNotifier.update(
+      (state) => state.copyWith(templateGroups: Map<String, List<String>>.from(groups)),
+    );
+  }
+
+  void _openMultiTemplateManager() {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => _MultiTemplateManagerDialog(
+        templateDetails: _templateDetails,
+        onCreateGoals: _createGoalsFromTemplatesBulk,
+        onDismiss: () => _dismissDialog(dialogContext),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bundle = ref.watch(themeBundleProvider);
+    final uiState = ref.watch(goalsScreenUiProvider);
+    return DeferredScreen<void>(
+      loadToken: 'goals-page',
+      load: _loadGoalsPage,
+      minLoadingMs: 120,
+      loading:
+          (_) => themedLoadingShell(
+            bundle,
+            title: 'Goals',
+            body: GoalsSkeleton(bundle: bundle),
+          ),
+      builder:
+          (context, _) => _buildGoalsScaffold(
+            context,
+            bundle,
+            uiState,
+          ),
+    );
+  }
+
+  Widget _buildGoalsScaffold(
+    BuildContext context,
+    ThemeBundle bundle,
+    GoalsScreenUiState uiState,
+  ) {
     int minutesRequired = 0;
     int minutesToDeadline = 0;
+    final allTemplateNames = [
+      ..._templateDetails.keys,
+      ...uiState.userTemplates.keys,
+    ];
 
     return Theme(
       data: bundle.themeData,
@@ -893,51 +716,45 @@ class _GoalsScreenState extends State<GoalsScreen> {
           iconTheme: IconThemeData(color: bundle.primaryColor),
         ),
         backgroundColor: bundle.secondaryColor,
-        body: Container(
-          // SafeArea - Container
-          color: bundle.secondaryColor,
-          child: LayoutBuilder(
-            builder:
-                (context, constraints) => SingleChildScrollView(
-                  padding: const EdgeInsets.all(16.0),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: constraints.maxHeight,
-                    ),
-                    child: IntrinsicHeight(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Form(
+        body: Stack(
+          children: [
+            CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Form(
                             key: _formKey,
                             child: Column(
                               children: [
                                 KeyedSubtree(
                                   key: ValueKey(
-                                    'goal-templates-${_templateDetails.length}-${_userTemplates.length}-${_userTemplates.keys.join('|')}',
+                                    'goal-templates-${_templateDetails.length}-${uiState.userTemplates.length}-${uiState.userTemplates.keys.join('|')}',
                                   ),
                                   child:
                                       CommonUtils.buildDropdownButtonFormField(
                                         'Template (optional)',
                                         null,
-                                        [
-                                          ..._templateDetails.keys,
-                                          ..._userTemplates.keys,
-                                        ],
-                                        themeBundle.textStyle,
-                                        themeBundle.secondaryColor,
+                                        allTemplateNames,
+                                        bundle.textStyle,
+                                        bundle.secondaryColor,
                                         (val) {
                                           if (val == null) return;
                                           _titleController.text = val;
                                           final data =
                                               _templateDetails[val] ??
-                                              _userTemplates[val]!;
-                                          setState(() {
-                                            _category = data['category'];
-                                            _complexity = data['complexity'];
-                                            _effort = data['effort'];
-                                            _motivation = data['motivation'];
-                                          });
+                                              uiState.userTemplates[val]!;
+                                          _uiNotifier.update(
+                                            (state) => state.copyWith(
+                                              category: data['category'],
+                                              complexity: data['complexity'],
+                                              effort: data['effort'],
+                                              motivation: data['motivation'],
+                                            ),
+                                          );
                                           _timeController.text = data['time'];
                                           _deadlineController.text =
                                               data['Hours to complete'];
@@ -947,48 +764,51 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                 ),
                                 CommonUtils.buildDropdownButtonFormField(
                                   'Category',
-                                  _category,
+                                  uiState.category,
                                   _categories,
-                                  themeBundle.textStyle,
-                                  themeBundle.secondaryColor,
-                                  (val) => setState(
-                                    () => _category = val ?? 'Productivity',
+                                  bundle.textStyle,
+                                  bundle.secondaryColor,
+                                  (val) => _uiNotifier.update(
+                                    (state) =>
+                                        state.copyWith(category: val ?? 'Productivity'),
                                   ),
                                 ),
                                 CommonUtils.buildDropdownButtonFormField(
                                   'Complexity',
-                                  _complexity,
+                                  uiState.complexity,
                                   _levels,
-                                  themeBundle.textStyle,
-                                  themeBundle.secondaryColor,
-                                  (val) => setState(
-                                    () => _complexity = val ?? 'Low',
+                                  bundle.textStyle,
+                                  bundle.secondaryColor,
+                                  (val) => _uiNotifier.update(
+                                    (state) => state.copyWith(complexity: val ?? 'Low'),
                                   ),
                                 ),
                                 CommonUtils.buildDropdownButtonFormField(
                                   'Effort Required',
-                                  _effort,
+                                  uiState.effort,
                                   _levels,
-                                  themeBundle.textStyle,
-                                  themeBundle.secondaryColor,
-                                  (val) =>
-                                      setState(() => _effort = val ?? 'Low'),
+                                  bundle.textStyle,
+                                  bundle.secondaryColor,
+                                  (val) => _uiNotifier.update(
+                                    (state) => state.copyWith(effort: val ?? 'Low'),
+                                  ),
                                 ),
                                 CommonUtils.buildDropdownButtonFormField(
                                   'Motivation Needed',
-                                  _motivation,
+                                  uiState.motivation,
                                   _levels,
-                                  themeBundle.textStyle,
-                                  themeBundle.secondaryColor,
-                                  (val) => setState(
-                                    () => _motivation = val ?? 'Low',
+                                  bundle.textStyle,
+                                  bundle.secondaryColor,
+                                  (val) => _uiNotifier.update(
+                                    (state) =>
+                                        state.copyWith(motivation: val ?? 'Low'),
                                   ),
                                 ),
                                 CommonUtils.buildTextFormField(
                                   _titleController,
                                   'Goal Title',
-                                  themeBundle.textStyle,
-                                  themeBundle.secondaryColor,
+                                  bundle.textStyle,
+                                  bundle.secondaryColor,
                                   true,
                                   (v) =>
                                       v == null || v.isEmpty
@@ -998,8 +818,8 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                 CommonUtils.buildTextFormField(
                                   _timeController,
                                   'Time Required in minutes',
-                                  themeBundle.textStyle,
-                                  themeBundle.secondaryColor,
+                                  bundle.textStyle,
+                                  bundle.secondaryColor,
                                   true,
                                   (v) {
                                     final parsed = int.tryParse(
@@ -1015,12 +835,13 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                 CommonUtils.buildTextFormField(
                                   _deadlineController,
                                   'Hours to complete (optional)',
-                                  themeBundle.textStyle,
-                                  themeBundle.secondaryColor,
+                                  bundle.textStyle,
+                                  bundle.secondaryColor,
                                   true,
                                   (v) {
-                                    if (v == null || v.trim().isEmpty)
+                                    if (v == null || v.trim().isEmpty) {
                                       return null;
+                                    }
                                     final parsed = int.tryParse(v);
                                     if (parsed == null ||
                                         parsed <= 0 ||
@@ -1037,8 +858,8 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                 CommonUtils.buildTextFormField(
                                   _stepsController,
                                   'Steps (Required)',
-                                  themeBundle.textStyle,
-                                  themeBundle.secondaryColor,
+                                  bundle.textStyle,
+                                  bundle.secondaryColor,
                                   true,
                                   (v) {
                                     final trimmed = v?.trim();
@@ -1054,59 +875,53 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                 const SizedBox(height: 10),
                                 CommonUtils.buildElevatedButton(
                                   'Add Goal',
-                                  themeBundle.primaryColor,
-                                  themeBundle.secondaryColor,
-                                  themeBundle.textStyle,
+                                  bundle.primaryColor,
+                                  bundle.secondaryColor,
+                                  bundle.textStyle,
                                   5,
                                   5,
                                   _createGoal,
-                                  borderColor: themeBundle.accentColor,
+                                  borderColor: bundle.accentColor,
                                 ),
                                 CommonUtils.buildElevatedButton(
                                   'Clear Active Goals',
-                                  themeBundle.primaryColor,
-                                  themeBundle.secondaryColor,
-                                  themeBundle.textStyle,
+                                  bundle.primaryColor,
+                                  bundle.secondaryColor,
+                                  bundle.textStyle,
                                   5,
                                   5,
                                   _clearGoals,
-                                  borderColor: themeBundle.accentColor,
+                                  borderColor: bundle.accentColor,
                                 ),
                                 CommonUtils.buildElevatedButton(
                                   'Clear Completed Goals',
-                                  themeBundle.primaryColor,
-                                  themeBundle.secondaryColor,
-                                  themeBundle.textStyle,
+                                  bundle.primaryColor,
+                                  bundle.secondaryColor,
+                                  bundle.textStyle,
                                   5,
                                   5,
                                   _clearCompleteGoals,
-                                  borderColor: themeBundle.accentColor,
+                                  borderColor: bundle.accentColor,
                                 ),
                                 CommonUtils.buildElevatedButton(
                                   'Manage Multi-templates',
-                                  themeBundle.primaryColor,
-                                  themeBundle.secondaryColor,
-                                  themeBundle.textStyle,
+                                  bundle.primaryColor,
+                                  bundle.secondaryColor,
+                                  bundle.textStyle,
                                   5,
                                   5,
                                   _openMultiTemplateManager,
-                                  borderColor: themeBundle.accentColor,
+                                  borderColor: bundle.accentColor,
                                 ),
                                 CommonUtils.buildElevatedButton(
                                   'Manage Templates',
-                                  themeBundle.primaryColor,
-                                  themeBundle.secondaryColor,
-                                  themeBundle.textStyle,
+                                  bundle.primaryColor,
+                                  bundle.secondaryColor,
+                                  bundle.textStyle,
                                   5,
                                   5,
                                   _openTemplateManager,
-                                  borderColor: themeBundle.accentColor,
-                                ),
-                                ConfettiWidget(
-                                  confettiController: _confettiController,
-                                  blastDirectionality:
-                                      BlastDirectionality.explosive,
-                                  shouldLoop: false,
+                                  borderColor: bundle.accentColor,
                                 ),
                               ],
                             ),
@@ -1118,38 +933,43 @@ class _GoalsScreenState extends State<GoalsScreen> {
                             runSpacing: 8,
                             children: [
                               CommonUtils.buildDropdownButton(
-                                _selectedCategoryFilter,
+                                uiState.selectedCategoryFilter,
                                 ['All', ..._categories],
-                                themeBundle.textStyle,
-                                themeBundle.secondaryColor,
-                                (val) => setState(
-                                  () => _selectedCategoryFilter = val ?? 'All',
+                                bundle.textStyle,
+                                bundle.secondaryColor,
+                                (val) => _uiNotifier.update(
+                                  (state) => state.copyWith(
+                                    selectedCategoryFilter: val ?? 'All',
+                                  ),
                                 ),
                                 displayText: (v) => 'Category: $v',
                               ),
                               CommonUtils.buildDropdownButton(
-                                _selectedComplexityFilter,
+                                uiState.selectedComplexityFilter,
                                 ['All', ..._levels],
-                                themeBundle.textStyle,
-                                themeBundle.secondaryColor,
-                                (val) => setState(
-                                  () =>
-                                      _selectedComplexityFilter = val ?? 'All',
+                                bundle.textStyle,
+                                bundle.secondaryColor,
+                                (val) => _uiNotifier.update(
+                                  (state) => state.copyWith(
+                                    selectedComplexityFilter: val ?? 'All',
+                                  ),
                                 ),
                                 displayText: (v) => 'Complexity: $v',
                               ),
                               CommonUtils.buildDropdownButton(
-                                _selectedStatusFilter,
+                                uiState.selectedStatusFilter,
                                 ['Active', 'Completed'],
-                                themeBundle.textStyle,
-                                themeBundle.secondaryColor,
-                                (val) => setState(
-                                  () => _selectedStatusFilter = val ?? 'Active',
+                                bundle.textStyle,
+                                bundle.secondaryColor,
+                                (val) => _uiNotifier.update(
+                                  (state) => state.copyWith(
+                                    selectedStatusFilter: val ?? 'Active',
+                                  ),
                                 ),
                                 displayText: (v) => 'Status: $v',
                               ),
                               CommonUtils.buildDropdownButton(
-                                _sortBy,
+                                uiState.sortBy,
                                 [
                                   'None',
                                   'Title A-Z',
@@ -1160,85 +980,454 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                   'Steps ↓',
                                   'Closest deadline',
                                 ],
-                                themeBundle.textStyle,
-                                themeBundle.secondaryColor,
-                                (val) =>
-                                    setState(() => _sortBy = val ?? 'None'),
+                                bundle.textStyle,
+                                bundle.secondaryColor,
+                                (val) => _uiNotifier.update(
+                                  (state) =>
+                                      state.copyWith(sortBy: val ?? 'None'),
+                                ),
                                 displayText: (v) => 'Sort: $v',
                               ),
                             ],
                           ),
 
-                          const SizedBox(height: 12),
-
-                          // 🗂 Filter + Sort Results
-                          SizedBox(
-                            height: 300,
-                            child: ListView.builder(
-                              itemCount: _filteredSortedGoals.length,
-                              itemBuilder: (_, i) {
-                                final g = _filteredSortedGoals[i];
-                                final steps = g.steps > 0 ? g.steps : 1;
-                                return ListTile(
-                                  titleTextStyle: themeBundle.textStyle,
-                                  textColor: themeBundle.primaryColor,
-                                  title: Text(g.title),
-                                  subtitle: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        '${g.points} pts | ${g.category}',
-                                        style: themeBundle.textStyle,
-                                      ),
-                                      if (_selectedStatusFilter == 'Active' &&
-                                          steps > 1)
-                                        buildStepDisplay(
-                                          g,
-                                          _repos.settings.userFontSize,
-                                        ),
-                                    ],
-                                  ),
-                                  onTap: () => _viewGoalDetails(g),
-                                  trailing:
-                                      _selectedStatusFilter == 'Active'
-                                          ? Wrap(
-                                            children: [
-                                              CommonUtils.buildIconButton(
-                                                'Add Step Progress',
-                                                Icons.add_circle_outline,
-                                                themeBundle.primaryColor,
-                                                () => _incrementStepProgress(
-                                                  g.goalId,
-                                                ),
-                                              ),
-                                              CommonUtils.buildIconButton(
-                                                'Complete Goal',
-                                                Icons.add_task,
-                                                themeBundle.primaryColor,
-                                                () => _completeGoal(g.goalId),
-                                              ),
-                                              CommonUtils.buildIconButton(
-                                                'Remove Goal',
-                                                Icons.delete,
-                                                themeBundle.primaryColor,
-                                                () => _removeGoal(g.goalId),
-                                              ),
-                                            ],
-                                          )
-                                          : null,
-                                );
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
+                    const SizedBox(height: 12),
+                  ],
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(child: _GoalsListSectionHeader(bundle: bundle)),
+            Consumer(
+              builder: (context, ref, _) {
+                final filters = ref.watch(
+                  goalsScreenUiProvider.select(
+                    (s) => (
+                      s.selectedStatusFilter,
+                      s.selectedCategoryFilter,
+                      s.selectedComplexityFilter,
+                      s.sortBy,
                     ),
                   ),
-                ),
-          ),
+                );
+                final goalsList = ref.watch(
+                  goalsProvider.select(
+                    (s) => filters.$1 == 'Active'
+                        ? s.activeGoals
+                        : s.completedGoals,
+                  ),
+                );
+                final filteredGoals = filterAndSortGoals(
+                  source: goalsList,
+                  categoryFilter: filters.$2,
+                  complexityFilter: filters.$3,
+                  sortBy: filters.$4,
+                  deadlineFormat: formatter,
+                );
+
+                if (filteredGoals.isEmpty) {
+                  return SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Center(
+                        child: Text(
+                          filters.$1 == 'Active'
+                              ? 'No active goals yet.'
+                              : 'No completed goals yet.',
+                          style: bundle.textStyle,
+                        ),
+                      ),
+                    ),
+                  );
+                }
+
+                return SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => _buildGoalListTile(
+                      bundle,
+                      filters.$1,
+                      filteredGoals[index],
+                    ),
+                    childCount: filteredGoals.length,
+                  ),
+                );
+              },
+            ),
+            const SliverPadding(padding: EdgeInsets.only(bottom: 16)),
+          ],
+            ),
+            Align(
+              alignment: Alignment.topCenter,
+              child: ConfettiWidget(
+                confettiController: _confettiController,
+                blastDirectionality: BlastDirectionality.explosive,
+                shouldLoop: false,
+              ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _compactGoalAction({
+    required String tooltip,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return IconButton(
+      onPressed: onPressed,
+      icon: Icon(icon, color: color, size: 20),
+      tooltip: tooltip,
+      visualDensity: VisualDensity.compact,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+    );
+  }
+
+  Widget _buildGoalListTile(
+    ThemeBundle bundle,
+    String selectedStatusFilter,
+    GoalSet g,
+  ) {
+    final steps = g.steps > 0 ? g.steps : 1;
+    final subtitleStyle = bundle.textStyle.copyWith(
+      fontSize: (bundle.textStyle.fontSize ?? 14) * 0.92,
+    );
+    final subtitleLines = <String>[
+      '${g.points} pts · ${goalDeadlineLabel(g.deadline)}',
+    ];
+    if (selectedStatusFilter == 'Active' && steps > 1) {
+      subtitleLines.add('Step ${g.stepProgress.clamp(0, steps)}/$steps');
+    }
+
+    final tile = ListTile(
+      key: ValueKey('goal-list-$selectedStatusFilter-${g.goalId}'),
+      dense: true,
+      visualDensity: VisualDensity.compact,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+      titleTextStyle: bundle.textStyle,
+      textColor: bundle.primaryColor,
+      title: Text(
+        g.title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      subtitle: Text(
+        subtitleLines.join('\n'),
+        style: subtitleStyle,
+        maxLines: 2,
+      ),
+      onTap: () => _viewGoalDetails(g),
+      trailing: selectedStatusFilter == 'Active'
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _compactGoalAction(
+                  tooltip: 'Add Step Progress',
+                  icon: Icons.add_circle_outline,
+                  color: bundle.primaryColor,
+                  onPressed: () => _incrementStepProgress(g.goalId),
+                ),
+                _compactGoalAction(
+                  tooltip: 'Complete Goal',
+                  icon: Icons.add_task,
+                  color: bundle.primaryColor,
+                  onPressed: () => _completeGoal(g.goalId),
+                ),
+                _compactGoalAction(
+                  tooltip: 'Remove Goal',
+                  icon: Icons.delete,
+                  color: bundle.primaryColor,
+                  onPressed: () => _removeGoal(g.goalId),
+                ),
+              ],
+            )
+          : null,
+    );
+
+    if (selectedStatusFilter != 'Active') return tile;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: bundle.primaryColor.withValues(alpha: 0.5),
+            width: 1.5,
+          ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: tile,
+      ),
+    );
+  }
+
+}
+
+class _MultiTemplateManagerDialog extends ConsumerStatefulWidget {
+  const _MultiTemplateManagerDialog({
+    required this.templateDetails,
+    required this.onCreateGoals,
+    required this.onDismiss,
+  });
+
+  final Map<String, Map<String, dynamic>> templateDetails;
+  final Future<void> Function(List<String> templateNames) onCreateGoals;
+  final VoidCallback onDismiss;
+
+  @override
+  ConsumerState<_MultiTemplateManagerDialog> createState() =>
+      _MultiTemplateManagerDialogState();
+}
+
+class _MultiTemplateManagerDialogState
+    extends ConsumerState<_MultiTemplateManagerDialog> {
+  late final TextEditingController _groupNameController;
+  List<String> _selectedTemplates = [];
+  String? _selectedGroup;
+  String? _validationMessage;
+
+  GoalsScreenUiNotifier get _uiNotifier =>
+      ref.read(goalsScreenUiProvider.notifier);
+
+  Future<void> _saveTemplateGroups(Map<String, List<String>> groups) async {
+    await ref.read(appRepositoriesProvider).templates.writeTemplateGroups(groups);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _groupNameController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _groupNameController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bundle = ref.watch(themeBundleProvider);
+    final ui = ref.watch(goalsScreenUiProvider);
+    final allTemplateNames = [
+      ...widget.templateDetails.keys,
+      ...ui.userTemplates.keys,
+    ];
+
+    return AlertDialog(
+      backgroundColor: bundle.secondaryColor,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      title: Text('Select Multiple Templates', style: bundle.textStyle),
+      content: CommonUtils.scrollableDialogBody(
+        context: context,
+        children: [
+          KeyedSubtree(
+            key: ValueKey('template-groups-${ui.templateGroups.keys.join('|')}'),
+            child: CommonUtils.buildDropdownButtonFormField(
+              'Load Saved Group',
+              _selectedGroup,
+              ui.templateGroups.keys.toList(),
+              bundle.textStyle,
+              bundle.secondaryColor,
+              (groupName) {
+                setState(() {
+                  _selectedGroup = groupName;
+                  _selectedTemplates = List.from(
+                    ui.templateGroups[groupName!] ?? [],
+                  );
+                  _groupNameController.text = groupName;
+                  _validationMessage = null;
+                });
+              },
+            ),
+          ),
+          const SizedBox(height: 10),
+          CommonUtils.buildTextFormField(
+            _groupNameController,
+            'Group Name (required to save/update)',
+            bundle.textStyle,
+            bundle.secondaryColor,
+            false,
+            (v) {
+              if (v == null || v.trim().isEmpty) {
+                return 'Group name is required';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Select Templates to Create Goals:',
+            style: bundle.textStyle,
+          ),
+          ...allTemplateNames.map((templateName) {
+            final selected = _selectedTemplates.contains(templateName);
+            return CommonUtils.buildCheckboxListTile(
+              title: templateName,
+              textStyle: bundle.textStyle,
+              value: selected,
+              activeColor: bundle.primaryColor,
+              checkColor: bundle.secondaryColor,
+              onChanged: (bool? value) {
+                setState(() {
+                  if (value == true) {
+                    _selectedTemplates.add(templateName);
+                  } else {
+                    _selectedTemplates.remove(templateName);
+                  }
+                  _validationMessage = null;
+                });
+              },
+            );
+          }),
+          const Divider(),
+          Text('Existing Groups:', style: bundle.textStyle),
+          ...ui.templateGroups.keys.map((name) {
+            return CommonUtils.buildListTile(
+              title: name,
+              textStyle: bundle.textStyle,
+              trailing: IconButton(
+                icon: const Icon(Icons.delete),
+                color: bundle.primaryColor,
+                onPressed: () async {
+                  final updatedGroups = Map<String, List<String>>.from(
+                    ui.templateGroups,
+                  )..remove(name);
+                  _uiNotifier.update(
+                    (state) => state.copyWith(templateGroups: updatedGroups),
+                  );
+                  await _saveTemplateGroups(updatedGroups);
+                  if (!mounted) return;
+                  setState(() {
+                    if (_selectedGroup == name) {
+                      _selectedGroup = null;
+                      _selectedTemplates = [];
+                      _groupNameController.clear();
+                    }
+                    _validationMessage = null;
+                  });
+                },
+              ),
+              onTap: () {
+                setState(() {
+                  _selectedGroup = name;
+                  _selectedTemplates = List.from(ui.templateGroups[name]!);
+                  _groupNameController.text = name;
+                  _validationMessage = null;
+                });
+              },
+            );
+          }),
+          if (_validationMessage != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              _validationMessage!,
+              style: bundle.textStyle.copyWith(color: Colors.purple),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Wrap(
+            alignment: WrapAlignment.end,
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              CommonUtils.buildTextButton(
+                widget.onDismiss,
+                'Cancel',
+                bundle.textStyle,
+              ),
+              CommonUtils.buildTextButton(
+                () async {
+                  final groupName = _groupNameController.text.trim();
+                  if (groupName.isEmpty || _selectedTemplates.isEmpty) {
+                    setState(() {
+                      _validationMessage =
+                          'Please enter a group name and select at least one template.';
+                    });
+                    return;
+                  }
+
+                  final updatedGroups = Map<String, List<String>>.from(
+                    ui.templateGroups,
+                  )..[groupName] = List.from(_selectedTemplates);
+                  _uiNotifier.update(
+                    (state) => state.copyWith(templateGroups: updatedGroups),
+                  );
+                  await _saveTemplateGroups(updatedGroups);
+                  if (!mounted) return;
+                  setState(() {
+                    _selectedGroup = groupName;
+                    _validationMessage = null;
+                  });
+                  CommonUtils.showDialogWidget(
+                    context,
+                    '$groupName has been updated.',
+                    bundle.textStyle,
+                    bundle.secondaryColor,
+                  );
+                },
+                'Save/Update Group',
+                bundle.textStyle,
+              ),
+            ],
+          ),
+          CommonUtils.buildElevatedButton(
+            'Create Goals',
+            bundle.primaryColor,
+            bundle.secondaryColor,
+            bundle.textStyle,
+            0,
+            0,
+            () async {
+              if (_selectedTemplates.isEmpty) {
+                CommonUtils.showBasicAlertDialog(
+                  context,
+                  'No templates Selected',
+                  'Please select at least one template to create goals from.',
+                  bundle.textStyle,
+                  bundle.secondaryColor,
+                );
+                return;
+              }
+              await widget.onCreateGoals(_selectedTemplates);
+            },
+            borderColor: bundle.accentColor,
+          ),
+        ],
+      ),
+      actions: const [],
+    );
+  }
+}
+
+class _GoalsListSectionHeader extends StatelessWidget {
+  const _GoalsListSectionHeader({required this.bundle});
+
+  final ThemeBundle bundle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Divider(
+          height: 2,
+          thickness: 2,
+          color: bundle.primaryColor.withValues(alpha: 0.35),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+          child: Text(
+            'Your goals',
+            style: bundle.textStyle.copyWith(
+              fontWeight: FontWeight.bold,
+              color: bundle.primaryColor,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

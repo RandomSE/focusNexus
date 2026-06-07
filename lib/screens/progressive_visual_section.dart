@@ -5,23 +5,16 @@ import '../utils/common_utils.dart';
 import '../utils/screen_theme.dart';
 
 /// One metaphor’s sandbox / growth view (bonsai, coral, etc.).
-class ProgressiveVisualSectionScreen extends StatefulWidget {
+class ProgressiveVisualSectionScreen extends StatelessWidget {
   const ProgressiveVisualSectionScreen({super.key, required this.themeId});
 
   final VisualThemeId themeId;
-
-  @override
-  State<ProgressiveVisualSectionScreen> createState() =>
-      _ProgressiveVisualSectionScreenState();
-}
-
-class _ProgressiveVisualSectionScreenState
-    extends State<ProgressiveVisualSectionScreen> {
+ 
   @override
   Widget build(BuildContext context) {
     return SettingsThemedBuilder(
       builder: (context, bundle) {
-        final title = visualThemeLabel(widget.themeId);
+        final title = visualThemeLabel(themeId);
 
         return Theme(
           data: bundle.themeData,
@@ -35,7 +28,7 @@ class _ProgressiveVisualSectionScreenState
               backgroundColor: bundle.secondaryColor,
               iconTheme: IconThemeData(color: bundle.primaryColor),
             ),
-            body: switch (widget.themeId) {
+            body: switch (themeId) {
               VisualThemeId.zenGarden => ZenGardenScreen(
                   themeData: bundle.themeData,
                   primaryColor: bundle.primaryColor,

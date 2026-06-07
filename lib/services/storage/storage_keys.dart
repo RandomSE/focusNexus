@@ -69,6 +69,16 @@ abstract final class StorageKeys {
   static const consecutiveWeeksWithGoalsCompleted =
       'consecutiveWeeksWithGoalsCompleted';
 
+  // Category completion stats (achievements 100–105)
+  static const goalsCompletedByCategory = 'goalsCompletedByCategory';
+  static const categoriesWithAtLeast1Goal = 'categoriesWithAtLeast1Goal';
+  static const categoriesWithAtLeast3Goals = 'categoriesWithAtLeast3Goals';
+  static const categoriesWithAtLeast5Goals = 'categoriesWithAtLeast5Goals';
+  static const categoriesWithAtLeast10Goals = 'categoriesWithAtLeast10Goals';
+  static const categoriesWithAtLeast25Goals = 'categoriesWithAtLeast25Goals';
+  static const categoriesWithAllTypesCompleted =
+      'categoriesWithAllTypesCompleted';
+
   // Achievements list blob
   static const achievements = 'achievements';
   static const achievementTrackingData = 'achievementTrackingData';

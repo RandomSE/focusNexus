@@ -4,34 +4,61 @@ import 'package:focusNexus/services/sound_service.dart';
 import '../helpers/in_memory_key_value_storage.dart';
 
 void main() {
-  tearDown(() {
-    SoundService.resetForTesting();
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  late SoundService sound;
+
+  setUp(() {
+    sound = SoundService(InMemoryKeyValueStorage());
   });
 
   test('checkSoundEnabled reads from injected storage', () async {
-    SoundService.storage = InMemoryKeyValueStorage(initial: {'soundEnabled': 'true'});
+    sound = SoundService(
+      InMemoryKeyValueStorage(initial: {'soundEnabled': 'true'}),
+    );
 
-    expect(await SoundService.checkSoundEnabled(), isTrue);
+    expect(await sound.checkSoundEnabled(), isTrue);
   });
 
   test('getSoundVolume normalizes stored value', () async {
-    SoundService.storage = InMemoryKeyValueStorage(initial: {'soundVolume': '150'});
+    sound = SoundService(
+      InMemoryKeyValueStorage(initial: {'soundVolume': '150'}),
+    );
 
-    expect(await SoundService.getSoundVolume(), 1.0);
+    expect(await sound.getSoundVolume(), 1.0);
   });
 
   test('checkIfSoundShouldBePlayed is false when disabled', () async {
-    SoundService.storage = InMemoryKeyValueStorage(initial: {'soundEnabled': 'false'});
+    sound = SoundService(
+      InMemoryKeyValueStorage(initial: {'soundEnabled': 'false'}),
+    );
 
-    expect(await SoundService.checkIfSoundShouldBePlayed(), isFalse);
+    expect(await sound.checkIfSoundShouldBePlayed(), isFalse);
   });
 
   test('checkIfSoundShouldBePlayed is false when volume is zero', () async {
-    SoundService.storage = InMemoryKeyValueStorage(initial: {
-      'soundEnabled': 'true',
-      'soundVolume': '0',
-    });
+    sound = SoundService(
+      InMemoryKeyValueStorage(initial: {
+        'soundEnabled': 'true',
+        'soundVolume': '0',
+      }),
+    );
 
-    expect(await SoundService.checkIfSoundShouldBePlayed(), isFalse);
+    expect(await sound.checkIfSoundShouldBePlayed(), isFalse);
+  });
+
+  test('warmPlaybackCache avoids repeat storage reads', () async {
+    final storage = InMemoryKeyValueStorage(
+      initial: {
+        'soundEnabled': 'true',
+        'soundVolume': '100',
+      },
+    );
+    sound = SoundService(storage);
+
+    await sound.warmPlaybackCache();
+    await storage.write(key: 'soundEnabled', value: 'false');
+
+    expect(await sound.checkIfSoundShouldBePlayed(), isTrue);
   });
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focusNexus/progressive_visuals/visual_theme_id.dart';
-import 'package:focusNexus/repositories/app_repositories.dart';
+import 'package:focusNexus/providers/app_repositories_provider.dart';
 import 'package:focusNexus/screens/achievements_screen.dart';
 import 'package:focusNexus/screens/ai_chat_screen.dart';
 import 'package:focusNexus/screens/auth_start_screen.dart';
@@ -64,19 +65,20 @@ abstract final class AppRoutes {
   }
 }
 
-class _RewardRouteScreen extends StatelessWidget {
+class _RewardRouteScreen extends ConsumerWidget {
   const _RewardRouteScreen();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final repos = ref.watch(appRepositoriesProvider);
     return FutureBuilder<String>(
-      future: _loadRewardType(),
+      future: _loadRewardType(ref),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return ThemedSkeletonScaffold(
             title: 'Reward',
-            bundle: AppRepositories.instance.theme.bundleFromSnapshot(
-              AppRepositories.instance.settings.snapshot,
+            bundle: repos.theme.bundleFromSnapshot(
+              repos.settings.snapshot,
             ),
           );
         }
@@ -98,8 +100,9 @@ class _RewardRouteScreen extends StatelessWidget {
     );
   }
 
-  static Future<String> _loadRewardType() async {
-    final reward = await AppRepositories.instance.userPrefs.readString(
+  static Future<String> _loadRewardType(WidgetRef ref) async {
+    final repos = ref.read(appRepositoriesProvider);
+    final reward = await repos.userPrefs.readString(
       StorageKeys.rewardType,
     );
     return reward ?? 'Mini-games';

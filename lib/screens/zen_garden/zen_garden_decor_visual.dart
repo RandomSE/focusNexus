@@ -35,7 +35,7 @@ class ZenDecorVisual extends StatefulWidget {
 class _ZenDecorVisualState extends State<ZenDecorVisual>
     with SingleTickerProviderStateMixin {
   Ticker? _ticker;
-  double _animSeconds = 0;
+  final ValueNotifier<double> _animPhase = ValueNotifier(0);
 
   bool get _koiPond => widget.item.kind == 'zen.koi_pond';
 
@@ -64,31 +64,29 @@ class _ZenDecorVisualState extends State<ZenDecorVisual>
   void _syncAnimation() {
     if (_needsAnimation && _ticker == null) {
       _ticker = createTicker((elapsed) {
-        final seconds = elapsed.inMicroseconds / 1000000.0;
         if (!mounted) return;
-        setState(() => _animSeconds = seconds);
+        _animPhase.value = elapsed.inMicroseconds / 1000000.0;
       })..start();
     } else if (!_needsAnimation && _ticker != null) {
       _ticker!.dispose();
       _ticker = null;
-      _animSeconds = 0;
+      _animPhase.value = 0;
     }
   }
 
   @override
   void dispose() {
     _ticker?.dispose();
+    _animPhase.dispose();
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildDecorBody(double animSeconds) {
     final showLanternGlow =
         widget.item.kind == 'zen.stone_lantern' && widget.item.stageIndex >= 2;
     final glowSize = showLanternGlow
         ? ZenGardenDecorPainter.lanternSandGlowSize(widget.item.stageIndex)
         : Size.zero;
-    final animSeconds = _needsAnimation ? _animSeconds : 0.0;
 
     Widget paintLayer(double seconds) {
       final canvas = zenDecorPaintCanvasSize(widget.item);
@@ -205,5 +203,16 @@ class _ZenDecorVisualState extends State<ZenDecorVisual>
       return TickerMode(enabled: true, child: body);
     }
     return body;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_ticker != null && _needsAnimation) {
+      return ValueListenableBuilder<double>(
+        valueListenable: _animPhase,
+        builder: (context, phase, _) => _buildDecorBody(phase),
+      );
+    }
+    return _buildDecorBody(0);
   }
 }

@@ -39,7 +39,7 @@ void main() {
           highContrast: false,
           prefs: prefs,
         ),
-        Colors.black87,
+        const Color(0xFF1D2730),
       );
     });
 

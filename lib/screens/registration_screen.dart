@@ -1,53 +1,42 @@
 // lib/screens/registration_screen.dart
 import 'package:flutter/material.dart';
-import 'package:focusNexus/repositories/app_repositories.dart';
-import '../utils/common_utils.dart';
-import '../utils/screen_theme.dart';
-import '../widgets/appearance_settings_section.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:focusNexus/providers/app_settings_provider.dart';
+import 'package:focusNexus/providers/registration_form_provider.dart';
+import 'package:focusNexus/utils/common_utils.dart';
+import 'package:focusNexus/widgets/appearance_settings_section.dart';
+import 'package:focusNexus/widgets/settings_themed_builder.dart';
 
-class RegistrationScreen extends StatefulWidget {
+class RegistrationScreen extends ConsumerStatefulWidget {
   const RegistrationScreen({super.key});
 
   @override
-  State<RegistrationScreen> createState() => _RegistrationScreenState();
+  ConsumerState<RegistrationScreen> createState() => _RegistrationScreenState();
 }
 
-class _RegistrationScreenState extends State<RegistrationScreen> {
-  final _settings = AppRepositories.instance.settings;
+class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  String? _notificationStyle;
-  String? _frequency;
-  String? _rewardType;
-
-  final notificationFrequencies = [
+  static const notificationFrequencies = [
     'Low',
     'Medium',
     'High',
     'No notifications',
   ];
-  final notificationStyles = ['Vibrant', 'Minimal', 'Animated'];
-  final rewardTypes = [
+  static const notificationStyles = ['Vibrant', 'Minimal', 'Animated'];
+  static const rewardTypes = [
     'Mini-games',
     'Progressive visuals',
     'Customization',
   ];
 
-  bool get _requiresNotificationStyle =>
-      _frequency != null && _frequency != 'No notifications';
-
-  bool get _canContinue {
-    final hasFrequency = _frequency != null;
-    final hasReward = _rewardType != null;
-    final hasStyle = !_requiresNotificationStyle || _notificationStyle != null;
-    return hasFrequency && hasReward && hasStyle;
-  }
-
   Future<void> _saveAndContinue() async {
-    await _settings.completeRegistration(
-      notificationFrequency: _frequency!,
-      notificationStyle: _notificationStyle ?? 'Minimal',
-      rewardType: _rewardType!,
+    final form = ref.read(registrationFormProvider);
+    final settings = ref.read(appSettingsProvider.notifier).service;
+    await settings.completeRegistration(
+      notificationFrequency: form.frequency!,
+      notificationStyle: form.notificationStyle ?? 'Minimal',
+      rewardType: form.rewardType!,
     );
     if (!mounted) return;
     Navigator.pushReplacementNamed(context, 'onboard');
@@ -55,6 +44,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final form = ref.watch(registrationFormProvider);
+    final formNotifier = ref.read(registrationFormProvider.notifier);
+
     return SettingsThemedBuilder(
       builder: (context, bundle) {
         final labelStyle = controlTextStyle(bundle.textStyle);
@@ -82,46 +74,37 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   const SizedBox(height: 20),
                   CommonUtils.buildDropdownButtonFormField(
                     'Notification Frequency',
-                    _frequency,
+                    form.frequency,
                     notificationFrequencies,
                     labelStyle,
                     secondaryColor,
-                    (value) {
-                      setState(() {
-                        _frequency = value;
-                        if (value == 'No notifications') {
-                          _notificationStyle = 'Minimal';
-                        } else {
-                          _notificationStyle = null;
-                        }
-                      });
-                    },
+                    (value) => formNotifier.setFrequency(value),
                     validator: (value) =>
                         value == null ? 'Select frequency' : null,
                   ),
-                  if (_requiresNotificationStyle)
+                  if (form.requiresNotificationStyle)
                     CommonUtils.buildDropdownButtonFormField(
                       'Notification Style',
-                      _notificationStyle,
+                      form.notificationStyle,
                       notificationStyles,
                       labelStyle,
                       secondaryColor,
-                      (value) => setState(() => _notificationStyle = value),
+                      (value) => formNotifier.setNotificationStyle(value),
                       validator: (value) =>
                           value == null ? 'Select notification style' : null,
                     ),
                   CommonUtils.buildDropdownButtonFormField(
                     'Reward type',
-                    _rewardType,
+                    form.rewardType,
                     rewardTypes,
                     labelStyle,
                     secondaryColor,
-                    (value) => setState(() => _rewardType = value),
+                    (value) => formNotifier.setRewardType(value),
                     validator: (value) =>
                         value == null ? 'Select reward type' : null,
                   ),
                   const SizedBox(height: 24),
-                  if (!_canContinue)
+                  if (!form.canContinue)
                     Text(
                       '* Complete required fields to continue.',
                       style: labelStyle.copyWith(
@@ -129,7 +112,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         fontWeight: FontWeight.normal,
                       ),
                     ),
-                  if (!_canContinue) const SizedBox(height: 8),
+                  if (!form.canContinue) const SizedBox(height: 8),
                   CommonUtils.buildElevatedButton(
                     'Continue',
                     primaryColor,
@@ -137,7 +120,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     labelStyle,
                     12,
                     8,
-                    _canContinue
+                    form.canContinue
                         ? () async {
                             if (_formKey.currentState!.validate()) {
                               await _saveAndContinue();

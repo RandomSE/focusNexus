@@ -3,6 +3,12 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:focusNexus/providers/points_balance_provider.dart';
+import 'package:focusNexus/providers/zen_garden_session_provider.dart';
+import 'package:focusNexus/providers/zen_garden_session_state.dart';
+import 'package:focusNexus/providers/zen_garden_shop_provider.dart';
+import 'package:focusNexus/utils/common_utils.dart';
 import 'package:focusNexus/progressive_visuals/decor_catalog.dart';
 import 'package:focusNexus/progressive_visuals/decor_item.dart';
 import 'package:focusNexus/progressive_visuals/garden_engine.dart';
@@ -19,7 +25,6 @@ import 'package:focusNexus/progressive_visuals/garden_valuation.dart';
 import 'package:focusNexus/progressive_visuals/zen_placeable_bounds.dart';
 import 'package:focusNexus/progressive_visuals/zen_garden_hit_test.dart';
 import 'package:focusNexus/progressive_visuals/zen_garden_rules.dart';
-import 'package:focusNexus/repositories/app_repositories.dart';
 import 'package:intl/intl.dart';
 
 import 'zen_garden_cartoon_style.dart';
@@ -51,38 +56,8 @@ Duration _zenWaitAfterAdvancingFrom(int fromStage) {
   return r.waitBeforeNextAdvance ?? const Duration(minutes: 2);
 }
 
-class _DragSession {
-  _DragSession({
-    required this.isPlant,
-    required this.id,
-    required this.nx,
-    required this.ny,
-  });
-
-  final bool isPlant;
-  final String id;
-  double nx;
-  double ny;
-}
-
-class _BulkDragSession {
-  _BulkDragSession({
-    required this.anchorNx,
-    required this.anchorNy,
-    required this.plantOrigins,
-    required this.decorOrigins,
-  });
-
-  final double anchorNx;
-  final double anchorNy;
-  final Map<String, Offset> plantOrigins;
-  final Map<String, Offset> decorOrigins;
-  double dx = 0;
-  double dy = 0;
-}
-
 /// Calm, playable Zen garden: plants, growth, decorations, selection, drag preview.
-class ZenGardenScreen extends StatefulWidget {
+class ZenGardenScreen extends ConsumerStatefulWidget {
   const ZenGardenScreen({
     super.key,
     required this.themeData,
@@ -97,7 +72,7 @@ class ZenGardenScreen extends StatefulWidget {
   final TextStyle textStyle;
 
   @override
-  State<ZenGardenScreen> createState() => _ZenGardenScreenState();
+  ConsumerState<ZenGardenScreen> createState() => _ZenGardenScreenState();
 }
 
 class _AreaSelectBoxPainter extends CustomPainter {
@@ -140,40 +115,42 @@ class _AreaSelectBoxPainter extends CustomPainter {
   }
 }
 
-class _ZenGardenScreenState extends State<ZenGardenScreen>
+class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen>
     with SingleTickerProviderStateMixin {
-  final _repos = AppRepositories.instance;
-  final _engine = ProgressiveGardenEngine(
-    transitionRules: zenGardenTransitionRules(),
-    // TODO: change to 0.05 once testing concludes.
-    mutationProbability: 0.5,
-  );
   final _random = Random();
-
-  GardenState _garden = const GardenState(pointsBalance: 0, items: []);
-  final SandboxSelectionState _selection = SandboxSelectionState();
   final SandboxHitTester _hitTester = const ZenGardenHitTester();
   final TransformationController _viewportTransform = TransformationController();
-  bool _chromeVisible = true;
-  String? _placingDecorInventoryId;
-  bool _placingPlant = false;
-  String? _placingPlantInventoryId;
-  _DragSession? _drag;
-  _BulkDragSession? _bulkDrag;
-  Size _gardenLayoutSize = zenReferenceGardenSize;
-  Map<String, Offset>? _bulkPlantPreview;
-  Map<String, Offset>? _bulkDecorPreview;
-  Offset? _pointerDownGlobal;
-  SandboxEntityRef? _pointerPick;
-  bool _pointerDragging = false;
-  Offset? _areaSelectStartNorm;
-  Offset? _areaSelectCurrentNorm;
-  bool _areaSelecting = false;
-  bool _viewportMoved = false;
-  Timer? _ticker;
   late final AnimationController _viewportResetAnim;
   bool _centeringViewport = false;
   Future<void>? _gardenLoadFuture;
+
+  ZenGardenSessionState get _ui => ref.watch(zenGardenSessionProvider);
+  ZenGardenSession get _session => ref.read(zenGardenSessionProvider.notifier);
+  SandboxSelectionState get _selection => _session.selection;
+  ProgressiveGardenEngine get _engine => _session.engine;
+  GardenState get _garden => _ui.garden;
+  bool get _chromeVisible => _ui.chromeVisible;
+  String? get _placingDecorInventoryId => _ui.placingDecorInventoryId;
+  bool get _placingPlant => _ui.placingPlant;
+  String? get _placingPlantInventoryId => _ui.placingPlantInventoryId;
+  ZenDragSession? get _drag => _ui.drag;
+  ZenBulkDragSession? get _bulkDrag => _ui.bulkDrag;
+  Size get _gardenLayoutSize => _ui.gardenLayoutSize;
+  Map<String, Offset>? get _bulkPlantPreview => _ui.bulkPlantPreview;
+  Map<String, Offset>? get _bulkDecorPreview => _ui.bulkDecorPreview;
+  Offset? get _pointerDownGlobal => _ui.pointerDownGlobal;
+  SandboxEntityRef? get _pointerPick => _ui.pointerPick;
+  bool get _pointerDragging => _ui.pointerDragging;
+  Offset? get _areaSelectStartNorm => _ui.areaSelectStartNorm;
+  Offset? get _areaSelectCurrentNorm => _ui.areaSelectCurrentNorm;
+  bool get _areaSelecting => _ui.areaSelecting;
+  bool get _viewportMoved => _ui.viewportMoved;
+
+  void _patch(ZenGardenSessionState Function(ZenGardenSessionState) transform) {
+    _session.patch(transform);
+  }
+
+  void _touch() => _session.touch();
 
   static const double _pointerSlop = 14.0;
   static const double _plantVisualW = zenPlantVisualWidth;
@@ -193,13 +170,35 @@ class _ZenGardenScreenState extends State<ZenGardenScreen>
       duration: const Duration(milliseconds: 450),
     );
     _viewportTransform.addListener(_syncViewportMoved);
+    ref.listenManual(pointsBalanceProvider, (previous, next) {
+      next.whenData((balance) {
+        ref.read(zenGardenSessionProvider.notifier).applyWalletBalance(balance);
+      });
+    }, fireImmediately: true);
+  }
+
+  int get _walletBalance {
+    final fromProvider = ref.watch(pointsBalanceProvider).valueOrNull;
+    if (fromProvider != null) return fromProvider;
+    return _garden.pointsBalance;
+  }
+
+  void _showZenGardenHelp() {
+    CommonUtils.showBasicAlertDialog(
+      context,
+      'Zen garden & points',
+      'Points are shared with the dashboard: earn them by completing goals, '
+      'then spend them here on plants, growth, and decorations.\n\n'
+      'Once you have placed a plant or decoration, tap it to select it. Drag to reposition on the sand.',
+      widget.textStyle,
+      widget.secondaryColor,
+    );
   }
 
   @override
   void dispose() {
     _viewportTransform.removeListener(_syncViewportMoved);
     _viewportResetAnim.dispose();
-    _ticker?.cancel();
     _viewportTransform.dispose();
     super.dispose();
   }
@@ -207,7 +206,7 @@ class _ZenGardenScreenState extends State<ZenGardenScreen>
   void _syncViewportMoved() {
     final moved = !sandboxViewportIsDefault(_viewportTransform.value);
     if (moved != _viewportMoved && mounted) {
-      setState(() => _viewportMoved = moved);
+      _session.setViewportMoved(moved);
     }
   }
 
@@ -251,49 +250,17 @@ class _ZenGardenScreenState extends State<ZenGardenScreen>
   }
 
   Future<void> _loadGarden() async {
-    final garden = await _repos.garden.load();
-    if (!mounted) return;
-    setState(() => _garden = garden);
-    _syncTicker();
+    await _session.loadGarden();
   }
 
-  void _syncTicker() {
-    bool waiting(dynamic x) =>
-        x.nextAdvanceAllowedAt != null &&
-        DateTime.now().isBefore(x.nextAdvanceAllowedAt!);
-    final needs =
-        _garden.items.any(waiting) || _garden.decor.any(waiting);
-    _ticker?.cancel();
-    if (!needs) {
-      _ticker = null;
-      return;
-    }
-    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      final still =
-          _garden.items.any(waiting) || _garden.decor.any(waiting);
-      if (!still) {
-        _ticker?.cancel();
-        _ticker = null;
-      }
-      setState(() {});
-    });
-  }
-
-  Future<void> _persist() async {
-    await _repos.garden.save(_garden);
-  }
+  Future<void> _persist() => _session.persist();
 
   void _apply(GardenOpResult result, {String? announce}) {
     if (!result.isSuccess) {
       _snack(result.error ?? 'Something went wrong');
       return;
     }
-    setState(() {
-      _garden = result.state!;
-    });
-    _syncTicker();
-    _persist();
+    _session.applyOp(result);
     if (announce != null && announce.isNotEmpty) {
       SemanticsService.announce(announce, Directionality.of(context));
     }
@@ -363,11 +330,13 @@ class _ZenGardenScreenState extends State<ZenGardenScreen>
   }
 
   void _cancelPlacement() {
-    setState(() {
-      _placingDecorInventoryId = null;
-      _placingPlant = false;
-      _placingPlantInventoryId = null;
-    });
+    _patch(
+      (s) => s.copyWith(
+        clearPlacingDecorInventoryId: true,
+        placingPlant: false,
+        clearPlacingPlantInventoryId: true,
+      ),
+    );
     _clearPlacementPrompts();
   }
 
@@ -392,16 +361,16 @@ class _ZenGardenScreenState extends State<ZenGardenScreen>
   }
 
   void _setMultiMode(bool v) {
-    setState(() {
-      _selection.setMultiMode(v);
-      if (v) {
-        _cancelPlacement();
-      }
-    });
+    _selection.setMultiMode(v);
+    if (v) {
+      _cancelPlacement();
+    } else {
+      _touch();
+    }
   }
 
   void _toggleChrome() {
-    setState(() => _chromeVisible = !_chromeVisible);
+    _patch((s) => s.copyWith(chromeVisible: !s.chromeVisible));
   }
 
   void _bulkStashToInventory() {
@@ -428,22 +397,23 @@ class _ZenGardenScreenState extends State<ZenGardenScreen>
       }
       next = r.state!;
     }
-    setState(() {
-      _garden = next;
-      _selection.bulkPrimary.clear();
-      _selection.bulkDecor.clear();
-    });
-    _persist();
+    _session.setGarden(next);
+    _selection.bulkPrimary.clear();
+    _selection.bulkDecor.clear();
+    _touch();
+    unawaited(_persist());
     SemanticsService.announce('Moved selection to inventory.', Directionality.of(context));
   }
 
   void _startPlantPlacement() {
-    setState(() {
-      _placingPlant = true;
-      _placingPlantInventoryId = null;
-      _placingDecorInventoryId = null;
-      _exitSelectionForPlacement();
-    });
+    _exitSelectionForPlacement();
+    _patch(
+      (s) => s.copyWith(
+        placingPlant: true,
+        clearPlacingPlantInventoryId: true,
+        clearPlacingDecorInventoryId: true,
+      ),
+    );
   }
 
   void _placePlantAt(double nx, double ny) {
@@ -494,23 +464,27 @@ class _ZenGardenScreenState extends State<ZenGardenScreen>
       return;
     }
     final placedId = fromInventoryId ?? r.state!.items.last.id;
-    setState(() {
-      _garden = r.state!;
-      _exitSelectionForPlacement();
-      if (fromInventoryId != null && plantStackKey != null) {
-        _placingPlantInventoryId =
-            nextPlantInventoryIdInStack(_garden.plantInventory, plantStackKey);
-        _placingPlant = _placingPlantInventoryId != null;
-      } else {
-        _placingPlant = false;
-        _placingPlantInventoryId = null;
-      }
-      _selection.applyPick(
-        SandboxEntityRef(id: placedId, kind: SandboxEntityKind.primary),
-      );
-    });
-    _syncTicker();
-    _persist();
+    final nextGarden = r.state!;
+    _exitSelectionForPlacement();
+    String? nextPlantInvId;
+    var stillPlacing = false;
+    if (fromInventoryId != null && plantStackKey != null) {
+      nextPlantInvId =
+          nextPlantInventoryIdInStack(nextGarden.plantInventory, plantStackKey);
+      stillPlacing = nextPlantInvId != null;
+    }
+    _selection.applyPick(
+      SandboxEntityRef(id: placedId, kind: SandboxEntityKind.primary),
+    );
+    _session.setGarden(nextGarden);
+    _patch(
+      (s) => s.copyWith(
+        placingPlant: stillPlacing,
+        placingPlantInventoryId: nextPlantInvId,
+        clearPlacingPlantInventoryId: nextPlantInvId == null,
+      ),
+    );
+    unawaited(_persist());
     SemanticsService.announce('Plant placed.', Directionality.of(context));
   }
 
@@ -544,7 +518,10 @@ class _ZenGardenScreenState extends State<ZenGardenScreen>
     Future<void>.delayed(const Duration(seconds: 2), entry.remove);
   }
 
-  void _openShop() {
+  Future<void> _openShop() async {
+    await _session.syncWalletBalance();
+    if (!mounted) return;
+    final garden = ref.read(zenGardenSessionProvider).garden;
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -552,7 +529,7 @@ class _ZenGardenScreenState extends State<ZenGardenScreen>
       builder: (ctx) => _ZenShopSheet(
         textStyle: widget.textStyle,
         primary: widget.primaryColor,
-        garden: _garden,
+        garden: garden,
         engine: _engine,
         onPurchased: (r) {
           _apply(r, announce: r.isSuccess ? 'Inventory updated.' : null);
@@ -571,9 +548,7 @@ class _ZenGardenScreenState extends State<ZenGardenScreen>
       _snack(result.error ?? 'Something went wrong');
       return;
     }
-    setState(() => _garden = result.state!);
-    _syncTicker();
-    _persist();
+    _session.applyOp(result);
     if (pointsEarned != null && pointsEarned > 0) {
       _showShopToast('Sold for +$pointsEarned points');
     } else if (announce != null && announce.isNotEmpty) {
@@ -623,12 +598,10 @@ class _ZenGardenScreenState extends State<ZenGardenScreen>
       showDragHandle: true,
       isScrollControlled: true,
       builder: (sheetCtx) {
-        return StatefulBuilder(
-          builder: (sheetCtx, setSheetState) {
-            void refreshSheet() {
-              if (mounted) setState(() {});
-              setSheetState(() {});
-            }
+        return Consumer(
+          builder: (sheetCtx, ref, _) {
+            ref.watch(zenGardenSessionProvider);
+            void refreshSheet() => _touch();
 
             final plantStacks = groupPlantInventory(_garden.plantInventory);
             final decorStacks = groupDecorInventory(_garden.decorInventory);
@@ -695,13 +668,15 @@ class _ZenGardenScreenState extends State<ZenGardenScreen>
                                     FilledButton.tonal(
                                       onPressed: () {
                                         Navigator.pop(sheetCtx);
-                                        setState(() {
-                                          _placingPlant = true;
-                                          _placingPlantInventoryId =
-                                              stack.placeOrSellItemId;
-                                          _placingDecorInventoryId = null;
-                                          _exitSelectionForPlacement();
-                                        });
+                                        _exitSelectionForPlacement();
+                                        _patch(
+                                          (s) => s.copyWith(
+                                            placingPlant: true,
+                                            placingPlantInventoryId:
+                                                stack.placeOrSellItemId,
+                                            clearPlacingDecorInventoryId: true,
+                                          ),
+                                        );
                                       },
                                       child: const Text('Place'),
                                     ),
@@ -719,13 +694,19 @@ class _ZenGardenScreenState extends State<ZenGardenScreen>
                                         if (_placingPlantInventoryId == itemId) {
                                           final stackKey =
                                               plantInventoryStackKey(p);
-                                          _placingPlantInventoryId =
+                                          final nextId =
                                               nextPlantInventoryIdInStack(
                                             _garden.plantInventory,
                                             stackKey,
                                           );
-                                          _placingPlant =
-                                              _placingPlantInventoryId != null;
+                                          _patch(
+                                            (s) => s.copyWith(
+                                              placingPlantInventoryId: nextId,
+                                              placingPlant: nextId != null,
+                                              clearPlacingPlantInventoryId:
+                                                  nextId == null,
+                                            ),
+                                          );
                                         }
                                         refreshSheet();
                                         if (_garden.plantInventory.isEmpty &&
@@ -771,20 +752,26 @@ class _ZenGardenScreenState extends State<ZenGardenScreen>
                                     FilledButton.tonal(
                                       onPressed: () {
                                         Navigator.pop(sheetCtx);
-                                        setState(() {
-                                          _placingDecorInventoryId =
-                                              stack.sellItemId;
-                                          _placingPlant = false;
-                                          _placingPlantInventoryId = null;
-                                          _exitSelectionForPlacement();
-                                        });
+                                        _exitSelectionForPlacement();
+                                        _patch(
+                                          (s) => s.copyWith(
+                                            placingDecorInventoryId:
+                                                stack.sellItemId,
+                                            placingPlant: false,
+                                            clearPlacingPlantInventoryId: true,
+                                          ),
+                                        );
                                       },
                                       child: Text(placingThis ? 'Placing…' : 'Place'),
                                     ),
                                     if (placingThis)
                                       TextButton(
                                         onPressed: () {
-                                          setState(() => _placingDecorInventoryId = null);
+                                          _patch(
+                                            (s) => s.copyWith(
+                                              clearPlacingDecorInventoryId: true,
+                                            ),
+                                          );
                                           _clearPlacementPrompts();
                                           refreshSheet();
                                         },
@@ -805,10 +792,17 @@ class _ZenGardenScreenState extends State<ZenGardenScreen>
                                             stack.itemIds.contains(
                                               _placingDecorInventoryId,
                                             )) {
-                                          _placingDecorInventoryId =
+                                          final nextId =
                                               nextDecorInventoryIdInStack(
                                             _garden.decorInventory,
                                             stackKey,
+                                          );
+                                          _patch(
+                                            (s) => s.copyWith(
+                                              placingDecorInventoryId: nextId,
+                                              clearPlacingDecorInventoryId:
+                                                  nextId == null,
+                                            ),
                                           );
                                         }
                                         refreshSheet();
@@ -863,16 +857,16 @@ class _ZenGardenScreenState extends State<ZenGardenScreen>
       _snack(r.error ?? 'Could not place decoration');
       return;
     }
-    setState(() {
-      _garden = r.state!;
-      _exitSelectionForPlacement();
-      _placingDecorInventoryId =
-          nextDecorInventoryIdInStack(_garden.decorInventory, stackKey);
-      _selection.applyPick(
-        SandboxEntityRef(id: inventoryId, kind: SandboxEntityKind.decoration),
-      );
-    });
-    _persist();
+    final nextGarden = r.state!;
+    _exitSelectionForPlacement();
+    final nextDecorId =
+        nextDecorInventoryIdInStack(nextGarden.decorInventory, stackKey);
+    _selection.applyPick(
+      SandboxEntityRef(id: inventoryId, kind: SandboxEntityKind.decoration),
+    );
+    _session.setGarden(nextGarden);
+    _patch((s) => s.copyWith(placingDecorInventoryId: nextDecorId));
+    unawaited(_persist());
     SemanticsService.announce('Decoration placed.', Directionality.of(context));
   }
 
@@ -918,14 +912,16 @@ class _ZenGardenScreenState extends State<ZenGardenScreen>
     final id = _selection.focusPrimaryId;
     if (id == null) return;
     _apply(_engine.removeItem(_garden, id), announce: 'Plant moved to inventory.');
-    setState(() => _selection.clearFocus());
+    _selection.clearFocus();
+    _touch();
   }
 
   void _removeFocusDecor() {
     final id = _selection.focusDecorId;
     if (id == null) return;
     _apply(_engine.removeDecor(_garden, id), announce: 'Decoration moved to inventory.');
-    setState(() => _selection.clearFocus());
+    _selection.clearFocus();
+    _touch();
   }
 
   void _growDecorSelected() {
@@ -1107,20 +1103,22 @@ class _ZenGardenScreenState extends State<ZenGardenScreen>
       final r = _engine.moveDecorsBulk(next, decorMoves);
       if (r.isSuccess) next = r.state!;
     }
-    setState(() {
-      _garden = next;
-      _bulkDrag = null;
-      _bulkPlantPreview = null;
-      _bulkDecorPreview = null;
-    });
-    _persist();
+    _session.setGarden(next);
+    _patch(
+      (s) => s.copyWith(
+        clearBulkDrag: true,
+        clearBulkPlantPreview: true,
+        clearBulkDecorPreview: true,
+      ),
+    );
+    unawaited(_persist());
   }
 
   void _updateBulkDragPreview(double nx, double ny) {
     final session = _bulkDrag;
     if (session == null) return;
-    var dx = nx - session.anchorNx;
-    var dy = ny - session.anchorNy;
+    final dx = nx - session.anchorNx;
+    final dy = ny - session.anchorNy;
     final members = <({double x, double y, double rx, double ry})>[];
     for (final entry in session.plantOrigins.entries) {
       final item = _garden.items.firstWhere((e) => e.id == entry.key);
@@ -1139,18 +1137,20 @@ class _ZenGardenScreenState extends State<ZenGardenScreen>
       members.add((x: entry.value.dx, y: entry.value.dy, rx: mrx, ry: mry));
     }
     final clamped = zenClampGroupDelta(dx: dx, dy: dy, members: members);
-    session.dx = clamped.dx;
-    session.dy = clamped.dy;
-    setState(() {
-      _bulkPlantPreview = {
-        for (final e in session.plantOrigins.entries)
-          e.key: Offset(e.value.dx + session.dx, e.value.dy + session.dy),
-      };
-      _bulkDecorPreview = {
-        for (final e in session.decorOrigins.entries)
-          e.key: Offset(e.value.dx + session.dx, e.value.dy + session.dy),
-      };
-    });
+    final moved = session.copyWith(dx: clamped.dx, dy: clamped.dy);
+    _patch(
+      (s) => s.copyWith(
+        bulkDrag: moved,
+        bulkPlantPreview: {
+          for (final e in moved.plantOrigins.entries)
+            e.key: Offset(e.value.dx + moved.dx, e.value.dy + moved.dy),
+        },
+        bulkDecorPreview: {
+          for (final e in moved.decorOrigins.entries)
+            e.key: Offset(e.value.dx + moved.dx, e.value.dy + moved.dy),
+        },
+      ),
+    );
   }
 
   void _commitPlantDrag(String id) {
@@ -1169,7 +1169,7 @@ class _ZenGardenScreenState extends State<ZenGardenScreen>
       );
       _apply(_engine.moveItem(_garden, id, x: resolved.x, y: resolved.y));
     }
-    setState(() => _drag = null);
+    _patch((s) => s.copyWith(clearDrag: true));
   }
 
   void _commitDecorDrag(String id) {
@@ -1188,48 +1188,56 @@ class _ZenGardenScreenState extends State<ZenGardenScreen>
       );
       _apply(_engine.moveDecor(_garden, id, x: resolved.x, y: resolved.y));
     }
-    setState(() => _drag = null);
+    _patch((s) => s.copyWith(clearDrag: true));
   }
 
   void _resetPointer() {
-    _pointerDownGlobal = null;
-    _pointerPick = null;
-    _pointerDragging = false;
-    _areaSelectStartNorm = null;
-    _areaSelectCurrentNorm = null;
-    _areaSelecting = false;
-    if (_drag != null || _bulkDrag != null) {
-      setState(() {
-        _drag = null;
-        _bulkDrag = null;
-        _bulkPlantPreview = null;
-        _bulkDecorPreview = null;
-      });
-    } else if (_areaSelecting) {
-      setState(() {});
+    if (_drag != null ||
+        _bulkDrag != null ||
+        _pointerDownGlobal != null ||
+        _pointerPick != null ||
+        _pointerDragging ||
+        _areaSelectStartNorm != null ||
+        _areaSelectCurrentNorm != null ||
+        _areaSelecting) {
+      _patch(
+        (s) => s.copyWith(
+          clearPointerDownGlobal: true,
+          clearPointerPick: true,
+          pointerDragging: false,
+          clearAreaSelectStart: true,
+          clearAreaSelectCurrent: true,
+          areaSelecting: false,
+          clearDrag: true,
+          clearBulkDrag: true,
+          clearBulkPlantPreview: true,
+          clearBulkDecorPreview: true,
+        ),
+      );
     }
   }
 
   bool get _viewportScaleEnabled => !_pointerDragging && _bulkDrag == null;
 
   void _onSandPointerDown(PointerDownEvent e, double nx, double ny) {
-    setState(() {
-      _pointerDownGlobal = e.position;
-      _pointerDragging = false;
-      _areaSelecting = false;
-      _areaSelectStartNorm = Offset(nx, ny);
-      _areaSelectCurrentNorm = Offset(nx, ny);
-      if (_isPlacing) {
-        _pointerPick = null;
-      } else {
-        _pointerPick = _hitTester.nearestPick(
-          nx,
-          ny,
-          _garden,
-          gardenSize: _gardenLayoutSize,
-        );
-      }
-    });
+    _patch(
+      (s) => s.copyWith(
+        pointerDownGlobal: e.position,
+        pointerDragging: false,
+        areaSelecting: false,
+        areaSelectStartNorm: Offset(nx, ny),
+        areaSelectCurrentNorm: Offset(nx, ny),
+        pointerPick: _isPlacing
+            ? null
+            : _hitTester.nearestPick(
+                nx,
+                ny,
+                _garden,
+                gardenSize: _gardenLayoutSize,
+              ),
+        clearPointerPick: _isPlacing,
+      ),
+    );
   }
 
   void _onSandPointerMove(PointerMoveEvent e, double nx, double ny) {
@@ -1244,10 +1252,11 @@ class _ZenGardenScreenState extends State<ZenGardenScreen>
         isPlant: _drag!.isPlant,
         id: _drag!.id,
       );
-      setState(() {
-        _drag!.nx = clamped.nx;
-        _drag!.ny = clamped.ny;
-      });
+      _patch(
+        (s) => s.copyWith(
+          drag: s.drag!.copyWith(nx: clamped.nx, ny: clamped.ny),
+        ),
+      );
       return;
     }
     if (_pointerDownGlobal == null || _isPlacing) {
@@ -1257,34 +1266,38 @@ class _ZenGardenScreenState extends State<ZenGardenScreen>
       return;
     }
     if (_selection.multiMode && _selection.bulkCount > 0) {
-      setState(() {
-        _pointerDragging = true;
-        final plantOrigins = <String, Offset>{};
-        for (final id in _selection.bulkPrimary) {
-          final item = _garden.items.firstWhere((p) => p.id == id);
-          plantOrigins[id] = Offset(item.positionX, item.positionY);
-        }
-        final decorOrigins = <String, Offset>{};
-        for (final id in _selection.bulkDecor) {
-          final item = _garden.decor.firstWhere((d) => d.id == id);
-          decorOrigins[id] = Offset(item.positionX, item.positionY);
-        }
-        _bulkDrag = _BulkDragSession(
-          anchorNx: nx,
-          anchorNy: ny,
-          plantOrigins: plantOrigins,
-          decorOrigins: decorOrigins,
-        );
-        _updateBulkDragPreview(nx, ny);
-      });
+      final plantOrigins = <String, Offset>{};
+      for (final id in _selection.bulkPrimary) {
+        final item = _garden.items.firstWhere((p) => p.id == id);
+        plantOrigins[id] = Offset(item.positionX, item.positionY);
+      }
+      final decorOrigins = <String, Offset>{};
+      for (final id in _selection.bulkDecor) {
+        final item = _garden.decor.firstWhere((d) => d.id == id);
+        decorOrigins[id] = Offset(item.positionX, item.positionY);
+      }
+      _patch(
+        (s) => s.copyWith(
+          pointerDragging: true,
+          bulkDrag: ZenBulkDragSession(
+            anchorNx: nx,
+            anchorNy: ny,
+            plantOrigins: plantOrigins,
+            decorOrigins: decorOrigins,
+          ),
+        ),
+      );
+      _updateBulkDragPreview(nx, ny);
       return;
     }
     if (_selection.multiMode &&
         _selection.bulkSelectStyle == BulkSelectStyle.area) {
-      setState(() {
-        _areaSelecting = true;
-        _areaSelectCurrentNorm = Offset(nx, ny);
-      });
+      _patch(
+        (s) => s.copyWith(
+          areaSelecting: true,
+          areaSelectCurrentNorm: Offset(nx, ny),
+        ),
+      );
       return;
     }
     if (_selection.multiMode) {
@@ -1298,15 +1311,17 @@ class _ZenGardenScreenState extends State<ZenGardenScreen>
       isPlant: pick.isPrimary,
       id: pick.id,
     );
-    setState(() {
-      _pointerDragging = true;
-      _drag = _DragSession(
-        isPlant: pick.isPrimary,
-        id: pick.id,
-        nx: clamped.nx,
-        ny: clamped.ny,
-      );
-    });
+    _patch(
+      (s) => s.copyWith(
+        pointerDragging: true,
+        drag: ZenDragSession(
+          isPlant: pick.isPrimary,
+          id: pick.id,
+          nx: clamped.nx,
+          ny: clamped.ny,
+        ),
+      ),
+    );
   }
 
   void _commitAreaSelection() {
@@ -1348,18 +1363,17 @@ class _ZenGardenScreenState extends State<ZenGardenScreen>
     if (_selection.multiMode &&
         _selection.bulkSelectStyle == BulkSelectStyle.area &&
         _areaSelecting) {
-      setState(_commitAreaSelection);
+      _commitAreaSelection(); _touch();
       _resetPointer();
       return;
     }
     if (_selection.multiMode) {
-      setState(() {
-        if (_pointerPick != null) {
-          _selection.toggleBulk(_pointerPick!);
-        } else {
-          _selection.deselectOnEmptyTap();
-        }
-      });
+      if (_pointerPick != null) {
+        _selection.toggleBulk(_pointerPick!);
+      } else {
+        _selection.deselectOnEmptyTap();
+      }
+      _touch();
       _resetPointer();
       return;
     }
@@ -1377,24 +1391,23 @@ class _ZenGardenScreenState extends State<ZenGardenScreen>
       _resetPointer();
       return;
     }
-    setState(() {
-      if (_pointerPick != null) {
-        if (!_selection.multiMode &&
-            _selection.hasFocus &&
-            ((_selection.focusPrimaryId != null &&
-                    _pointerPick!.isPrimary &&
-                    _selection.focusPrimaryId == _pointerPick!.id) ||
-                (_selection.focusDecorId != null &&
-                    !_pointerPick!.isPrimary &&
-                    _selection.focusDecorId == _pointerPick!.id))) {
-          _selection.deselectOnEmptyTap();
-        } else {
-          _selection.applyPick(_pointerPick!);
-        }
-      } else {
+    if (_pointerPick != null) {
+      if (!_selection.multiMode &&
+          _selection.hasFocus &&
+          ((_selection.focusPrimaryId != null &&
+                  _pointerPick!.isPrimary &&
+                  _selection.focusPrimaryId == _pointerPick!.id) ||
+              (_selection.focusDecorId != null &&
+                  !_pointerPick!.isPrimary &&
+                  _selection.focusDecorId == _pointerPick!.id))) {
         _selection.deselectOnEmptyTap();
+      } else {
+        _selection.applyPick(_pointerPick!);
       }
-    });
+    } else {
+      _selection.deselectOnEmptyTap();
+    }
+    _touch();
     _resetPointer();
   }
 
@@ -1488,9 +1501,8 @@ class _ZenGardenScreenState extends State<ZenGardenScreen>
                     ],
                     selected: {_selection.bulkSelectStyle},
                     onSelectionChanged: (selected) {
-                      setState(() {
-                        _selection.setBulkSelectStyle(selected.first);
-                      });
+                      _selection.setBulkSelectStyle(selected.first);
+                      _touch();
                     },
                   ),
                   const SizedBox(height: 8),
@@ -1524,28 +1536,7 @@ class _ZenGardenScreenState extends State<ZenGardenScreen>
     if (_selection.multiMode) return const SizedBox.shrink();
 
     if (focusPlant == null && focusDecor == null) {
-      if (!_chromeVisible) return const SizedBox.shrink();
-      return Align(
-        alignment: Alignment.bottomCenter,
-        child: IgnorePointer(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              16,
-              10,
-              16,
-              MediaQuery.paddingOf(context).bottom + 16,
-            ),
-            child: Text(
-              'Tap a plant or decoration. Drag to reposition.',
-              textAlign: TextAlign.center,
-              style: widget.textStyle.copyWith(
-                fontWeight: FontWeight.normal,
-                color: widget.textStyle.color?.withValues(alpha: 0.72),
-              ),
-            ),
-          ),
-        ),
-      );
+      return const SizedBox.shrink();
     }
 
     final anchorY = focusPlant?.positionY ?? focusDecor!.positionY;
@@ -1611,29 +1602,22 @@ class _ZenGardenScreenState extends State<ZenGardenScreen>
               if (_chromeVisible) ...[
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                  child: Semantics(
-                    container: true,
-                    label:
-                        'Focus points: ${_garden.pointsBalance}. Earn more from goals on the dashboard.',
-                    child: Row(
-                      children: [
-                        Icon(Icons.spa_outlined, color: widget.primaryColor, size: 22),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Points: ${_garden.pointsBalance}',
-                            style: widget.textStyle,
-                          ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.spa_outlined, color: widget.primaryColor, size: 22),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Points: $_walletBalance',
+                          style: widget.textStyle,
                         ),
-                        IconButton(
-                          tooltip: 'How points work',
-                          onPressed: () => _snack(
-                            'Earn points from goals on the dashboard. Shared balance here.',
-                          ),
-                          icon: Icon(Icons.info_outline, color: widget.primaryColor),
-                        ),
-                      ],
-                    ),
+                      ),
+                      IconButton(
+                        tooltip: 'How points and the garden work',
+                        onPressed: _showZenGardenHelp,
+                        icon: Icon(Icons.info_outline, color: widget.primaryColor),
+                      ),
+                    ],
                   ),
                 ),
                 Padding(
@@ -1735,7 +1719,13 @@ class _ZenGardenScreenState extends State<ZenGardenScreen>
                     builder: (context, constraints) {
                       final w = constraints.maxWidth;
                       final h = constraints.maxHeight;
-                      _gardenLayoutSize = Size(w, h);
+                      final layoutSize = Size(w, h);
+                      if (_gardenLayoutSize != layoutSize) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (!mounted) return;
+                          _patch((s) => s.copyWith(gardenLayoutSize: layoutSize));
+                        });
+                      }
                       final plantOverrides = <String, Offset>{};
                       final decorOverrides = <String, Offset>{};
                       if (_drag != null) {
@@ -2099,14 +2089,7 @@ class _BottomActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (plant == null && decor == null) {
-      return Semantics(
-        container: true,
-        label: 'Nothing selected. Tap the garden or add a plant.',
-        child: Text(
-          'Tap a plant or decoration. Drag to reposition.',
-          style: textStyle.copyWith(fontWeight: FontWeight.normal),
-        ),
-      );
+      return const SizedBox.shrink();
     }
 
     if (decor != null) {
@@ -2388,7 +2371,7 @@ class _CountdownRow extends StatelessWidget {
   }
 }
 
-class _ZenShopSheet extends StatefulWidget {
+class _ZenShopSheet extends ConsumerStatefulWidget {
   const _ZenShopSheet({
     required this.textStyle,
     required this.primary,
@@ -2406,33 +2389,36 @@ class _ZenShopSheet extends StatefulWidget {
   final void Function(String message)? onUserMessage;
 
   @override
-  State<_ZenShopSheet> createState() => _ZenShopSheetState();
+  ConsumerState<_ZenShopSheet> createState() => _ZenShopSheetState();
 }
 
-class _ZenShopSheetState extends State<_ZenShopSheet> {
+class _ZenShopSheetState extends ConsumerState<_ZenShopSheet> {
   late final Map<String, TextEditingController> _qtyControllers;
-  late GardenState _cartGarden;
+  final ValueNotifier<int> _qtyRevision = ValueNotifier(0);
 
   @override
   void initState() {
     super.initState();
-    _cartGarden = widget.garden;
     _qtyControllers = {
       for (final e in decorCatalogFor(VisualThemeId.zenGarden))
         e.id: TextEditingController(text: '1'),
     };
+    WidgetsBinding.instance.addPostFrameCallback((_) => _syncCartWallet());
   }
 
-  @override
-  void didUpdateWidget(covariant _ZenShopSheet oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (!identical(oldWidget.garden, widget.garden)) {
-      _cartGarden = widget.garden;
-    }
+  void _syncCartWallet() {
+    final wallet = ref.read(pointsBalanceProvider).valueOrNull;
+    if (wallet == null) return;
+    final cart = ref.read(zenGardenShopCartProvider(widget.garden));
+    if (cart.pointsBalance == wallet) return;
+    ref.read(zenGardenShopCartProvider(widget.garden).notifier).setGarden(
+          cart.copyWith(pointsBalance: wallet),
+        );
   }
 
   @override
   void dispose() {
+    _qtyRevision.dispose();
     for (final c in _qtyControllers.values) {
       c.dispose();
     }
@@ -2449,14 +2435,21 @@ class _ZenShopSheetState extends State<_ZenShopSheet> {
   void _bumpQty(String kind, int delta) {
     final q = (_parsedQty(kind) + delta).clamp(1, 999);
     _qtyControllers[kind]!.text = '$q';
-    setState(() {});
+    _qtyRevision.value++;
   }
 
   void _buy(DecorCatalogEntry entry) {
     final q = _parsedQty(entry.id);
-    final r = widget.engine.purchaseDecor(_cartGarden, entry.id, quantity: q);
+    final wallet = ref.read(pointsBalanceProvider).valueOrNull;
+    final cart = ref.read(zenGardenShopCartProvider(widget.garden));
+    final working = wallet != null
+        ? cart.copyWith(pointsBalance: wallet)
+        : cart;
+    final r = widget.engine.purchaseDecor(working, entry.id, quantity: q);
     if (r.isSuccess && r.state != null) {
-      setState(() => _cartGarden = r.state!);
+      ref.read(zenGardenShopCartProvider(widget.garden).notifier).setGarden(
+            r.state!,
+          );
     }
     widget.onPurchased(r);
     if (r.isSuccess) {
@@ -2469,10 +2462,15 @@ class _ZenShopSheetState extends State<_ZenShopSheet> {
   @override
   Widget build(BuildContext context) {
     final entries = decorCatalogFor(VisualThemeId.zenGarden);
-    final balance = _cartGarden.pointsBalance;
+    ref.watch(pointsBalanceProvider);
+    final cartGarden = ref.watch(zenGardenShopCartProvider(widget.garden));
+    final balance =
+        ref.watch(pointsBalanceProvider).valueOrNull ?? cartGarden.pointsBalance;
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
 
-    return Padding(
+    return ValueListenableBuilder<int>(
+      valueListenable: _qtyRevision,
+      builder: (context, _, __) => Padding(
       padding: EdgeInsets.only(bottom: bottomInset),
       child: DraggableScrollableSheet(
         expand: false,
@@ -2562,7 +2560,7 @@ class _ZenShopSheetState extends State<_ZenShopSheet> {
                                         border: OutlineInputBorder(),
                                         labelText: 'Qty',
                                       ),
-                                      onChanged: (_) => setState(() {}),
+                                      onChanged: (_) => _qtyRevision.value++,
                                     ),
                                   ),
                                   IconButton(
@@ -2589,6 +2587,7 @@ class _ZenShopSheetState extends State<_ZenShopSheet> {
           );
         },
       ),
+    ),
     );
   }
 }
