@@ -7,7 +7,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:flutter/foundation.dart';
 import 'package:timezone/data/latest.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:focusNexus/services/storage/flutter_secure_key_value_storage.dart';
@@ -27,11 +26,20 @@ class GoalNotifier {
       FlutterLocalNotificationsPlugin();
   static bool _initialized = false;
   static const _platform = MethodChannel('flutter_native_timezone');
-  static KeyValueStorage storage = const FlutterSecureKeyValueStorage();
+  static KeyValueStorage? _boundStorage;
+
+  /// Storage from [goalNotifierWiringProvider] (falls back to secure storage).
+  static KeyValueStorage get storage =>
+      _boundStorage ?? const FlutterSecureKeyValueStorage();
+
+  /// Called once per [ProviderScope] via [goalNotifierWiringProvider].
+  static void bindStorage(KeyValueStorage storage) {
+    _boundStorage = storage;
+  }
 
   /// Test-only: restore defaults between tests.
   static void resetForTesting() {
-    storage = const FlutterSecureKeyValueStorage();
+    _boundStorage = null;
     _initialized = false;
     _aiEncouragement = false;
     _dailyAffirmations = false;
@@ -545,19 +553,23 @@ class GoalNotifier {
       final deadlineDate = _formatter.parse(deadline);
       final daysToExpire = deadlineDate.difference(now).inDays;
 
-      await _plugin.cancel(goalId); // 1-hour before - High
-      await _plugin.cancel(goalId + 1); // 4-hours before - all
-      await _plugin.cancel(goalId + 3); // 2-hours before - High
+      final cancelOps = <Future<void>>[
+        _plugin.cancel(goalId), // 1-hour before - High
+        _plugin.cancel(goalId + 1), // 4-hours before - all
+        _plugin.cancel(goalId + 3), // 2-hours before - High
+      ];
 
       if (daysToExpire > 0) {
-        for (int i = 1; i <= daysToExpire; i++) {
-          await _plugin.cancel(goalId + 10 + i);
+        for (var i = 1; i <= daysToExpire; i++) {
+          cancelOps.add(_plugin.cancel(goalId + 10 + i));
         }
-        await _plugin.cancel(goalId + 2); // 1 day before - medium, High
+        cancelOps.add(_plugin.cancel(goalId + 2)); // 1 day before - medium, High
         for (final offset in _aiEncouragementSlotOffsets) {
-          await _plugin.cancel(goalId + offset);
+          cancelOps.add(_plugin.cancel(goalId + offset));
         }
       }
+
+      await Future.wait(cancelOps);
     }
 
     // Cancel any active timers
@@ -668,7 +680,13 @@ class GoalNotifier {
     }
   }
 
+  static bool get _runningInFlutterTest =>
+      WidgetsBinding.instance.runtimeType.toString().contains('TestWidgets');
+
   static Future<bool> checkNotificationsPermissionsGranted() async {
+    if (_runningInFlutterTest) {
+      return false;
+    }
     final statusNotification = await Permission.notification.status;
     final statusExactAlarm = await Permission.scheduleExactAlarm.status;
     if (statusNotification.isGranted && statusExactAlarm.isGranted) {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focusNexus/models/classes/theme_bundle.dart';
-import 'package:focusNexus/repositories/app_repositories.dart';
+import 'package:focusNexus/providers/theme_bundle_provider.dart';
 import 'package:focusNexus/widgets/skeleton_loaders.dart';
 
 typedef SettingsThemedWidgetBuilder = Widget Function(
@@ -9,8 +9,8 @@ typedef SettingsThemedWidgetBuilder = Widget Function(
   ThemeBundle bundle,
 );
 
-/// Rebuilds when [AppSettings] changes; derives [ThemeBundle] from the live snapshot.
-class SettingsThemedBuilder extends StatelessWidget {
+/// Rebuilds when app settings change; derives [ThemeBundle] from the live snapshot.
+class SettingsThemedBuilder extends ConsumerWidget {
   const SettingsThemedBuilder({
     super.key,
     required this.builder,
@@ -19,17 +19,9 @@ class SettingsThemedBuilder extends StatelessWidget {
   final SettingsThemedWidgetBuilder builder;
 
   @override
-  Widget build(BuildContext context) {
-    final settings = AppRepositories.instance.settings;
-    final theme = AppRepositories.instance.theme;
-
-    return ListenableBuilder(
-      listenable: settings,
-      builder: (context, _) {
-        final bundle = theme.bundleFromSnapshot(settings.snapshot);
-        return builder(context, bundle);
-      },
-    );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bundle = ref.watch(themeBundleProvider);
+    return builder(context, bundle);
   }
 }
 

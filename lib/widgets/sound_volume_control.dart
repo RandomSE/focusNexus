@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focusNexus/models/classes/theme_bundle.dart';
-import 'package:focusNexus/repositories/app_repositories.dart';
-import 'package:focusNexus/settings/app_settings.dart';
+import 'package:focusNexus/providers/app_settings_provider.dart';
+import 'package:focusNexus/providers/screen_ui_providers.dart';
 import 'package:focusNexus/utils/sound_volume.dart';
 
 /// Integer percent volume (0–100) with slider and ±1 / ±5 step buttons.
-class SoundVolumeControl extends StatefulWidget {
+class SoundVolumeControl extends ConsumerWidget {
   const SoundVolumeControl({
     super.key,
     required this.bundle,
@@ -14,25 +15,21 @@ class SoundVolumeControl extends StatefulWidget {
   final ThemeBundle bundle;
 
   @override
-  State<SoundVolumeControl> createState() => _SoundVolumeControlState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(appSettingsProvider.notifier).service;
+    final persisted = roundSoundVolumePercent(settings.soundVolume);
+    final liveOverride = ref.watch(soundVolumeLiveProvider);
+    final volume = liveOverride ?? persisted;
 
-class _SoundVolumeControlState extends State<SoundVolumeControl> {
-  AppSettings get _settings => AppRepositories.instance.settings;
-  late int _liveVolume;
+    final textStyle = bundle.textStyle;
+    final primary = bundle.primaryColor;
+    final secondary = bundle.secondaryColor;
 
-  @override
-  void initState() {
-    super.initState();
-    _liveVolume = roundSoundVolumePercent(_settings.soundVolume);
-  }
+    void setLive(int next) {
+      ref.read(soundVolumeLiveProvider.notifier).set(next);
+    }
 
-  @override
-  Widget build(BuildContext context) {
-    final textStyle = widget.bundle.textStyle;
-    final primary = widget.bundle.primaryColor;
-    final secondary = widget.bundle.secondaryColor;
-    final volume = _liveVolume;
+    Future<void> persist(int next) => settings.setSoundVolume(next);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -44,13 +41,13 @@ class _SoundVolumeControlState extends State<SoundVolumeControl> {
           max: 100,
           divisions: 100,
           label: '$volume%',
-          onChanged: (val) => setState(() => _liveVolume = val.round()),
-          onChangeEnd: (val) => _settings.setSoundVolume(val.round()),
+          onChanged: (val) => setLive(val.round()),
+          onChangeEnd: (val) => persist(val.round()),
         ),
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            _StepButton(
+            Expanded(
+              child: _StepButton(
               label: '−5%',
               textStyle: textStyle,
               primary: primary,
@@ -59,11 +56,13 @@ class _SoundVolumeControlState extends State<SoundVolumeControl> {
                   ? null
                   : () {
                       final next = (volume - 5).clamp(0, 100);
-                      setState(() => _liveVolume = next);
-                      _settings.setSoundVolume(next);
+                      setLive(next);
+                      persist(next);
                     },
+              ),
             ),
-            _StepButton(
+            Expanded(
+              child: _StepButton(
               label: '−1%',
               textStyle: textStyle,
               primary: primary,
@@ -72,11 +71,13 @@ class _SoundVolumeControlState extends State<SoundVolumeControl> {
                   ? null
                   : () {
                       final next = (volume - 1).clamp(0, 100);
-                      setState(() => _liveVolume = next);
-                      _settings.setSoundVolume(next);
+                      setLive(next);
+                      persist(next);
                     },
+              ),
             ),
-            _StepButton(
+            Expanded(
+              child: _StepButton(
               label: '+1%',
               textStyle: textStyle,
               primary: primary,
@@ -85,11 +86,13 @@ class _SoundVolumeControlState extends State<SoundVolumeControl> {
                   ? null
                   : () {
                       final next = (volume + 1).clamp(0, 100);
-                      setState(() => _liveVolume = next);
-                      _settings.setSoundVolume(next);
+                      setLive(next);
+                      persist(next);
                     },
+              ),
             ),
-            _StepButton(
+            Expanded(
+              child: _StepButton(
               label: '+5%',
               textStyle: textStyle,
               primary: primary,
@@ -98,9 +101,10 @@ class _SoundVolumeControlState extends State<SoundVolumeControl> {
                   ? null
                   : () {
                       final next = (volume + 5).clamp(0, 100);
-                      setState(() => _liveVolume = next);
-                      _settings.setSoundVolume(next);
+                      setLive(next);
+                      persist(next);
                     },
+              ),
             ),
           ],
         ),
@@ -132,9 +136,14 @@ class _StepButton extends StatelessWidget {
         foregroundColor: primary,
         side: BorderSide(color: primary),
         backgroundColor: secondary,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+        minimumSize: const Size(0, 36),
       ),
-      child: Text(label, style: textStyle.copyWith(fontSize: 12)),
+      child: Text(
+        label,
+        style: textStyle.copyWith(fontSize: 12),
+        textAlign: TextAlign.center,
+      ),
     );
   }
 }

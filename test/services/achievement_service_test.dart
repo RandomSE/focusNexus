@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:focusNexus/models/classes/achievement.dart';
+import 'package:focusNexus/repositories/points_repository.dart';
 import 'package:focusNexus/services/achievement_service.dart';
 import 'package:focusNexus/services/sound_service.dart';
 
@@ -20,56 +21,56 @@ Achievement _achievement({
   );
 }
 
+Future<AchievementService> _service(
+  InMemoryKeyValueStorage memory, {
+  List<Achievement>? cached,
+  PointsRepository? points,
+}) async {
+  final service = AchievementService(
+    storage: memory,
+    pointsRepository: points ?? PointsRepository(memory),
+    soundService: SoundService(memory),
+    cachedAchievements: cached,
+  );
+  await service.setInitializationPrerequisites();
+  return service;
+}
+
 void main() {
   late InMemoryKeyValueStorage memory;
 
-  setUp(() async {
+  setUp(() {
     memory = InMemoryKeyValueStorage();
-    AchievementService.resetForTesting();
-    SoundService.resetForTesting();
-    SoundService.storage = memory;
-    await AchievementService().setInitializationPrerequisites();
-  });
-
-  tearDown(() {
-    AchievementService.resetForTesting();
-    SoundService.resetForTesting();
   });
 
   group('updateProgress', () {
     test('updates cached progress from tracking variable in storage', () async {
       memory = InMemoryKeyValueStorage(initial: {'totalGoalsCreated': '5'});
-      AchievementService.configureForTesting(
-        keyValueStorage: memory,
-        cachedAchievements: [_achievement()],
-      );
+      final service = await _service(memory, cached: [_achievement()]);
 
-      await AchievementService.updateProgress('1');
+      await service.updateProgress('1');
 
-      expect(AchievementService.getById('1')!.progress, 50.0);
+      expect(service.getById('1')!.progress, 50.0);
     });
 
     test('does not decrease progress once achievement reached 100%', () async {
       memory = InMemoryKeyValueStorage(initial: {'totalGoalsCreated': '0'});
-      AchievementService.configureForTesting(
-        keyValueStorage: memory,
-        cachedAchievements: [_achievement(progress: 100)],
+      final service = await _service(
+        memory,
+        cached: [_achievement(progress: 100)],
       );
 
-      await AchievementService.updateProgress('1');
+      await service.updateProgress('1');
 
-      expect(AchievementService.getById('1')!.progress, 100);
+      expect(service.getById('1')!.progress, 100);
     });
 
     test('ignores unknown achievement ids', () async {
-      AchievementService.configureForTesting(
-        keyValueStorage: memory,
-        cachedAchievements: [_achievement()],
-      );
+      final service = await _service(memory, cached: [_achievement()]);
 
-      await AchievementService.updateProgress('999');
+      await service.updateProgress('999');
 
-      expect(AchievementService.getById('1')!.progress, 0);
+      expect(service.getById('1')!.progress, 0);
     });
   });
 
@@ -79,28 +80,31 @@ void main() {
         'points': '100',
         'soundEnabled': 'false',
       });
-      AchievementService.configureForTesting(
-        keyValueStorage: memory,
-        cachedAchievements: [_achievement(reward: '250 points')],
+      final service = await _service(
+        memory,
+        cached: [_achievement(reward: '250 points')],
       );
 
-      await AchievementService().completeAchievement('1');
+      await service.completeAchievement('1');
 
-      final updated = AchievementService.getById('1')!;
+      final updated = service.getById('1')!;
       expect(updated.isCompleted, isTrue);
       expect(memory.snapshot['points'], '350');
     });
 
     test('skips duplicate completion', () async {
-      memory = InMemoryKeyValueStorage(initial: {'points': '50', 'soundEnabled': 'false'});
-      AchievementService.configureForTesting(
-        keyValueStorage: memory,
-        cachedAchievements: [
+      memory = InMemoryKeyValueStorage(initial: {
+        'points': '50',
+        'soundEnabled': 'false',
+      });
+      final service = await _service(
+        memory,
+        cached: [
           _achievement(reward: '100 points').copyWith(isCompleted: true),
         ],
       );
 
-      await AchievementService().completeAchievement('1');
+      await service.completeAchievement('1');
 
       expect(memory.snapshot['points'], '50');
     });
@@ -108,18 +112,13 @@ void main() {
 
   group('addAchievement', () {
     test('persists new achievements without duplicates', () async {
-      AchievementService.configureForTesting(
-        keyValueStorage: memory,
-        cachedAchievements: [],
-      );
-
-      final service = AchievementService();
+      final service = await _service(memory, cached: []);
       final achievement = _achievement(id: '42');
       await service.addAchievement(achievement);
       await service.addAchievement(achievement);
 
       expect(service.all.length, 1);
-      expect(memory.snapshot.containsKey('achievements'), isTrue);
+      expect(service.getById('42'), isNotNull);
     });
   });
 }

@@ -4,6 +4,7 @@ import 'package:focusNexus/models/classes/goal_set.dart';
 import 'package:focusNexus/repositories/achievement_counters_repository.dart';
 import 'package:focusNexus/repositories/user_prefs_repository.dart';
 import 'package:focusNexus/services/storage/storage_keys.dart';
+import 'package:focusNexus/utils/category_achievement_tracking.dart';
 import 'package:focusNexus/utils/goal_achievement_eval.dart';
 import 'package:focusNexus/utils/streak_logic.dart';
 
@@ -17,6 +18,12 @@ class AchievementStreakService {
   Future<int> readInt(String key) => _counters.readInt(key);
 
   Future<void> increment(String key) => _counters.increment(key);
+
+  Future<void> incrementBy(String key, int amount) async {
+    if (amount <= 0) return;
+    final current = await readInt(key);
+    await setInt(key, current + amount);
+  }
 
   Future<void> decrement(String key) => _counters.decrement(key);
 
@@ -98,6 +105,16 @@ class AchievementStreakService {
     } else {
       await increment(StorageKeys.goalsCompletedThisMonth);
     }
+  }
+
+  Future<void> updateCategoryCompletionStats(String category) async {
+    await CategoryAchievementTracking(_counters).recordCompletion(category);
+  }
+
+  Future<void> backfillCategoryStatsFromGoals(List<GoalSet> completed) async {
+    await CategoryAchievementTracking(
+      _counters,
+    ).backfillFromCompletedGoals(completed);
   }
 
   Future<void> updateGoalAchievementStats(GoalSet goal) async {

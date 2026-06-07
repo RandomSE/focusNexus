@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focusNexus/models/classes/theme_bundle.dart';
-import 'package:focusNexus/repositories/app_repositories.dart';
-import 'package:focusNexus/utils/screen_theme.dart';
+import 'package:focusNexus/providers/app_settings_provider.dart';
+import 'package:focusNexus/providers/theme_bundle_provider.dart';
 import 'package:focusNexus/utils/theme_styles.dart';
 import 'package:focusNexus/utils/user_prefs_codec.dart';
 
 /// Default scaffold fill before settings are applied (light preset).
 const Color kDefaultScaffoldColor = Color(0xFFF2EFE6);
 
-Color resolveScaffoldBackground([UserPrefsSnapshot? snapshot]) {
-  final snap = snapshot ?? AppRepositories.instance.settings.snapshot;
+Color resolveScaffoldBackground(UserPrefsSnapshot snapshot) {
   return ThemeStyles.resolveSecondaryColor(
-    isDark: snap.isDark,
-    highContrast: snap.highContrastMode,
-    prefs: snap,
+    isDark: snapshot.isDark,
+    highContrast: snapshot.highContrastMode,
+    prefs: snapshot,
   );
 }
 
@@ -47,7 +47,7 @@ class SkeletonBlock extends StatelessWidget {
 }
 
 /// Themed scaffold with placeholder blocks (no spinner).
-class ThemedSkeletonScaffold extends StatelessWidget {
+class ThemedSkeletonScaffold extends ConsumerWidget {
   const ThemedSkeletonScaffold({
     super.key,
     this.title,
@@ -60,12 +60,12 @@ class ThemedSkeletonScaffold extends StatelessWidget {
   final ThemeBundle? bundle;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settingsView = ref.watch(appSettingsProvider);
     final live = bundle ??
-        (AppRepositories.instance.settings.isLoaded
-            ? currentThemeBundle()
-            : null);
-    final bg = live?.secondaryColor ?? resolveScaffoldBackground();
+        (settingsView.isLoaded ? ref.watch(themeBundleProvider) : null);
+    final bg =
+        live?.secondaryColor ?? resolveScaffoldBackground(settingsView.snapshot);
     final fg = live?.primaryColor ?? Colors.black87;
     final shimmer = fg.withValues(alpha: 0.25);
 

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focusNexus/models/classes/achievement.dart';
+import 'package:focusNexus/providers/screen_ui_providers.dart';
 import 'package:focusNexus/services/achievement_service.dart';
 import 'package:focusNexus/utils/common_utils.dart';
 
-class AchievementDetailView extends StatefulWidget {
+class AchievementDetailView extends ConsumerWidget {
   const AchievementDetailView({
     super.key,
     required this.achievement,
@@ -24,68 +26,76 @@ class AchievementDetailView extends StatefulWidget {
   final AchievementService achievementService;
 
   @override
-  State<AchievementDetailView> createState() => _AchievementDetailViewState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final achievement = this.achievement;
+    final buttonDisabled = ref.watch(
+      achievementDetailDisabledProvider(achievement.id),
+    );
+    final toRefresh = ref.watch(
+      achievementDetailRefreshProvider(achievement.id),
+    );
 
-class _AchievementDetailViewState extends State<AchievementDetailView> {
-  bool _buttonDisabled = false;
-  bool _toRefresh = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final achievement = widget.achievement;
-
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _pop(context, toRefresh);
+      },
+      child: Scaffold(
         appBar: AppBar(
           leading: BackButton(
-            onPressed: () => Navigator.of(context).pop(_toRefresh),
+            onPressed: () => _pop(context, toRefresh),
           ),
-          title: Text(achievement.title, style: widget.textStyle),
-          backgroundColor: widget.secondaryColor,
-          iconTheme: IconThemeData(color: widget.primaryColor),
+          title: Text(achievement.title, style: textStyle),
+          backgroundColor: secondaryColor,
+          iconTheme: IconThemeData(color: primaryColor),
         ),
-        backgroundColor: widget.secondaryColor,
+        backgroundColor: secondaryColor,
         body: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Task: ${achievement.task}', style: widget.textStyle),
+              Text('Task: ${achievement.task}', style: textStyle),
               const SizedBox(height: 8),
-              Text('Reward: ${achievement.reward}', style: widget.textStyle),
+              Text('Reward: ${achievement.reward}', style: textStyle),
               const SizedBox(height: 8),
               Text(
                 'Progress: ${achievement.progress.toStringAsFixed(1)}%',
-                style: widget.textStyle,
+                style: textStyle,
               ),
               const SizedBox(height: 8),
               if (achievement.isCompleted && achievement.dateCompleted != null)
                 Text(
                   'Completed on: ${achievement.dateCompleted}',
-                  style: widget.textStyle,
+                  style: textStyle,
                 ),
               const Spacer(),
-              if (!_buttonDisabled &&
+              if (!buttonDisabled &&
                   achievement.progress >= 100 &&
                   !achievement.isCompleted) ...[
                 CommonUtils.buildElevatedButton(
                   'Complete Achievement',
-                  widget.primaryColor,
-                  widget.secondaryColor,
-                  widget.textStyle,
+                  primaryColor,
+                  secondaryColor,
+                  textStyle,
                   14,
                   10,
                   () async {
-                    _toRefresh = true;
-                    await widget.achievementService.completeAchievement(
+                    ref
+                        .read(achievementDetailRefreshProvider(achievement.id).notifier)
+                        .markRefresh();
+                    await achievementService.completeAchievement(
                       achievement.id,
                     );
                     if (!context.mounted) return;
-                    setState(() => _buttonDisabled = true);
+                    ref
+                        .read(achievementDetailDisabledProvider(achievement.id).notifier)
+                        .disable();
                     CommonUtils.showSnackBar(
                       context,
                       'Achievement completed! Well done on completing ${achievement.title}',
-                      widget.textStyle,
+                      textStyle,
                       2000,
                       12,
                     );
@@ -94,13 +104,18 @@ class _AchievementDetailViewState extends State<AchievementDetailView> {
               ],
               const SizedBox(height: 12),
               ElevatedButton(
-                onPressed: () => Navigator.pop(context, _toRefresh),
-                style: widget.buttonStyle,
+                onPressed: () => _pop(context, toRefresh),
+                style: buttonStyle,
                 child: const Text('Close'),
               ),
             ],
           ),
         ),
+      ),
     );
+  }
+
+  static void _pop(BuildContext context, bool refreshList) {
+    Navigator.of(context).pop(refreshList);
   }
 }

@@ -7,12 +7,15 @@ import 'package:focusNexus/services/storage/storage_keys.dart';
 import 'package:focusNexus/utils/theme_styles.dart';
 import 'package:focusNexus/utils/user_prefs_codec.dart';
 
-/// In-memory app preferences; UI reads this, storage lives in [UserPrefsRepository].
-class AppSettings extends ChangeNotifier {
+/// In-memory app preferences; UI reads via [appSettingsProvider], storage in [UserPrefsRepository].
+class AppSettings {
   AppSettings(this._prefs, this._theme);
 
   final UserPrefsRepository _prefs;
   final ThemeRepository _theme;
+
+  /// Called after snapshot mutations; wired by [AppSettingsNotifier].
+  VoidCallback? onSnapshotChanged;
 
   UserPrefsSnapshot _snapshot = const UserPrefsSnapshot();
   bool _loaded = false;
@@ -54,7 +57,7 @@ class AppSettings extends ChangeNotifier {
     _snapshot = await _prefs.loadSnapshot();
     await _theme.ensurePersistedTheme(_snapshot);
     _loaded = true;
-    notifyListeners();
+    onSnapshotChanged?.call();
   }
 
   Future<void> reload() => load();
@@ -309,7 +312,7 @@ class AppSettings extends ChangeNotifier {
 
   void _apply(UserPrefsSnapshot next) {
     _snapshot = next;
-    notifyListeners();
+    onSnapshotChanged?.call();
   }
 
   Future<void> _persistThemeFromSnapshot(

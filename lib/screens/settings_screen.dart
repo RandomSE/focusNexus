@@ -1,28 +1,26 @@
 import 'package:flutter/material.dart';
-import 'package:focusNexus/repositories/app_repositories.dart';
-import '../utils/common_utils.dart';
-import '../utils/notifier.dart';
-import '../utils/screen_theme.dart';
-import '../utils/appearance_transition.dart';
-import '../widgets/appearance_settings_section.dart';
-import '../widgets/deferred_screen.dart';
-import '../widgets/skeleton_loaders.dart';
-import '../widgets/settings_themed_builder.dart';
-import '../widgets/sound_volume_control.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:focusNexus/providers/app_settings_provider.dart';
+import 'package:focusNexus/providers/screen_ui_providers.dart';
+import 'package:focusNexus/utils/appearance_transition.dart';
+import 'package:focusNexus/utils/common_utils.dart';
+import 'package:focusNexus/utils/notifier.dart';
+import 'package:focusNexus/utils/screen_theme.dart';
+import 'package:focusNexus/widgets/appearance_settings_section.dart';
+import 'package:focusNexus/widgets/deferred_screen.dart';
+import 'package:focusNexus/widgets/settings_themed_builder.dart';
+import 'package:focusNexus/widgets/skeleton_loaders.dart';
+import 'package:focusNexus/widgets/sound_volume_control.dart';
 
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen>
+class _SettingsScreenState extends ConsumerState<SettingsScreen>
     with WidgetsBindingObserver {
-  final _settings = AppRepositories.instance.settings;
-  bool _notificationsAllowed = false;
-  bool _isDeletingAccount = false;
-
   static const _notificationFrequencies = [
     'Low',
     'Medium',
@@ -54,13 +52,15 @@ class _SettingsScreenState extends State<SettingsScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) async {
     if (state == AppLifecycleState.resumed) {
       final allowed = await GoalNotifier.checkNotificationsPermissionsGranted();
-      if (mounted) setState(() => _notificationsAllowed = allowed);
+      if (!mounted) return;
+      ref.read(settingsNotificationsAllowedProvider.notifier).set(allowed);
     }
   }
 
   Future<void> _refreshNotificationPermission() async {
     final allowed = await GoalNotifier.checkNotificationsPermissionsGranted();
-    if (mounted) setState(() => _notificationsAllowed = allowed);
+    if (!mounted) return;
+    ref.read(settingsNotificationsAllowedProvider.notifier).set(allowed);
   }
 
   Future<void> _load() async {
@@ -68,16 +68,17 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   Future<void> setAndCheckDailyAffirmations(bool value) async {
-    await _settings.setDailyAffirmations(value);
+    final settings = ref.read(appSettingsProvider.notifier).service;
+    await settings.setDailyAffirmations(value);
     if (value) {
-      await updateDailyAffirmations(_settings.dailyAffirmationsTime);
+      await updateDailyAffirmations(settings.dailyAffirmationsTime);
     } else {
       await GoalNotifier.cancelDailyAffirmationsNotification();
     }
   }
 
   Future<void> updateDailyAffirmations(String time) async {
-    await _settings.setDailyAffirmationsTime(time);
+    await ref.read(appSettingsProvider.notifier).service.setDailyAffirmationsTime(time);
     await GoalNotifier.startDailyAffirmations(time);
   }
 
@@ -85,7 +86,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     String oldFrequency,
     String newFrequency,
   ) async {
-    await _settings.setNotificationFrequency(newFrequency);
+    final settings = ref.read(appSettingsProvider.notifier).service;
+    await settings.setNotificationFrequency(newFrequency);
     if (oldFrequency == 'No notifications' &&
         newFrequency != 'No notifications') {
       await GoalNotifier.requestNotificationPermission();
@@ -101,11 +103,11 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   Future<void> _runAppearanceChange(Future<void> Function() apply) async {
-    await runAppearanceChange(this, setState, apply);
+    await runAppearanceChange(ref, apply);
   }
 
   Future<void> setPauseGoalsScreen(bool value) async {
-    await _settings.setPauseGoals(value);
+    await ref.read(appSettingsProvider.notifier).service.setPauseGoals(value);
     if (value) {
       await GoalNotifier.cancelAllGoalNotifications();
     }
@@ -155,6 +157,10 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final settings = ref.watch(appSettingsProvider.notifier).service;
+    final notificationsAllowed = ref.watch(settingsNotificationsAllowedProvider);
+    final isDeletingAccount = ref.watch(settingsDeletingAccountProvider);
+
     return SettingsThemedBuilder(
       builder: (context, bundle) {
         final primaryColor = bundle.primaryColor;
@@ -164,6 +170,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         _loadFuture ??= _load();
 
         return DeferredScreen<void>(
+          loadToken: 'settings-initial',
           load: () => _loadFuture!,
           minLoadingMs: 120,
           loading: (_) => themedLoadingShell(
@@ -172,7 +179,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             body: SettingsListSkeleton(bundle: bundle),
           ),
           builder: (context, _) => PopScope<Object?>(
-            canPop: !_isDeletingAccount,
+            canPop: !isDeletingAccount,
             child: Stack(
               children: [
                 Theme(
@@ -199,32 +206,32 @@ class _SettingsScreenState extends State<SettingsScreen>
                         AppearanceSettingsSection(bundle: bundle),
                         CommonUtils.buildDropdownButtonFormField(
                           'Reward Type',
-                          _settings.rewardType,
+                          settings.rewardType,
                           _rewardTypes,
                           textStyle,
                           secondaryColor,
-                          (val) => _settings.setRewardType(val ?? 'Mini-games'),
+                          (val) => settings.setRewardType(val ?? 'Mini-games'),
                         ),
                         CommonUtils.buildDropdownButtonFormField(
                           'Notification Frequency',
-                          _settings.notificationFrequency,
+                          settings.notificationFrequency,
                           _notificationFrequencies,
                           textStyle,
                           secondaryColor,
                           (val) => updateNotificationFrequency(
-                            _settings.notificationFrequency,
+                            settings.notificationFrequency,
                             val ?? 'Medium',
                           ),
                         ),
-                        if (_settings.notificationFrequency !=
+                        if (settings.notificationFrequency !=
                             'No notifications')
                           CommonUtils.buildDropdownButtonFormField(
                             'Notification Style',
-                            _settings.notificationStyle,
+                            settings.notificationStyle,
                             _notificationStyles,
                             textStyle,
                             secondaryColor,
-                            (val) => _settings.setNotificationStyle(
+                            (val) => settings.setNotificationStyle(
                               val ?? 'Minimal',
                             ),
                           )
@@ -237,37 +244,37 @@ class _SettingsScreenState extends State<SettingsScreen>
                         CommonUtils.buildSwitchListTile(
                           'Dyslexia-friendly Font',
                           textStyle,
-                          _settings.useDyslexiaFont,
+                          settings.useDyslexiaFont,
                           (val) => _runAppearanceChange(
-                            () => _settings.setUseDyslexiaFont(val),
+                            () => settings.setUseDyslexiaFont(val),
                           ),
                           primaryColor,
                         ),
                         CommonUtils.buildSwitchListTile(
                           'High Contrast Mode',
                           textStyle,
-                          _settings.highContrastMode,
+                          settings.highContrastMode,
                           (val) => _runAppearanceChange(
-                            () => _settings.setHighContrastMode(val),
+                            () => settings.setHighContrastMode(val),
                           ),
                           primaryColor,
                         ),
-                        if (_settings.notificationFrequency !=
+                        if (settings.notificationFrequency !=
                             'No notifications') ...[
                           CommonUtils.buildSwitchListTile(
                             'Daily Affirmations',
                             textStyle,
-                            _settings.dailyAffirmations,
+                            settings.dailyAffirmations,
                             setAndCheckDailyAffirmations,
                             primaryColor,
                           ),
-                          if (_settings.dailyAffirmations) ...[
+                          if (settings.dailyAffirmations) ...[
                             Row(
                               children: [
                                 Expanded(
                                   child: CommonUtils.buildElevatedButton(
-                                    _settings.dailyAffirmationsTime.isNotEmpty
-                                        ? 'Selected daily affirmations time: ${_settings.dailyAffirmationsTime} click me to change'
+                                    settings.dailyAffirmationsTime.isNotEmpty
+                                        ? 'Selected daily affirmations time: ${settings.dailyAffirmationsTime} click me to change'
                                         : 'Choose Time',
                                     primaryColor,
                                     secondaryColor,
@@ -307,24 +314,26 @@ class _SettingsScreenState extends State<SettingsScreen>
                           CommonUtils.buildSwitchListTile(
                             'AI Encouragement',
                             textStyle,
-                            _settings.aiEncouragement,
-                            _settings.setAiEncouragement,
+                            settings.aiEncouragement,
+                            settings.setAiEncouragement,
                             primaryColor,
                           ),
-                          if (!_notificationsAllowed)
+                          if (!notificationsAllowed)
                             CommonUtils.buildSwitchListTile(
                               'Would you like to enable notifications?',
                               textStyle,
-                              _notificationsAllowed,
+                              notificationsAllowed,
                               (val) async {
                                 await GoalNotifier.requestNotificationPermission();
                                 final allowed =
                                     await GoalNotifier.checkNotificationsPermissionsGranted();
-                                if (mounted) {
-                                  setState(
-                                    () => _notificationsAllowed = allowed,
-                                  );
-                                }
+                                if (!mounted) return;
+                                ref
+                                    .read(
+                                      settingsNotificationsAllowedProvider
+                                          .notifier,
+                                    )
+                                    .set(allowed);
                               },
                               primaryColor,
                             ),
@@ -332,18 +341,18 @@ class _SettingsScreenState extends State<SettingsScreen>
                         CommonUtils.buildSwitchListTile(
                           'Pause Goals',
                           textStyle,
-                          _settings.pauseGoals,
+                          settings.pauseGoals,
                           setPauseGoalsScreen,
                           primaryColor,
                         ),
                         CommonUtils.buildSwitchListTile(
                           'Sound',
                           textStyle,
-                          _settings.soundEnabled,
-                          _settings.setSoundEnabled,
+                          settings.soundEnabled,
+                          settings.setSoundEnabled,
                           primaryColor,
                         ),
-                        if (_settings.soundEnabled)
+                        if (settings.soundEnabled)
                           SoundVolumeControl(bundle: bundle),
                         const Divider(),
                         CommonUtils.buildElevatedButton(
@@ -353,7 +362,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                           textStyle,
                           0,
                           0,
-                          _isDeletingAccount
+                          isDeletingAccount
                               ? null
                               : () => _confirmAndDeleteAccount(
                                 context,
@@ -367,12 +376,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ),
                 ),
               ),
-              if (_isDeletingAccount)
+              if (isDeletingAccount)
                 ModalBarrier(
                   color: Colors.black.withValues(alpha: 0.45),
                   dismissible: false,
                 ),
-              if (_isDeletingAccount)
+              if (isDeletingAccount)
                 Center(
                   child: Material(
                     color: secondaryColor,
@@ -418,6 +427,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     Color secondaryColor,
     TextStyle textStyle,
   ) async {
+    final settings = ref.read(appSettingsProvider.notifier).service;
     final firstConfirmation = await CommonUtils.showInteractableAlertDialog(
       context,
       'Delete Account?',
@@ -480,13 +490,15 @@ class _SettingsScreenState extends State<SettingsScreen>
     if (finalConfirmation != true) return;
     if (!context.mounted) return;
 
-    setState(() => _isDeletingAccount = true);
+    ref.read(settingsDeletingAccountProvider.notifier).set(true);
     try {
-      await _settings.clearAll();
+      await settings.clearAll();
       if (!context.mounted) return;
       Navigator.pushNamedAndRemoveUntil(context, 'auth', (_) => false);
     } finally {
-      if (mounted) setState(() => _isDeletingAccount = false);
+      if (mounted) {
+        ref.read(settingsDeletingAccountProvider.notifier).set(false);
+      }
     }
   }
 }

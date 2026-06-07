@@ -1,26 +1,27 @@
 import 'package:flutter/material.dart';
-import 'package:focusNexus/repositories/app_repositories.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:focusNexus/models/classes/theme_bundle.dart';
+import 'package:focusNexus/providers/app_settings_provider.dart';
+import 'package:focusNexus/providers/screen_ui_providers.dart';
+import 'package:focusNexus/providers/theme_bundle_provider.dart';
+import 'package:focusNexus/utils/common_utils.dart';
 import 'package:focusNexus/utils/notifier.dart';
+import 'package:focusNexus/utils/onboarding_assets.dart';
+import 'package:focusNexus/utils/screen_theme.dart';
+import 'package:focusNexus/widgets/appearance_settings_section.dart';
+import 'package:focusNexus/widgets/deferred_screen.dart';
+import 'package:focusNexus/widgets/skeleton_loaders.dart';
 
-import '../utils/common_utils.dart';
-import '../utils/onboarding_assets.dart';
-import '../models/classes/theme_bundle.dart';
-import '../utils/screen_theme.dart';
-import '../widgets/appearance_settings_section.dart';
-import '../widgets/skeleton_loaders.dart';
-import '../widgets/deferred_screen.dart';
-
-class OnboardingScreen extends StatefulWidget {
+class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
   @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
+  ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
-  final _settings = AppRepositories.instance.settings;
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final PageController _pageController = PageController();
-  int _currentPage = 0;
+
   @override
   void dispose() {
     _pageController.dispose();
@@ -28,7 +29,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _goToNextPage(List<String> images) {
-    if (_currentPage < images.length - 1) {
+    final currentPage = ref.read(onboardingPageIndexProvider);
+    if (currentPage < images.length - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -37,7 +39,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _goToPreviousPage() {
-    if (_currentPage > 0) {
+    final currentPage = ref.read(onboardingPageIndexProvider);
+    if (currentPage > 0) {
       _pageController.previousPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -46,7 +49,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Future<void> _finishOnboarding() async {
-    final bundle = currentThemeBundle();
+    final bundle = ref.watch(themeBundleProvider);
+    final settings = ref.read(appSettingsProvider.notifier).service;
     final textStyle = bundle.textStyle;
     final primaryColor = bundle.primaryColor;
     final secondaryColor = bundle.secondaryColor;
@@ -55,7 +59,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         await GoalNotifier.checkNotificationsPermissionsGranted();
     if (!mounted) return;
 
-    if (_settings.notificationsEnabled && !notificationsGranted) {
+    if (settings.notificationsEnabled && !notificationsGranted) {
       final shouldEnable = await CommonUtils.showInteractableAlertDialog(
         context,
         'Enable Notifications',
@@ -91,7 +95,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       }
     }
 
-    await _settings.setOnboardingCompleted(true);
+    await settings.setOnboardingCompleted(true);
     if (!mounted) return;
     Navigator.pushReplacementNamed(context, 'dashboard');
   }
@@ -101,6 +105,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return SettingsThemedBuilder(
       builder: (context, bundle) {
         return DeferredScreen<List<String>>(
+          loadToken: 'onboarding-images',
           load: loadOnboardingImagePaths,
           loading: (_) => Scaffold(
             backgroundColor: bundle.secondaryColor,
@@ -118,6 +123,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ThemeBundle bundle,
     List<String> onboardingImages,
   ) {
+    final currentPage = ref.watch(onboardingPageIndexProvider);
     final textStyle = bundle.textStyle;
     final primaryColor = bundle.primaryColor;
     final secondaryColor = bundle.secondaryColor;
@@ -165,7 +171,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: PageView.builder(
                 controller: _pageController,
                 itemCount: onboardingImages.length,
-                onPageChanged: (index) => setState(() => _currentPage = index),
+                onPageChanged: (index) {
+                  ref.read(onboardingPageIndexProvider.notifier).set(index);
+                },
                 itemBuilder: (context, index) {
                   return Padding(
                     padding: const EdgeInsets.all(8.0),
@@ -179,7 +187,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 },
               ),
             ),
-            if (_currentPage == lastIndex) ...[
+            if (currentPage == lastIndex) ...[
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: AppearanceSettingsSection(
@@ -203,7 +211,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  if (_currentPage > 0)
+                  if (currentPage > 0)
                     CommonUtils.buildElevatedButton(
                       'Previous',
                       primaryColor,
@@ -213,7 +221,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       0,
                       _goToPreviousPage,
                     ),
-                  if (_currentPage < lastIndex)
+                  if (currentPage < lastIndex)
                     CommonUtils.buildElevatedButton(
                       'Next',
                       primaryColor,

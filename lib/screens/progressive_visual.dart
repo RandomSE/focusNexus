@@ -3,15 +3,10 @@ import 'package:focusNexus/progressive_visuals/visual_theme_id.dart';
 import 'package:focusNexus/utils/screen_theme.dart';
 
 /// Entry point for progressive visuals: choose a metaphor, then open its section.
-class ProgressiveVisualScreen extends StatefulWidget {
+class ProgressiveVisualScreen extends StatelessWidget {
   const ProgressiveVisualScreen({super.key});
 
-  @override
-  State<ProgressiveVisualScreen> createState() => _ProgressiveVisualScreenState();
-}
-
-class _ProgressiveVisualScreenState extends State<ProgressiveVisualScreen> {
-  void _openSection(VisualThemeId id) {
+  void _openSection(BuildContext context, VisualThemeId id) {
     Navigator.pushNamed(
       context,
       'progressive_visual_section',
@@ -19,7 +14,7 @@ class _ProgressiveVisualScreenState extends State<ProgressiveVisualScreen> {
     );
   }
 
-  @override
+   @override
   Widget build(BuildContext context) {
     return SettingsThemedBuilder(
       builder: (context, bundle) {
@@ -55,7 +50,7 @@ class _ProgressiveVisualScreenState extends State<ProgressiveVisualScreen> {
                       ),
                     ),
                     trailing: Icon(Icons.chevron_right, color: bundle.primaryColor),
-                    onTap: () => _openSection(id),
+                    onTap: () => _openSection(context, id),
                   ),
                 );
               },

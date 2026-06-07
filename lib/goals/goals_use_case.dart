@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 
@@ -8,6 +10,7 @@ import 'package:focusNexus/repositories/points_repository.dart';
 import 'package:focusNexus/services/achievement_streak_service.dart';
 import 'package:focusNexus/settings/app_settings.dart';
 import 'package:focusNexus/goals/goal_notifications.dart';
+import 'package:focusNexus/goals/goals_mutation_plan.dart';
 import 'package:focusNexus/utils/goal_points.dart';
 import 'package:focusNexus/utils/notifier.dart';
 
@@ -59,7 +62,7 @@ class GoalsUseCase {
     return record.dateKey == today ? record.count : 0;
   }
 
-  Future<GoalSet> createGoal({
+  GoalsCreatePlan planCreateGoal({
     required String title,
     required String category,
     required String complexity,
@@ -70,7 +73,8 @@ class GoalsUseCase {
     required int deadlineHours,
     required DateTime anchor,
     int? goalId,
-  }) async {
+    required List<GoalSet> activeSnapshot,
+  }) {
     final id = goalId ?? GoalNotifier.generateGoalId(title);
     final deadline = _formatDeadline(hours: deadlineHours, anchor: anchor);
     final goal = _buildGoal(
@@ -84,17 +88,138 @@ class GoalsUseCase {
       deadline: deadline,
       goalId: id,
     );
-
-    final active = [...await _goals.readActiveGoals(), goal];
-    await _goals.writeActiveGoals(active);
-    await _scheduleNotificationsIfNeeded(goal, deadlineHours);
-    await _streaks.increment('totalGoalsCreated');
-    await _streaks.increment('totalGoalsActive');
-    return goal;
+    return GoalsCreatePlan(
+      goal: goal,
+      activeGoals: [...activeSnapshot, goal],
+      deadlineHours: deadlineHours,
+    );
   }
 
-  Future<StepProgressResult?> incrementStepProgress(int goalId) async {
-    final active = await _goals.readActiveGoals();
+  Future<void> persistCreatePlan(GoalsCreatePlan plan) async {
+    await _goals.writeActiveGoals(plan.activeGoals);
+    unawaited(_scheduleNotificationsIfNeeded(plan.goal, plan.deadlineHours));
+    unawaited(_recordGoalsCreated(count: 1));
+  }
+
+  Future<GoalSet> createGoal({
+    required String title,
+    required String category,
+    required String complexity,
+    required String effort,
+    required String motivation,
+    required String time,
+    required String steps,
+    required int deadlineHours,
+    required DateTime anchor,
+    int? goalId,
+    List<GoalSet>? activeSnapshot,
+  }) async {
+    final plan = planCreateGoal(
+      title: title,
+      category: category,
+      complexity: complexity,
+      effort: effort,
+      motivation: motivation,
+      time: time,
+      steps: steps,
+      deadlineHours: deadlineHours,
+      anchor: anchor,
+      goalId: goalId,
+      activeSnapshot: activeSnapshot ?? await _goals.readActiveGoals(),
+    );
+    await persistCreatePlan(plan);
+    return plan.goal;
+  }
+
+  GoalsBatchCreatePlan planCreateGoals({
+    required List<CreateGoalInput> inputs,
+    required DateTime anchor,
+    required List<GoalSet> activeSnapshot,
+  }) {
+    if (inputs.isEmpty) {
+      return GoalsBatchCreatePlan(
+        newGoals: const [],
+        activeGoals: activeSnapshot,
+        deadlineHoursByGoal: const {},
+      );
+    }
+
+    final newGoals = <GoalSet>[];
+    final deadlineHoursByGoal = <GoalSet, int>{};
+
+    for (final input in inputs) {
+      final id = input.goalId ?? GoalNotifier.generateGoalId(input.title);
+      final deadline = _formatDeadline(
+        hours: input.deadlineHours,
+        anchor: anchor,
+      );
+      final goal = _buildGoal(
+        title: input.title,
+        category: input.category,
+        complexity: input.complexity,
+        effort: input.effort,
+        motivation: input.motivation,
+        time: input.time,
+        steps: input.steps,
+        deadline: deadline,
+        goalId: id,
+      );
+      newGoals.add(goal);
+      deadlineHoursByGoal[goal] = input.deadlineHours;
+    }
+
+    return GoalsBatchCreatePlan(
+      newGoals: newGoals,
+      activeGoals: [...activeSnapshot, ...newGoals],
+      deadlineHoursByGoal: deadlineHoursByGoal,
+    );
+  }
+
+  Future<void> persistBatchCreatePlan(GoalsBatchCreatePlan plan) async {
+    if (plan.newGoals.isEmpty) return;
+    await _goals.writeActiveGoals(plan.activeGoals);
+    unawaited(_recordGoalsCreated(count: plan.newGoals.length));
+
+    if (_settings.notificationsEnabled && !_settings.pauseGoals) {
+      unawaited(
+        Future.wait(
+          plan.newGoals.map(
+            (goal) => _scheduleNotificationsIfNeeded(
+              goal,
+              plan.deadlineHoursByGoal[goal] ?? 0,
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
+  /// Creates many goals with one storage write; schedules reminders in the background.
+  Future<List<GoalSet>> createGoals({
+    required List<CreateGoalInput> inputs,
+    required DateTime anchor,
+    List<GoalSet>? activeSnapshot,
+  }) async {
+    if (inputs.isEmpty) return const [];
+
+    final plan = planCreateGoals(
+      inputs: inputs,
+      anchor: anchor,
+      activeSnapshot: activeSnapshot ?? await _goals.readActiveGoals(),
+    );
+    await persistBatchCreatePlan(plan);
+    return plan.newGoals;
+  }
+
+  Future<StepProgressResult?> incrementStepProgress(
+    int goalId, {
+    List<GoalSet>? activeSnapshot,
+    List<GoalSet>? completedSnapshot,
+    int? goalsCompletedTodayBefore,
+  }) async {
+    final active = activeSnapshot != null
+        ? List<GoalSet>.from(activeSnapshot)
+        : await _goals.readActiveGoals();
     final index = active.indexWhere((g) => g.goalId == goalId);
     if (index < 0) return null;
 
@@ -108,37 +233,105 @@ class GoalsUseCase {
     await _goals.writeActiveGoals(active);
 
     if (updated.stepProgress >= maxSteps) {
-      return StepProgressResult(completed: await completeGoal(goalId));
+      final before = goalsCompletedTodayBefore ??
+          await _readGoalsCompletedTodayCount();
+      final plan = planCompleteGoal(
+        goalId,
+        activeSnapshot: active,
+        completedSnapshot:
+            completedSnapshot ?? await _goals.readCompletedGoals(),
+        goalsCompletedTodayBefore: before,
+      );
+      if (plan == null) return null;
+      await persistCompletePlan(plan);
+      return StepProgressResult(completed: plan.result);
     }
     return const StepProgressResult();
   }
 
-  Future<CompleteGoalResult?> completeGoal(int goalId) async {
-    var active = await _goals.readActiveGoals();
+  GoalsCompletePlan? planCompleteGoal(
+    int goalId, {
+    required List<GoalSet> activeSnapshot,
+    required List<GoalSet> completedSnapshot,
+    required int goalsCompletedTodayBefore,
+  }) {
+    final active = List<GoalSet>.from(activeSnapshot);
     final index = active.indexWhere((g) => g.goalId == goalId);
     if (index < 0) return null;
 
     final goal = active.removeAt(index);
-    await _notifications.cancelForGoal(goal);
+    final completed = [...completedSnapshot, goal];
+    final todayCount = goalsCompletedTodayBefore + 1;
+    final pointsAwarded = GoalPoints.computeDailyCompletionReward(
+      goal.points,
+      todayCount,
+    );
 
-    final completed = [...await _goals.readCompletedGoals(), goal];
-    await _goals.writeCompletedGoals(completed);
-    await _goals.writeActiveGoals(active);
-
-    final pointsAwarded = await _awardCompletionPoints(goal.points);
-    await _streaks.decrement('totalGoalsActive');
-    await _streaks.increment('totalGoalsCompleted');
-    await _streaks.checkOrAddDate();
-    await _streaks.updateGoalAchievementStats(goal);
-
-    final goalsCompletedToday = await _readGoalsCompletedTodayCount();
-
-    return CompleteGoalResult(
+    return GoalsCompletePlan(
+      result: CompleteGoalResult(
+        goal: goal,
+        pointsAwarded: pointsAwarded,
+        goalsCompletedToday: todayCount,
+      ),
+      activeGoals: active,
+      completedGoals: completed,
       goal: goal,
-      pointsAwarded: pointsAwarded,
-      goalsCompletedToday: goalsCompletedToday,
+      pointsDelta: pointsAwarded,
+      goalsCompletedTodayCount: todayCount,
     );
   }
+
+  Future<void> persistCompletePlan(
+    GoalsCompletePlan plan, {
+    bool optimisticCacheCredit = false,
+  }) {
+    return _persistCompletePlanInBackground(
+      plan,
+      optimisticCacheCredit: optimisticCacheCredit,
+    );
+  }
+
+  Future<void> _persistCompletePlanInBackground(
+    GoalsCompletePlan plan, {
+    required bool optimisticCacheCredit,
+  }) async {
+    unawaited(_notifications.cancelForGoal(plan.goal));
+    await Future.wait([
+      _goals.writeCompletedGoals(plan.completedGoals),
+      _goals.writeActiveGoals(plan.activeGoals),
+      _persistCompletionPoints(
+        goalsCompletedTodayCount: plan.goalsCompletedTodayCount,
+        pointsDeltaToAdd: plan.pointsDelta,
+        optimisticCacheCredit: optimisticCacheCredit,
+      ),
+    ]);
+    unawaited(_recordGoalCompleted(plan.goal));
+  }
+
+  Future<CompleteGoalResult?> completeGoal(
+    int goalId, {
+    List<GoalSet>? activeSnapshot,
+    List<GoalSet>? completedSnapshot,
+    int? goalsCompletedTodayBefore,
+  }) async {
+    final plan = planCompleteGoal(
+      goalId,
+      activeSnapshot: activeSnapshot ?? await _goals.readActiveGoals(),
+      completedSnapshot: completedSnapshot ?? await _goals.readCompletedGoals(),
+      goalsCompletedTodayBefore:
+          goalsCompletedTodayBefore ??
+          await _readGoalsCompletedTodayCount(),
+    );
+    if (plan == null) return null;
+    await persistCompletePlan(plan);
+    return plan.result;
+  }
+
+  Future<void> persistActiveGoals(List<GoalSet> active) =>
+      _goals.writeActiveGoals(active);
+
+  Future<void> cancelAiEncouragementForGoal(int goalId) =>
+      _notifications.cancelAiEncouragement(goalId);
 
   Future<void> removeGoal(int goalId) async {
     var active = await _goals.readActiveGoals();
@@ -283,18 +476,71 @@ class GoalsUseCase {
     );
   }
 
-  Future<int> _awardCompletionPoints(int basePoints) async {
+  Future<void> _persistCompletionPoints({
+    required int goalsCompletedTodayCount,
+    required int pointsDeltaToAdd,
+    required bool optimisticCacheCredit,
+  }) async {
     final today = DateFormat('dd MM yyyy').format(DateTime.now());
-    final count = await _goals.nextCompletedTodayCount(today);
-    await _goals.writeCompletedToday(today: today, count: count);
-    final totalAmount = GoalPoints.computeDailyCompletionReward(
-      basePoints,
-      count,
+    await _goals.writeCompletedToday(
+      today: today,
+      count: goalsCompletedTodayCount,
     );
-    final balance = await _points.readBalance();
-    await _points.writeBalance(balance + totalAmount);
-    return totalAmount;
+    if (pointsDeltaToAdd <= 0) return;
+    if (optimisticCacheCredit) {
+      await _points.persistCachedBalance();
+      return;
+    }
+    await _points.add(pointsDeltaToAdd);
   }
+
+  Future<void> _recordGoalsCreated({required int count}) async {
+    if (count <= 0) return;
+    await Future.wait([
+      _streaks.incrementBy('totalGoalsCreated', count),
+      _streaks.incrementBy('totalGoalsActive', count),
+    ]);
+  }
+
+  Future<void> _recordGoalCompleted(GoalSet goal) async {
+    await Future.wait([
+      _streaks.decrement('totalGoalsActive'),
+      _streaks.increment('totalGoalsCompleted'),
+    ]);
+    await _streaks.checkOrAddDate();
+    await _streaks.updateCategoryCompletionStats(goal.category);
+    await _streaks.updateGoalAchievementStats(goal);
+  }
+
+  /// One-time backfill of per-category counters from stored completed goals.
+  Future<void> backfillCategoryAchievementStats() async {
+    final completed = await _goals.readCompletedGoals();
+    await _streaks.backfillCategoryStatsFromGoals(completed);
+  }
+}
+
+class CreateGoalInput {
+  const CreateGoalInput({
+    required this.title,
+    required this.category,
+    required this.complexity,
+    required this.effort,
+    required this.motivation,
+    required this.time,
+    required this.steps,
+    required this.deadlineHours,
+    this.goalId,
+  });
+
+  final String title;
+  final String category;
+  final String complexity;
+  final String effort;
+  final String motivation;
+  final String time;
+  final String steps;
+  final int deadlineHours;
+  final int? goalId;
 }
 
 class GoalsSnapshot {

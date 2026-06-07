@@ -20,7 +20,7 @@ double formFieldMinHeight(TextStyle style) {
   final dyslexia = usesOpenDyslexic(style);
   if (!dyslexia) return kMinInteractiveDimension;
   // Label is outside the box; room for value + padding (and optional multiline input).
-  return (size * line * 2.8 + 20).clamp(64.0, 140.0);
+  return (size * line * 2.8 + 20).clamp(64.0, 160.0);
 }
 
 /// Closed dropdown button height (must fit wrapped selected value).
@@ -29,7 +29,7 @@ double dropdownButtonClosedHeight(TextStyle style) {
   final line = _lineHeight(style);
   final dyslexia = usesOpenDyslexic(style);
   if (!dyslexia) return kMinInteractiveDimension;
-  return (size * line * 3 + 32).clamp(80.0, 220.0);
+  return (size * line * 3 + 32).clamp(80.0, 280.0);
 }
 
 /// Dropdown menu row height.

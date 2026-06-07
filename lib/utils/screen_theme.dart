@@ -1,18 +1,18 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focusNexus/models/classes/theme_bundle.dart';
-import 'package:focusNexus/repositories/app_repositories.dart';
+import 'package:focusNexus/providers/app_repositories_provider.dart';
+import 'package:focusNexus/providers/app_settings_provider.dart';
+import 'package:focusNexus/providers/theme_bundle_provider.dart';
 import 'package:focusNexus/widgets/settings_themed_builder.dart';
 
 export 'package:focusNexus/widgets/settings_themed_builder.dart';
 
-/// Legacy async theme read. Prefer [SettingsThemedBuilder] (sync from [AppSettings]).
-/// Do not call from [State.initState]; use [SettingsThemedBuilder] instead.
-Future<ThemeBundle> loadScreenThemeBundle() {
-  final repos = AppRepositories.instance;
-  return repos.theme.loadScreenBundle(prefs: repos.settings.snapshot);
-}
+/// Sync bundle from the current settings snapshot (requires [ProviderScope]).
+ThemeBundle currentThemeBundle(WidgetRef ref) => ref.watch(themeBundleProvider);
 
-/// Sync bundle from the current in-memory settings snapshot.
-ThemeBundle currentThemeBundle() {
-  final repos = AppRepositories.instance;
-  return repos.theme.bundleFromSnapshot(repos.settings.snapshot);
+/// Legacy async theme read. Prefer [SettingsThemedBuilder].
+Future<ThemeBundle> loadScreenThemeBundle(WidgetRef ref) {
+  final repos = ref.read(appRepositoriesProvider);
+  final snap = ref.read(appSettingsProvider).snapshot;
+  return repos.theme.loadScreenBundle(prefs: snap);
 }

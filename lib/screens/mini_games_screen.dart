@@ -1,17 +1,13 @@
 import 'package:flutter/material.dart';
-import '../utils/common_utils.dart';
-import '../utils/screen_theme.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:focusNexus/utils/common_utils.dart';
+import 'package:focusNexus/widgets/settings_themed_builder.dart';
 
-class MiniGamesScreen extends StatefulWidget {
+class MiniGamesScreen extends ConsumerWidget {
   const MiniGamesScreen({super.key});
 
   @override
-  State<MiniGamesScreen> createState() => _MiniGamesScreenState();
-}
-
-class _MiniGamesScreenState extends State<MiniGamesScreen> {
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return SettingsThemedBuilder(
       builder: (context, bundle) {
         return Theme(

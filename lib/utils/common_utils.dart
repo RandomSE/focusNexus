@@ -420,6 +420,25 @@ class CommonUtils {
     );
   }
 
+  /// Scrollable dialog body sized for large / dyslexia text on small screens.
+  static Widget scrollableDialogBody({
+    required BuildContext context,
+    required List<Widget> children,
+    double heightFactor = 0.55,
+  }) {
+    final maxHeight = MediaQuery.sizeOf(context).height * heightFactor;
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: maxHeight),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: children,
+        ),
+      ),
+    );
+  }
+
   static void showBasicAlertDialog(
     BuildContext context,
     String titleText,
