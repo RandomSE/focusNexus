@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:focusNexus/app/app_route.dart';
 import 'package:focusNexus/app/app_routes.dart';
 import 'package:focusNexus/bootstrap/app_bootstrap.dart';
 import 'package:focusNexus/providers/app_settings_provider.dart';
@@ -17,9 +18,9 @@ void main() async {
   final container = ProviderContainer();
   await ensureAppReady(container);
 
-  final initialRoute = AppRoutes.initialFor(
+  final initialRoute = AppRouteGuard.initialFor(
     container.read(appSettingsProvider.notifier).service,
-  );
+  ).path;
 
   runApp(
     UncontrolledProviderScope(

@@ -60,6 +60,7 @@ Future<ProviderContainer> createTestContainer({
 /// Settings + points only (no notification plugin init).
 Future<void> lightTestBootstrap(ProviderContainer container) async {
   container.read(goalNotifierWiringProvider);
+  container.read(achievementTrackingWiringProvider);
   await container.read(appSettingsProvider.notifier).load();
   await container.read(appRepositoriesProvider).points.ensureInitialized();
 }

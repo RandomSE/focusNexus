@@ -4,6 +4,7 @@ import 'package:focusNexus/providers/app_repositories_provider.dart';
 import 'package:focusNexus/providers/app_services_provider.dart';
 import 'package:focusNexus/providers/key_value_storage_provider.dart';
 import 'package:focusNexus/services/ai_chat_service.dart';
+import 'package:focusNexus/services/storage/storage_keys.dart';
 import 'package:focusNexus/utils/notifier.dart';
 
 import '../helpers/in_memory_key_value_storage.dart';
@@ -17,7 +18,7 @@ void main() {
   group('app services providers', () {
     test('goalNotifierWiring binds scoped storage', () async {
       final storage = InMemoryKeyValueStorage(
-        initial: {'aiEncouragement': 'true'},
+        initial: {StorageKeys.aiEncouragement: 'true'},
       );
       final container = await createTestContainer(storage: storage);
       addTearDown(container.dispose);

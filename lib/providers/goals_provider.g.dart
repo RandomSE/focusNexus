@@ -6,7 +6,7 @@ part of 'goals_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$goalsViewHash() => r'3c24a02ed207ef0b5815d004388d5cd2ebe217ea';
+String _$goalsViewHash() => r'2947a5ce587c7cb71155eca5f09d70b887551444';
 
 /// Goals UI state and optimistic mutations (persisted via [GoalsUseCase]).
 ///

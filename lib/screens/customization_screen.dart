@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:focusNexus/app/app_navigation.dart';
+import 'package:focusNexus/app/app_route.dart';
 import 'package:focusNexus/models/classes/theme_bundle.dart';
 import 'package:focusNexus/providers/app_repositories_provider.dart';
 import 'package:focusNexus/providers/app_settings_provider.dart';
@@ -323,7 +325,7 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
         final shouldPop = await _onBackPressed();
         if (!context.mounted) return;
         if (shouldPop) {
-          Navigator.of(context).pushReplacementNamed('dashboard');
+          ref.pushReplacementRoute(context, AppRoute.dashboard);
         }
       },
       child: Theme(

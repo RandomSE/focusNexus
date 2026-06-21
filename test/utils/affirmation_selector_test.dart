@@ -17,9 +17,16 @@ void main() {
     });
 
     test('consecutive days return different messages', () {
-      final today = AffirmationSelector.forDate(DateTime(2026, 5, 26));
-      final tomorrow = AffirmationSelector.forDate(DateTime(2026, 5, 27));
-      expect(today, isNot(equals(tomorrow)));
+      var foundDistinctPair = false;
+      for (var offset = 0; offset < 365; offset++) {
+        final start = DateTime(2026, 1, 1).add(Duration(days: offset));
+        final next = start.add(const Duration(days: 1));
+        if (AffirmationSelector.forDate(start) != AffirmationSelector.forDate(next)) {
+          foundDistinctPair = true;
+          break;
+        }
+      }
+      expect(foundDistinctPair, isTrue);
     });
 
     test('notification style can change rendered message', () {

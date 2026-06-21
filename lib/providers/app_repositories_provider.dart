@@ -8,7 +8,5 @@ part 'app_repositories_provider.g.dart';
 @Riverpod(keepAlive: true)
 AppRepositories appRepositories(Ref ref) {
   final storage = ref.watch(keyValueStorageProvider);
-  final repos = AppRepositories(storage);
-  ref.onDispose(AppRepositories.resetForTesting);
-  return repos;
+  return AppRepositories(storage);
 }

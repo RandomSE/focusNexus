@@ -5,9 +5,11 @@ import 'package:focusNexus/repositories/achievement_counters_repository.dart';
 import 'package:focusNexus/repositories/goals_repository.dart';
 import 'package:focusNexus/repositories/points_repository.dart';
 import 'package:focusNexus/repositories/theme_repository.dart';
+import 'package:focusNexus/repositories/time_window_repeat_repository.dart';
 import 'package:focusNexus/repositories/user_prefs_repository.dart';
 import 'package:focusNexus/services/achievement_streak_service.dart';
 import 'package:focusNexus/services/storage/storage_keys.dart';
+import 'package:intl/intl.dart';
 import 'package:focusNexus/settings/app_settings.dart';
 
 import '../helpers/in_memory_key_value_storage.dart';
@@ -35,6 +37,8 @@ void main() {
         streaks: streaks,
         settings: settings,
         notifications: const NoopGoalNotifications(),
+        repeatSeries: TimeWindowRepeatRepository(storage),
+        deadlineFormat: DateFormat('dd MMMM yyyy HH:mm'),
       );
     });
 
@@ -59,6 +63,33 @@ void main() {
       expect(snapshot.active.single.title, 'Test goal');
     });
 
+    test('planCompleteGoal uses provided now for completedAt timestamp', () async {
+      final anchor = DateTime(2026, 6, 3, 14, 30);
+      final created = await useCase.createGoal(
+        title: 'Frozen clock',
+        category: 'Health',
+        complexity: 'Low',
+        effort: 'Low',
+        motivation: 'Low',
+        time: '5',
+        steps: '1',
+        deadlineHours: 0,
+        anchor: anchor,
+        goalId: 501,
+      );
+
+      final plan = useCase.planCompleteGoal(
+        501,
+        activeSnapshot: [created],
+        completedSnapshot: const [],
+        goalsCompletedTodayBefore: 0,
+        now: anchor,
+      );
+
+      expect(plan, isNotNull);
+      expect(plan!.goal.completedAt, '03 June 2026 14:30');
+    });
+
     test('completeGoal moves goal and awards points', () async {
       await useCase.createGoal(
         title: 'Finish me',
@@ -80,6 +111,7 @@ void main() {
       final snapshot = await useCase.load();
       expect(snapshot.active, isEmpty);
       expect(snapshot.completed.single.goalId, 100);
+      expect(snapshot.completed.single.completedAt, isNotEmpty);
     });
 
     test('completeGoal persists awarded points to storage', () async {

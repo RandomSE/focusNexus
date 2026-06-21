@@ -7,7 +7,7 @@ part of 'customization_preview_provider.dart';
 // **************************************************************************
 
 String _$customizationPreviewHash() =>
-    r'ebfff497769f27ec450aa789d5908d94dfcbac98';
+    r'a105e5a4c5399d3c88235460c63047ac7b17cb2e';
 
 /// See also [CustomizationPreview].
 @ProviderFor(CustomizationPreview)

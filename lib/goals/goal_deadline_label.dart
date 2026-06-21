@@ -6,3 +6,10 @@ String goalDeadlineLabel(String deadline) {
   if (trimmed.isEmpty) return GoalsUseCase.noDeadlineLabel;
   return trimmed;
 }
+
+/// User-facing completion timestamp for completed goal rows and details.
+String goalCompletedLabel(String completedAt) {
+  final trimmed = completedAt.trim();
+  if (trimmed.isEmpty) return 'completion date unknown';
+  return trimmed;
+}

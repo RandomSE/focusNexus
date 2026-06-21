@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:focusNexus/models/classes/achievement_tracking_variables.dart';
 import 'package:focusNexus/providers/app_repositories_provider.dart';
 import 'package:focusNexus/services/achievement_service.dart';
 import 'package:focusNexus/services/ai_chat_service.dart';
@@ -14,6 +15,7 @@ AchievementService achievementService(Ref ref) {
   final repos = ref.watch(appRepositoriesProvider);
   return AchievementService(
     storage: repos.storage,
+    repository: repos.achievements,
     pointsRepository: repos.points,
     soundService: ref.watch(soundServiceProvider),
   );
@@ -35,10 +37,17 @@ void goalNotifierWiring(Ref ref) {
   GoalNotifier.bindStorage(ref.watch(appRepositoriesProvider).storage);
 }
 
+/// Binds [AchievementTrackingVariables] to scoped storage.
+@Riverpod(keepAlive: true)
+void achievementTrackingWiring(Ref ref) {
+  AchievementTrackingVariables.bindStorage(ref.watch(appRepositoriesProvider).storage);
+}
+
 /// Ensures injected app services are constructed for this [ProviderScope].
 @Riverpod(keepAlive: true)
 void appServicesWired(Ref ref) {
   ref.watch(achievementServiceProvider);
   ref.watch(soundServiceProvider);
   ref.watch(goalNotifierWiringProvider);
+  ref.watch(achievementTrackingWiringProvider);
 }

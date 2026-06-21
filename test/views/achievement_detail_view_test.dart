@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:focusNexus/models/classes/achievement.dart';
+import 'package:focusNexus/providers/app_services_provider.dart';
+import 'package:focusNexus/repositories/achievement_repository.dart';
 import 'package:focusNexus/repositories/points_repository.dart';
 import 'package:focusNexus/services/achievement_service.dart';
 import 'package:focusNexus/services/sound_service.dart';
@@ -14,22 +16,25 @@ void main() {
     List<Achievement>? achievements,
   }) async {
     final storage = InMemoryKeyValueStorage();
+    final seeded = achievements ??
+        [
+          const Achievement(
+            id: '1',
+            title: 'Test',
+            reward: '10 points',
+            task: 'Do thing',
+            progress: 100,
+          ),
+        ];
+    await AchievementRepository(storage).saveAll(seeded);
     final service = AchievementService(
       storage: storage,
+      repository: AchievementRepository(storage),
       pointsRepository: PointsRepository(storage),
       soundService: SoundService(storage),
-      cachedAchievements: achievements ??
-          [
-            const Achievement(
-              id: '1',
-              title: 'Test',
-              reward: '10 points',
-              task: 'Do thing',
-              progress: 100,
-            ),
-          ],
     );
     await service.setInitializationPrerequisites();
+    await service.initialize();
     return service;
   }
 
@@ -40,6 +45,9 @@ void main() {
   }) async {
     await tester.pumpWidget(
       ProviderScope(
+        overrides: [
+          achievementServiceProvider.overrideWithValue(service),
+        ],
         child: MaterialApp(
           home: Builder(
             builder: (context) => Scaffold(
@@ -49,13 +57,12 @@ void main() {
                     context,
                     MaterialPageRoute(
                       builder: (_) => AchievementDetailView(
-                        achievement: service.all.first,
+                        achievementId: '1',
                         themeData: ThemeData.light(),
                         primaryColor: Colors.blue,
                         secondaryColor: Colors.white,
                         textStyle: const TextStyle(),
                         buttonStyle: ElevatedButton.styleFrom(),
-                        achievementService: service,
                       ),
                     ),
                   );
@@ -71,6 +78,28 @@ void main() {
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
   }
+
+  testWidgets('shows Complete label for completed achievements', (
+    tester,
+  ) async {
+    final service = await readyService(
+      achievements: [
+        const Achievement(
+          id: '1',
+          title: 'Test',
+          reward: '10 points',
+          task: 'Do thing',
+          progress: 3285,
+          isCompleted: true,
+        ),
+      ],
+    );
+
+    await pumpDetail(tester, service: service, onPop: (_) {});
+
+    expect(find.textContaining('Progress: Complete'), findsOneWidget);
+    expect(find.textContaining('3285'), findsNothing);
+  });
 
   testWidgets('system back pops with refresh after achievement completed', (
     tester,

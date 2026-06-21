@@ -13,4 +13,14 @@ void main() {
     expect(goalDeadlineLabel(formatted), formatted);
     expect(goalDeadlineLabel('  $formatted  '), formatted);
   });
+
+  test('goalCompletedLabel uses unknown label when empty', () {
+    expect(goalCompletedLabel(''), 'completion date unknown');
+    expect(goalCompletedLabel('   '), 'completion date unknown');
+  });
+
+  test('goalCompletedLabel preserves formatted completion time', () {
+    const formatted = '07 June 2026 09:15';
+    expect(goalCompletedLabel(formatted), formatted);
+  });
 }

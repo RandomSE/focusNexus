@@ -6,7 +6,7 @@ part of 'app_repositories_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$appRepositoriesHash() => r'527bbbb0cb3cab1769274cda4f18c8385be3894a';
+String _$appRepositoriesHash() => r'ca7cc51e0a961f2939195dfad2a8d9bd03617556';
 
 /// Shared repositories graph; one instance per [ProviderScope].
 ///

@@ -2,6 +2,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:focusNexus/app/app_navigation.dart';
+import 'package:focusNexus/app/app_route.dart';
 import 'package:focusNexus/providers/app_repositories_provider.dart';
 import 'package:focusNexus/providers/app_settings_provider.dart';
 import 'package:focusNexus/providers/points_balance_provider.dart';
@@ -68,7 +70,7 @@ class DashboardScreen extends ConsumerWidget {
                   CommonUtils.buildCenteredButton(
                     context,
                     'Goals',
-                    () => Navigator.pushNamed(context, 'goals'),
+                    () => ref.pushRoute(context, AppRoute.goals),
                     bundle.textStyle,
                     bundle.secondaryColor,
                     borderColor: bundle.primaryColor,
@@ -77,7 +79,7 @@ class DashboardScreen extends ConsumerWidget {
                   CommonUtils.buildCenteredButton(
                     context,
                     'Settings',
-                    () => Navigator.pushNamed(context, 'settings'),
+                    () => ref.pushRoute(context, AppRoute.settings),
                     bundle.textStyle,
                     bundle.secondaryColor,
                     borderColor: bundle.primaryColor,
@@ -86,7 +88,7 @@ class DashboardScreen extends ConsumerWidget {
                   CommonUtils.buildCenteredButton(
                     context,
                     'Achievements',
-                    () => Navigator.pushNamed(context, 'achievements'),
+                    () => ref.pushRoute(context, AppRoute.achievements),
                     bundle.textStyle,
                     bundle.secondaryColor,
                     borderColor: bundle.primaryColor,
@@ -97,7 +99,7 @@ class DashboardScreen extends ConsumerWidget {
                     rewardType == 'Customization'
                         ? 'Customization'
                         : 'Reward: $rewardType',
-                    () => Navigator.pushNamed(context, 'reward'),
+                    () => ref.pushRoute(context, AppRoute.reward),
                     bundle.textStyle,
                     bundle.secondaryColor,
                     borderColor: bundle.primaryColor,
@@ -106,7 +108,7 @@ class DashboardScreen extends ConsumerWidget {
                   CommonUtils.buildCenteredButton(
                     context,
                     'AI Chat',
-                    () => Navigator.pushNamed(context, 'chat'),
+                    () => ref.pushRoute(context, AppRoute.chat),
                     bundle.textStyle,
                     bundle.secondaryColor,
                     borderColor: bundle.primaryColor,

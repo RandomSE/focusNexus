@@ -3,11 +3,17 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 
+import 'package:focusNexus/goals/goal_achievement_tracking_keys.dart';
+import 'package:focusNexus/goals/goals_time_window_service.dart';
+import 'package:focusNexus/goals/time_window_goal.dart';
+import 'package:focusNexus/models/classes/goal_repeat_series.dart';
 import 'package:focusNexus/models/classes/goal_set.dart';
+import 'package:focusNexus/repositories/time_window_repeat_repository.dart';
 import 'package:focusNexus/models/completed_today_record.dart';
 import 'package:focusNexus/repositories/goals_repository.dart';
 import 'package:focusNexus/repositories/points_repository.dart';
 import 'package:focusNexus/services/achievement_streak_service.dart';
+import 'package:focusNexus/services/storage/storage_keys.dart';
 import 'package:focusNexus/settings/app_settings.dart';
 import 'package:focusNexus/goals/goal_notifications.dart';
 import 'package:focusNexus/goals/goals_mutation_plan.dart';
@@ -21,6 +27,7 @@ class GoalsUseCase {
     required PointsRepository points,
     required AchievementStreakService streaks,
     required AppSettings settings,
+    required TimeWindowRepeatRepository repeatSeries,
     GoalNotifications? notifications,
     DateFormat? deadlineFormat,
   })  : _goals = goals,
@@ -28,6 +35,12 @@ class GoalsUseCase {
         _streaks = streaks,
         _settings = settings,
         _notifications = notifications ?? const GoalNotifierNotifications(),
+        _repeats = repeatSeries,
+        _timeWindow = GoalsTimeWindowService(
+          repeats: repeatSeries,
+          notifications: notifications ?? const GoalNotifierNotifications(),
+          settings: settings,
+        ),
         deadlineFormat = deadlineFormat ?? DateFormat('dd MMMM yyyy HH:mm');
 
   final GoalsRepository _goals;
@@ -35,17 +48,28 @@ class GoalsUseCase {
   final AchievementStreakService _streaks;
   final AppSettings _settings;
   final GoalNotifications _notifications;
+  final TimeWindowRepeatRepository _repeats;
+  final GoalsTimeWindowService _timeWindow;
   final DateFormat deadlineFormat;
 
   static const String noDeadlineLabel = 'no deadline';
 
   Future<GoalsSnapshot> load({DateTime? now}) async {
+    final clock = now ?? DateTime.now();
     var active = await _goals.readActiveGoals();
     final completed = await _goals.readCompletedGoals();
     final goalsCompletedToday = await _readGoalsCompletedTodayCount();
 
     if (!await _goals.areDeadlinesPaused()) {
-      active = await _removeExpiredGoals(active, now: now ?? DateTime.now());
+      active = await _removeExpiredGoals(active, now: clock);
+      active = await _processTimeWindowGoals(active, now: clock);
+    }
+
+    final spawned = await _timeWindow.spawnDueSeriesGoals(active: active, now: clock);
+    if (spawned.isNotEmpty) {
+      active = [...active, ...spawned];
+      await _goals.writeActiveGoals(active);
+      unawaited(_recordGoalsCreated(count: spawned.length));
     }
 
     return GoalsSnapshot(
@@ -95,10 +119,11 @@ class GoalsUseCase {
     );
   }
 
-  Future<void> persistCreatePlan(GoalsCreatePlan plan) async {
+  Future<Set<String>> persistCreatePlan(GoalsCreatePlan plan) async {
     await _goals.writeActiveGoals(plan.activeGoals);
     unawaited(_scheduleNotificationsIfNeeded(plan.goal, plan.deadlineHours));
-    unawaited(_recordGoalsCreated(count: 1));
+    await _recordGoalsCreated(count: 1);
+    return GoalAchievementTrackingKeys.onCreate;
   }
 
   Future<GoalSet> createGoal({
@@ -175,10 +200,10 @@ class GoalsUseCase {
     );
   }
 
-  Future<void> persistBatchCreatePlan(GoalsBatchCreatePlan plan) async {
-    if (plan.newGoals.isEmpty) return;
+  Future<Set<String>> persistBatchCreatePlan(GoalsBatchCreatePlan plan) async {
+    if (plan.newGoals.isEmpty) return const {};
     await _goals.writeActiveGoals(plan.activeGoals);
-    unawaited(_recordGoalsCreated(count: plan.newGoals.length));
+    await _recordGoalsCreated(count: plan.newGoals.length);
 
     if (_settings.notificationsEnabled && !_settings.pauseGoals) {
       unawaited(
@@ -192,6 +217,7 @@ class GoalsUseCase {
         ),
       );
     }
+    return GoalAchievementTrackingKeys.onCreate;
   }
 
   /// Creates many goals with one storage write; schedules reminders in the background.
@@ -216,6 +242,7 @@ class GoalsUseCase {
     List<GoalSet>? activeSnapshot,
     List<GoalSet>? completedSnapshot,
     int? goalsCompletedTodayBefore,
+    DateTime? now,
   }) async {
     final active = activeSnapshot != null
         ? List<GoalSet>.from(activeSnapshot)
@@ -227,6 +254,7 @@ class GoalsUseCase {
     final goal = active[index];
     final maxSteps = goal.steps > 0 ? goal.steps : 1;
     if (goal.stepProgress >= maxSteps) return null;
+    if (!isActionWindowActive(goal, now ?? DateTime.now())) return null;
 
     final updated = goal.copyWith(stepProgress: goal.stepProgress + 1);
     active[index] = updated;
@@ -241,6 +269,7 @@ class GoalsUseCase {
         completedSnapshot:
             completedSnapshot ?? await _goals.readCompletedGoals(),
         goalsCompletedTodayBefore: before,
+        now: now,
       );
       if (plan == null) return null;
       await persistCompletePlan(plan);
@@ -254,12 +283,19 @@ class GoalsUseCase {
     required List<GoalSet> activeSnapshot,
     required List<GoalSet> completedSnapshot,
     required int goalsCompletedTodayBefore,
+    DateTime? now,
   }) {
     final active = List<GoalSet>.from(activeSnapshot);
     final index = active.indexWhere((g) => g.goalId == goalId);
     if (index < 0) return null;
 
-    final goal = active.removeAt(index);
+    final candidate = active[index];
+    final clock = now ?? DateTime.now();
+    if (!isActionWindowActive(candidate, clock)) return null;
+
+    final goal = active.removeAt(index).copyWith(
+      completedAt: deadlineFormat.format(clock),
+    );
     final completed = [...completedSnapshot, goal];
     final todayCount = goalsCompletedTodayBefore + 1;
     final pointsAwarded = GoalPoints.computeDailyCompletionReward(
@@ -281,17 +317,19 @@ class GoalsUseCase {
     );
   }
 
-  Future<void> persistCompletePlan(
+  Future<Set<String>> persistCompletePlan(
     GoalsCompletePlan plan, {
     bool optimisticCacheCredit = false,
-  }) {
-    return _persistCompletePlanInBackground(
+  }) async {
+    final keys = await _persistCompletePlanInBackground(
       plan,
       optimisticCacheCredit: optimisticCacheCredit,
     );
+    await _maybeSpawnRepeatAfterComplete(plan.goal);
+    return keys;
   }
 
-  Future<void> _persistCompletePlanInBackground(
+  Future<Set<String>> _persistCompletePlanInBackground(
     GoalsCompletePlan plan, {
     required bool optimisticCacheCredit,
   }) async {
@@ -305,7 +343,13 @@ class GoalsUseCase {
         optimisticCacheCredit: optimisticCacheCredit,
       ),
     ]);
-    unawaited(_recordGoalCompleted(plan.goal));
+    return _recordGoalCompleted(plan.goal);
+  }
+
+  /// Records create counters after goals were already persisted (time-window flow).
+  Future<Set<String>> recordGoalsCreatedCounters({required int count}) async {
+    await _recordGoalsCreated(count: count);
+    return GoalAchievementTrackingKeys.onCreate;
   }
 
   Future<CompleteGoalResult?> completeGoal(
@@ -313,6 +357,7 @@ class GoalsUseCase {
     List<GoalSet>? activeSnapshot,
     List<GoalSet>? completedSnapshot,
     int? goalsCompletedTodayBefore,
+    DateTime? now,
   }) async {
     final plan = planCompleteGoal(
       goalId,
@@ -321,6 +366,7 @@ class GoalsUseCase {
       goalsCompletedTodayBefore:
           goalsCompletedTodayBefore ??
           await _readGoalsCompletedTodayCount(),
+      now: now,
     );
     if (plan == null) return null;
     await persistCompletePlan(plan);
@@ -350,20 +396,25 @@ class GoalsUseCase {
     await _goals.writeCompletedGoals(completed);
   }
 
-  /// Clears active goals without per-goal notification cancel (then cancels all).
-  Future<void> clearActiveGoals() async {
-    final count = (await _goals.readActiveGoals()).length;
-    if (count == 0) {
+  /// Clears active goals. When [cancelRepeatSeries] is true, also deactivates
+  /// all active repeat schedules (user confirmed on clear-active dialog).
+  Future<void> clearActiveGoals({bool cancelRepeatSeries = false}) async {
+    final active = await _goals.readActiveGoals();
+    if (active.isEmpty) {
       await _notifications.cancelAll();
       await _streaks.setInt('totalGoalsActive', 0);
       return;
     }
 
-    for (var i = 0; i < count; i++) {
-      await _removeActiveWithoutNotificationCancel();
+    for (final goal in active) {
+      await _notifications.cancelForGoal(goal);
     }
-    await _notifications.cancelAll();
+    await _goals.writeActiveGoals(const []);
     await _streaks.setInt('totalGoalsActive', 0);
+
+    if (cancelRepeatSeries) {
+      await _timeWindow.deactivateAllActiveSeries();
+    }
   }
 
   Future<void> clearCompletedGoals() async {
@@ -460,6 +511,7 @@ class GoalsUseCase {
     GoalSet goal,
     int deadlineHours,
   ) async {
+    if (isTimeWindowGoal(goal)) return;
     if (!_settings.notificationsEnabled ||
         deadlineHours <= 0 ||
         _settings.pauseGoals) {
@@ -497,25 +549,112 @@ class GoalsUseCase {
   Future<void> _recordGoalsCreated({required int count}) async {
     if (count <= 0) return;
     await Future.wait([
-      _streaks.incrementBy('totalGoalsCreated', count),
-      _streaks.incrementBy('totalGoalsActive', count),
+      _streaks.incrementBy(StorageKeys.totalGoalsCreated, count),
+      _streaks.incrementBy(StorageKeys.totalGoalsActive, count),
     ]);
   }
 
-  Future<void> _recordGoalCompleted(GoalSet goal) async {
+  Future<Set<String>> _recordGoalCompleted(GoalSet goal) async {
     await Future.wait([
-      _streaks.decrement('totalGoalsActive'),
-      _streaks.increment('totalGoalsCompleted'),
+      _streaks.decrement(StorageKeys.totalGoalsActive),
+      _streaks.increment(StorageKeys.totalGoalsCompleted),
     ]);
     await _streaks.checkOrAddDate();
     await _streaks.updateCategoryCompletionStats(goal.category);
     await _streaks.updateGoalAchievementStats(goal);
+    return GoalAchievementTrackingKeys.forGoalCompletion(goal, DateTime.now());
   }
 
   /// One-time backfill of per-category counters from stored completed goals.
   Future<void> backfillCategoryAchievementStats() async {
     final completed = await _goals.readCompletedGoals();
     await _streaks.backfillCategoryStatsFromGoals(completed);
+  }
+
+  bool activeGoalsIncludeRepeats(List<GoalSet> active) =>
+      active.any((g) => g.repeatSeriesId != 0);
+
+  Future<List<GoalRepeatSeries>> readActiveRepeatSeries() =>
+      _timeWindow.readActiveSeries();
+
+  Future<void> deactivateRepeatSeries(int seriesId) =>
+      _timeWindow.deactivateSeries(seriesId);
+
+  Future<void> deactivateAllRepeatingSchedules() =>
+      _timeWindow.deactivateAllActiveSeries();
+
+  Future<GoalSet> createTimeWindowGoal({
+    required CreateTimeWindowGoalInput input,
+    required DateTime now,
+    List<GoalSet>? activeSnapshot,
+  }) async {
+    final active = activeSnapshot ?? await _goals.readActiveGoals();
+    final result = await _timeWindow.createGoal(
+      input: input,
+      now: now,
+      activeSnapshot: active,
+    );
+    final updated = [...active, result.goal];
+    await _goals.writeActiveGoals(updated);
+    await _recordGoalsCreated(count: 1);
+    return result.goal;
+  }
+
+  Future<List<GoalSet>> createTimeWindowGoals({
+    required List<CreateTimeWindowGoalInput> inputs,
+    required DateTime now,
+    List<GoalSet>? activeSnapshot,
+  }) async {
+    if (inputs.isEmpty) return const [];
+    var active = activeSnapshot ?? await _goals.readActiveGoals();
+    final created = <GoalSet>[];
+    for (final input in inputs) {
+      final result = await _timeWindow.createGoal(
+        input: input,
+        now: now,
+        activeSnapshot: active,
+      );
+      created.add(result.goal);
+      active = [...active, result.goal];
+    }
+    await _goals.writeActiveGoals(active);
+    await _recordGoalsCreated(count: created.length);
+    return created;
+  }
+
+  Future<List<GoalSet>> _processTimeWindowGoals(
+    List<GoalSet> active, {
+    required DateTime now,
+  }) async {
+    final result = await _timeWindow.expireTimeWindowGoals(
+      active: active,
+      now: now,
+      onExpire: (goal) => _streaks.decrement('totalGoalsActive'),
+      spawnNext: (series, expired) => _timeWindow.spawnNextFromSeries(
+        series: series,
+        after: parseGoalDateTime(expired.actionWindowEnd) ?? now,
+        now: now,
+      ),
+    );
+    if (result.expired.isEmpty) return active;
+    await _goals.writeActiveGoals(result.kept);
+    return result.kept;
+  }
+
+  Future<void> _maybeSpawnRepeatAfterComplete(GoalSet completed) async {
+    if (completed.repeatSeriesId == 0) return;
+    final series = await _repeats.readById(completed.repeatSeriesId);
+    if (series == null || !series.isActive) return;
+    final now = DateTime.now();
+    final next = await _timeWindow.spawnNextFromSeries(
+      series: series,
+      after: parseGoalDateTime(completed.actionWindowEnd) ?? now,
+      now: now,
+    );
+    if (next == null) return;
+    final active = await _goals.readActiveGoals();
+    await _goals.writeActiveGoals([...active, next]);
+    unawaited(_recordGoalsCreated(count: 1));
   }
 }
 
