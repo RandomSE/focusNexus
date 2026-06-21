@@ -1,21 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:focusNexus/app/app_navigation.dart';
+import 'package:focusNexus/app/app_route.dart';
 import 'package:focusNexus/progressive_visuals/visual_theme_id.dart';
 import 'package:focusNexus/utils/screen_theme.dart';
 
 /// Entry point for progressive visuals: choose a metaphor, then open its section.
-class ProgressiveVisualScreen extends StatelessWidget {
+class ProgressiveVisualScreen extends ConsumerWidget {
   const ProgressiveVisualScreen({super.key});
 
-  void _openSection(BuildContext context, VisualThemeId id) {
-    Navigator.pushNamed(
-      context,
-      'progressive_visual_section',
-      arguments: id,
-    );
+  void _openSection(BuildContext context, WidgetRef ref, VisualThemeId id) {
+    ref.pushRoute(context, ProgressiveVisualSectionRoute(id));
   }
 
    @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return SettingsThemedBuilder(
       builder: (context, bundle) {
         return Theme(
@@ -50,7 +49,7 @@ class ProgressiveVisualScreen extends StatelessWidget {
                       ),
                     ),
                     trailing: Icon(Icons.chevron_right, color: bundle.primaryColor),
-                    onTap: () => _openSection(context, id),
+                    onTap: () => _openSection(context, ref, id),
                   ),
                 );
               },

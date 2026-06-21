@@ -1,38 +1,52 @@
 // lib/services/achievement_service.dart
 import 'dart:convert';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:focusNexus/repositories/achievement_repository.dart';
 import 'package:focusNexus/repositories/points_repository.dart';
 import 'package:focusNexus/services/achievement_progress.dart';
 import 'package:focusNexus/services/sound_service.dart';
 import 'package:focusNexus/services/storage/key_value_storage.dart';
 import '../models/classes/achievement.dart';
-import '../models/classes/achievement_tracking_variables.dart';
+import 'package:focusNexus/models/achievement_tracking_snapshot.dart';
 import 'package:focusNexus/goals/goal_categories.dart';
 import 'package:focusNexus/services/storage/storage_keys.dart';
-import 'package:focusNexus/views/achievement_detail_view.dart';
-
 class AchievementService {
   AchievementService({
     required KeyValueStorage storage,
+    AchievementRepository? repository,
     PointsRepository? pointsRepository,
     SoundService? soundService,
     List<Achievement>? cachedAchievements,
   })  : _storage = storage,
+        _repository = repository ?? AchievementRepository(storage),
         _pointsRepository = pointsRepository,
         _soundService = soundService ?? SoundService(storage),
         _cachedAchievements = List.of(cachedAchievements ?? []);
 
-  static const _key = 'achievements';
   static const _numOfAchievements = 105;
 
   final KeyValueStorage _storage;
+  final AchievementRepository _repository;
   final PointsRepository? _pointsRepository;
   final SoundService _soundService;
 
   List<Achievement> _cachedAchievements;
+  bool _initialized = false;
+  Map<String, List<String>> _achievementIdsByVariable = {};
+
+  /// Test-only: count of [updateProgress] invocations.
+  @visibleForTesting
+  int updateProgressInvocationCount = 0;
+
   List<Achievement> get all => List.unmodifiable(_cachedAchievements);
 
+  bool get isInitialized => _initialized;
+
+  @visibleForTesting
+  void resetInitializedForTesting() {
+    _initialized = false;
+  }
   late List<int> achievementRepetitions;
   late Map<List<int>, String> achievementVariableMap;
 
@@ -47,36 +61,135 @@ class AchievementService {
   List<int> weeklyStreakRepetitions = [2, 4, 8, 12, 16, 20];
   List<int> categoryTripletsRepetitions = [3, 3, 3, 3, 3];
 
-  /// Initialize cache from storage.
+  /// Initialize cache from storage (idempotent — safe to call once at startup).
   Future<void> initialize() async {
+    if (_initialized) return;
     await setInitializationPrerequisites();
-    final jsonStr = await _storage.read(key: _key);
-    if (jsonStr == null || jsonStr == '') {
+    _buildAchievementIdsByVariable();
+    final stored = await _repository.loadAll();
+    if (stored == null) {
       debugPrint('No achievements. creating');
       _cachedAchievements = [];
       await initializeAchievements();
     } else {
       debugPrint('Achievements exist.');
-      final List<dynamic> decoded = jsonDecode(jsonStr);
-      _cachedAchievements = decoded.map((e) => Achievement.fromJson(e)).toList();
+      _cachedAchievements = stored;
       await _ensureCategoryAchievements();
     }
-    await AchievementTrackingVariables().load();
+    await _sanitizeStoredProgress();
+    _initialized = true;
   }
 
-  /// Recomputes all achievement progress from tracking variables (expensive).
+  /// Recomputes all achievement progress from tracking variables (migration/tests only).
   Future<void> recomputeAllProgress() async {
+    await _syncTrackingVariablesFromStorage();
     for (var i = 1; i <= _numOfAchievements; i++) {
       await updateProgress(i.toString());
     }
   }
 
-  Future<void> _saveToStorage() async {
-    final encoded =
-        jsonEncode(_cachedAchievements.map((a) => a.toJson()).toList());
-    await _storage.write(key: _key, value: encoded);
+  /// Updates progress only for achievements tied to the given tracking keys.
+  ///
+  /// Returns achievements that newly reached 100% (completable, not yet claimed).
+  Future<List<Achievement>> updateProgressForTrackingKeys(
+    Set<String> trackingKeys,
+  ) async {
+    if (!_initialized) {
+      await initialize();
+    }
+    final ids = <String>{};
+    for (final key in trackingKeys) {
+      final mapped = _achievementIdsByVariable[key];
+      if (mapped != null) ids.addAll(mapped);
+    }
+    final newlyReady = <Achievement>[];
+    for (final id in ids) {
+      final ready = await updateProgress(id);
+      if (ready != null) newlyReady.add(ready);
+    }
+    return newlyReady;
   }
 
+  void _buildAchievementIdsByVariable() {
+    final reverse = <String, List<String>>{};
+    for (final entry in achievementVariableMap.entries) {
+      for (final achievementId in entry.key) {
+        final id = achievementId.toString();
+        final variable = entry.value;
+        reverse.putIfAbsent(variable, () => []).add(id);
+      }
+    }
+    for (final list in reverse.values) {
+      list.sort((a, b) => int.parse(a).compareTo(int.parse(b)));
+    }
+    _achievementIdsByVariable = reverse;
+  }
+
+  Future<void> _sanitizeStoredProgress() async {
+    var changed = false;
+    for (var i = 0; i < _cachedAchievements.length; i++) {
+      final current = _cachedAchievements[i];
+      final display = AchievementProgress.displayPercent(
+        progress: current.progress,
+        isCompleted: current.isCompleted,
+      );
+      if (display == current.progress) continue;
+      _cachedAchievements[i] = current.copyWith(progress: display);
+      changed = true;
+    }
+    if (changed) await _saveToStorage();
+  }
+  /// Mirrors scalar counters into the achievement tracking blob (same [KeyValueStorage]).
+  Future<void> _syncTrackingVariablesFromStorage() async {
+    Future<int> readInt(String key) async {
+      final raw = await _storage.read(key: key);
+      return int.tryParse(raw ?? '') ?? 0;
+    }
+
+    Future<String> readString(String key) async =>
+        await _storage.read(key: key) ?? '';
+
+    final snapshot = AchievementTrackingSnapshot(
+      totalGoalsCreated: await readInt(StorageKeys.totalGoalsCreated),
+      totalGoalsActive: await readInt(StorageKeys.totalGoalsActive),
+      totalGoalsCompleted: await readInt(StorageKeys.totalGoalsCompleted),
+      goalsCompletedToday: await readInt(StorageKeys.goalsCompletedToday),
+      goalsCompletedThisWeek: await readInt(StorageKeys.goalsCompletedThisWeek),
+      goalsCompletedThisMonth: await readInt(StorageKeys.goalsCompletedThisMonth),
+      goalsCompletedWithHighPoints:
+          await readInt(StorageKeys.goalsCompletedWithHighPoints),
+      goalsCompletedWithHighComplexity:
+          await readInt(StorageKeys.goalsCompletedWithHighComplexity),
+      goalsCompletedWithHighEffort:
+          await readInt(StorageKeys.goalsCompletedWithHighEffort),
+      goalsCompletedWithHighMotivation:
+          await readInt(StorageKeys.goalsCompletedWithHighMotivation),
+      goalsCompletedWithAllHigh: await readInt(StorageKeys.goalsCompletedWithAllHigh),
+      goalsCompletedWithHighTimeRequirement:
+          await readInt(StorageKeys.goalsCompletedWithHighTimeRequirement),
+      goalsCompletedWithManySteps:
+          await readInt(StorageKeys.goalsCompletedWithManySteps),
+      goalsCompletedEarly: await readInt(StorageKeys.goalsCompletedEarly),
+      datesGoalsCompleted: await readString(StorageKeys.dateGoalsCompleted),
+      lastWeekGoalWasCompleted:
+          await readString(StorageKeys.lastWeekGoalWasCompleted),
+      lastMonthGoalWasCompleted:
+          await readString(StorageKeys.lastMonthGoalWasCompleted),
+      consecutiveDaysWithGoalsCompleted:
+          await readInt(StorageKeys.consecutiveDaysWithGoalsCompleted),
+      consecutiveWeeksWithGoalsCompleted:
+          await readInt(StorageKeys.consecutiveWeeksWithGoalsCompleted),
+    );
+
+    await _storage.write(
+      key: StorageKeys.achievementTrackingData,
+      value: jsonEncode(snapshot.toJson()),
+    );
+  }
+
+  Future<void> _saveToStorage() async {
+    await _repository.saveAll(_cachedAchievements);
+  }
   Future<void> setInitializationPrerequisites() async {
     achievementRepetitions = [
       ...repetitionsCreationAndCompletion,
@@ -101,22 +214,22 @@ class AchievementService {
     ];
 
     achievementVariableMap = {
-      [1, 2, 3]: 'totalGoalsCreated',
-      [4, 5]: 'totalGoalsActive',
-      [6, 7, 8]: 'totalGoalsCompleted',
-      [9, 10, 11]: 'goalsCompletedToday',
-      [12, 13, 14]: 'goalsCompletedThisWeek',
-      [15, 16, 17]: 'goalsCompletedThisMonth',
-      [18, 19, 20, 21, 22, 23, 24, 25, 26]: 'goalsCompletedWithHighPoints',
-      [27, 28, 29, 30, 31, 32, 33, 34, 35]: 'goalsCompletedWithHighComplexity',
-      [36, 37, 38, 39, 40, 41, 42, 43, 44]: 'goalsCompletedWithHighEffort',
-      [45, 46, 47, 48, 49, 50, 51, 52, 53]: 'goalsCompletedWithHighMotivation',
-      [54, 55, 56, 57, 58, 59, 60, 61, 62]: 'goalsCompletedWithHighTimeRequirement',
-      [63, 64, 65, 66, 67, 68, 69, 70, 71]: 'goalsCompletedWithManySteps',
-      [72, 73, 74, 75, 76, 77, 78]: 'goalsCompletedWithAllHigh',
-      [79, 80, 81, 82, 83, 84, 85, 86, 87]: 'goalsCompletedEarly',
-      [88, 89, 90, 91, 92, 93]: 'consecutiveDaysWithGoalsCompleted',
-      [94, 95, 96, 97, 98, 99]: 'consecutiveWeeksWithGoalsCompleted',
+      [1, 2, 3]: StorageKeys.totalGoalsCreated,
+      [4, 5]: StorageKeys.totalGoalsActive,
+      [6, 7, 8]: StorageKeys.totalGoalsCompleted,
+      [9, 10, 11]: StorageKeys.goalsCompletedToday,
+      [12, 13, 14]: StorageKeys.goalsCompletedThisWeek,
+      [15, 16, 17]: StorageKeys.goalsCompletedThisMonth,
+      [18, 19, 20, 21, 22, 23, 24, 25, 26]: StorageKeys.goalsCompletedWithHighPoints,
+      [27, 28, 29, 30, 31, 32, 33, 34, 35]: StorageKeys.goalsCompletedWithHighComplexity,
+      [36, 37, 38, 39, 40, 41, 42, 43, 44]: StorageKeys.goalsCompletedWithHighEffort,
+      [45, 46, 47, 48, 49, 50, 51, 52, 53]: StorageKeys.goalsCompletedWithHighMotivation,
+      [54, 55, 56, 57, 58, 59, 60, 61, 62]: StorageKeys.goalsCompletedWithHighTimeRequirement,
+      [63, 64, 65, 66, 67, 68, 69, 70, 71]: StorageKeys.goalsCompletedWithManySteps,
+      [72, 73, 74, 75, 76, 77, 78]: StorageKeys.goalsCompletedWithAllHigh,
+      [79, 80, 81, 82, 83, 84, 85, 86, 87]: StorageKeys.goalsCompletedEarly,
+      [88, 89, 90, 91, 92, 93]: StorageKeys.consecutiveDaysWithGoalsCompleted,
+      [94, 95, 96, 97, 98, 99]: StorageKeys.consecutiveWeeksWithGoalsCompleted,
       [100]: StorageKeys.categoriesWithAtLeast1Goal,
       [101]: StorageKeys.categoriesWithAtLeast3Goals,
       [102]: StorageKeys.categoriesWithAtLeast5Goals,
@@ -428,65 +541,30 @@ class AchievementService {
   Future<void> markCompleted(String id) async {
     final index = _cachedAchievements.indexWhere((a) => a.id == id);
     if (index != -1 && !_cachedAchievements[index].isCompleted) {
-      final updated = Achievement(
-        id: _cachedAchievements[index].id,
-        title: _cachedAchievements[index].title,
-        reward: _cachedAchievements[index].reward,
-        task: _cachedAchievements[index].task,
+      final updated = _cachedAchievements[index].copyWith(
         dateCompleted: DateTime.now(),
         isCompleted: true,
         isSecret: false,
+        progress: 100,
       );
       _cachedAchievements[index] = updated;
       await _saveToStorage();
     }
   }
 
-  void viewAchievement(
-    String id,
-    ThemeData themeData,
-    Color primaryColor,
-    Color secondaryColor,
-    TextStyle textStyle,
-    ButtonStyle buttonStyle,
-    BuildContext context,
-  ) {
-    final achievement = getById(id);
-    if (achievement == null) {
-      debugPrint('Achievement not found: $id');
-      return;
-    }
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => AchievementDetailView(
-          achievement: achievement,
-          themeData: themeData,
-          primaryColor: primaryColor,
-          secondaryColor: secondaryColor,
-          textStyle: textStyle,
-          buttonStyle: buttonStyle,
-          achievementService: this,
-        ),
-      ),
-    );
-  }
-
-  Future<void> updateProgress(String id) async {
-    try {
-      final index = _cachedAchievements.indexWhere((a) => a.id == id);
+  /// Returns the achievement when it newly becomes completable (reaches 100%).
+  Future<Achievement?> updateProgress(String id) async {
+    updateProgressInvocationCount++;
+    try {      final index = _cachedAchievements.indexWhere((a) => a.id == id);
       if (index == -1) {
         debugPrint('updateProgress: achievement not found. id: $id');
-        return;
+        return null;
       }
-
       final variableName = getVariableForAchievement(id);
       if (variableName == null) {
         debugPrint('No tracking variable found for achievement $id');
-        return;
+        return null;
       }
-
       final repetitionsNeeded = achievementRepetitions[index];
       final currentRepetitions = int.parse(
         await getAchievementTrackingVariable(variableName),
@@ -497,22 +575,21 @@ class AchievementService {
       );
 
       final currentAchievement = _cachedAchievements[index];
+      if (currentAchievement.isCompleted) return null;
+
       final currentProgress = currentAchievement.progress;
       if (AchievementProgress.shouldBlockProgressDecrease(
-        _cachedAchievements[index].progress,
+        currentProgress,
         achievementProgress,
       )) {
         debugPrint('Achievement progress will not decrease here for id: $id.');
-        return;
+        return null;
       }
-      _cachedAchievements[index] = Achievement(
-        id: currentAchievement.id,
-        title: currentAchievement.title,
-        reward: currentAchievement.reward,
-        task: currentAchievement.task,
-        dateCompleted: currentAchievement.dateCompleted,
-        isCompleted: currentAchievement.isCompleted,
-        isSecret: currentAchievement.isSecret,
+
+      final wasCompletable = currentProgress >= 100;
+      final nowCompletable = achievementProgress >= 100;
+
+      _cachedAchievements[index] = currentAchievement.copyWith(
         progress: achievementProgress,
       );
 
@@ -522,11 +599,16 @@ class AchievementService {
           'Achievement successfully saved. title: ${_cachedAchievements[index].title}, progress: ${_cachedAchievements[index].progress}%',
         );
       }
+
+      if (!wasCompletable && nowCompletable) {
+        return _cachedAchievements[index];
+      }
+      return null;
     } catch (e) {
       debugPrint('updateProgress: failed. id: $id, error: $e');
+      return null;
     }
   }
-
   Future<void> removeAchievement(String id) async {
     _cachedAchievements.removeWhere((a) => a.id == id);
     await _saveToStorage();
@@ -540,17 +622,11 @@ class AchievementService {
       debugPrint('This achievement is already completed!');
       return;
     }
-    _cachedAchievements[index] = Achievement(
-      id: currentAchievement.id,
-      title: currentAchievement.title,
-      reward: currentAchievement.reward,
-      task: currentAchievement.task,
-      dateCompleted: currentAchievement.dateCompleted,
+    _cachedAchievements[index] = currentAchievement.copyWith(
+      dateCompleted: DateTime.now(),
       isCompleted: true,
-      isSecret: currentAchievement.isSecret,
-      progress: currentAchievement.progress,
-    );
-    final reward = currentAchievement.reward;
+      progress: 100,
+    );    final reward = currentAchievement.reward;
     if (reward.contains('points')) {
       final pointsToAdd = AchievementProgress.parsePointsFromReward(reward);
       await _addPoints(pointsToAdd);
@@ -571,19 +647,18 @@ class AchievementService {
       await repo.add(pointsToAdd);
       return;
     }
-    final currentPointsString = await _storage.read(key: 'points');
+    final currentPointsString = await _storage.read(key: StorageKeys.points);
     final currentPoints = int.tryParse(currentPointsString ?? '0') ?? 0;
     await _storage.write(
-      key: 'points',
+      key: StorageKeys.points,
       value: (currentPoints + pointsToAdd).toString(),
     );
   }
 
   Future<void> clearAll() async {
     _cachedAchievements = [];
-    await _storage.delete(key: _key);
+    await _repository.clear();
   }
-
   Achievement? getById(String id) {
     try {
       return _cachedAchievements.firstWhere((a) => a.id == id);
@@ -595,9 +670,8 @@ class AchievementService {
 
   Future<String> getAchievementTrackingVariable(String key) async {
     final storedValue = await _storage.read(key: key);
-    if (storedValue == null || storedValue == '') {
-      debugPrint('getAchievementTrackingVariable: no value found for key $key');
-      return '';
+    if (storedValue == null || storedValue.isEmpty) {
+      return '0';
     }
     return storedValue;
   }

@@ -1,131 +1,35 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:focusNexus/progressive_visuals/visual_theme_id.dart';
-import 'package:focusNexus/providers/app_repositories_provider.dart';
-import 'package:focusNexus/screens/achievements_screen.dart';
-import 'package:focusNexus/screens/ai_chat_screen.dart';
-import 'package:focusNexus/screens/auth_start_screen.dart';
-import 'package:focusNexus/screens/customization_screen.dart';
-import 'package:focusNexus/screens/dashboard_screen.dart';
-import 'package:focusNexus/screens/goals_screen.dart';
-import 'package:focusNexus/screens/mini_games_screen.dart';
-import 'package:focusNexus/screens/onboarding_screen.dart';
-import 'package:focusNexus/screens/progressive_visual.dart';
-import 'package:focusNexus/screens/progressive_visual_section.dart';
-import 'package:focusNexus/screens/settings_screen.dart';
-import 'package:focusNexus/services/storage/storage_keys.dart';
+import 'package:focusNexus/app/app_route.dart';
 import 'package:focusNexus/settings/app_settings.dart';
-import 'package:focusNexus/widgets/skeleton_loaders.dart';
 
-/// Named routes for [MaterialApp.routes] (not [MaterialApp.router]).
+export 'package:focusNexus/app/app_navigation.dart';
+export 'package:focusNexus/app/app_route.dart';
+
+/// Back-compat facade for [MaterialApp.routes] wiring and legacy string constants.
 abstract final class AppRoutes {
   AppRoutes._();
 
-  static const auth = 'auth';
-  static const onboard = 'onboard';
-  static const dashboard = 'dashboard';
-  static const settings = 'settings';
-  static const reward = 'reward';
-  static const chat = 'chat';
-  static const achievements = 'achievements';
-  static const goals = 'goals';
-  static const progressiveVisual = 'progressive_visual';
-  static const progressiveVisualSection = 'progressive_visual_section';
+  static const auth = AuthRoute.routeName;
+  static const onboard = OnboardRoute.routeName;
+  static const dashboard = DashboardRoute.routeName;
+  static const settings = SettingsRoute.routeName;
+  static const reward = RewardRoute.routeName;
+  static const chat = ChatRoute.routeName;
+  static const achievements = AchievementsRoute.routeName;
+  static const goals = GoalsRoute.routeName;
+  static const timeWindowHub = TimeWindowHubRoute.routeName;
+  static const timeWindowManual = TimeWindowManualRoute.routeName;
+  static const timeWindowCalendar = TimeWindowCalendarRoute.routeName;
+  static const timeWindowBulk = TimeWindowBulkCreateRoute.routeName;
+  static const progressiveVisual = ProgressiveVisualRoute.routeName;
+  static const progressiveVisualSection = ProgressiveVisualSectionRoute.routeName;
 
-  static String initialFor(AppSettings settings) {
-    if (settings.onboardingCompleted) return dashboard;
-    if (settings.registrationComplete) return onboard;
-    return auth;
-  }
+  static String initialFor(AppSettings settings) =>
+      AppRouteGuard.initialFor(settings).path;
 
-  static Map<String, WidgetBuilder> builders() {
-    return {
-      auth: (_) => const AuthStartScreen(),
-      onboard: (_) => const OnboardingScreen(),
-      dashboard: (_) => const DashboardScreen(),
-      settings: (_) => const SettingsScreen(),
-      reward: (_) => const _RewardRouteScreen(),
-      chat: (_) => const AiChatScreen(),
-      achievements: (_) => const AchievementScreen(),
-      goals: (_) => const GoalsScreen(),
-      progressiveVisual: (_) => const ProgressiveVisualScreen(),
-      progressiveVisualSection: (context) {
-        final args = ModalRoute.of(context)?.settings.arguments;
-        final themeId =
-            args is VisualThemeId ? args : VisualThemeId.zenGarden;
-        return ProgressiveVisualSectionScreen(themeId: themeId);
-      },
-    };
-  }
+  static Map<String, WidgetBuilder> builders() =>
+      AppRouteRegistry.materialRouteTable();
 
-  static Route<dynamic> onUnknownRoute(RouteSettings settings) {
-    return MaterialPageRoute<void>(
-      builder: (_) => _UnknownRouteScreen(routeName: settings.name),
-    );
-  }
-}
-
-class _RewardRouteScreen extends ConsumerWidget {
-  const _RewardRouteScreen();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final repos = ref.watch(appRepositoriesProvider);
-    return FutureBuilder<String>(
-      future: _loadRewardType(ref),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return ThemedSkeletonScaffold(
-            title: 'Reward',
-            bundle: repos.theme.bundleFromSnapshot(
-              repos.settings.snapshot,
-            ),
-          );
-        }
-
-        switch (snapshot.data) {
-          case 'Mini-games':
-            return const MiniGamesScreen();
-          case 'Progressive visuals':
-            return const ProgressiveVisualScreen();
-          case 'Customization':
-            return const CustomizationScreen();
-          default:
-            return _UnknownRouteScreen(
-              routeName: snapshot.data,
-              message: '${snapshot.data} screen coming soon...',
-            );
-        }
-      },
-    );
-  }
-
-  static Future<String> _loadRewardType(WidgetRef ref) async {
-    final repos = ref.read(appRepositoriesProvider);
-    final reward = await repos.userPrefs.readString(
-      StorageKeys.rewardType,
-    );
-    return reward ?? 'Mini-games';
-  }
-}
-
-class _UnknownRouteScreen extends StatelessWidget {
-  const _UnknownRouteScreen({
-    this.routeName,
-    this.message,
-  });
-
-  final String? routeName;
-  final String? message;
-
-  @override
-  Widget build(BuildContext context) {
-    final title = routeName ?? 'unknown';
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: Center(
-        child: Text(message ?? 'Unknown route: $title'),
-      ),
-    );
-  }
+  static Route<dynamic> onUnknownRoute(RouteSettings settings) =>
+      AppRouteRegistry.onUnknownRoute(settings);
 }

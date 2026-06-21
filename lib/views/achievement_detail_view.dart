@@ -1,33 +1,48 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:focusNexus/models/classes/achievement.dart';
+import 'package:focusNexus/providers/app_services_provider.dart';
 import 'package:focusNexus/providers/screen_ui_providers.dart';
-import 'package:focusNexus/services/achievement_service.dart';
+import 'package:focusNexus/services/achievement_progress.dart';
 import 'package:focusNexus/utils/common_utils.dart';
 
 class AchievementDetailView extends ConsumerWidget {
   const AchievementDetailView({
     super.key,
-    required this.achievement,
+    required this.achievementId,
     required this.themeData,
     required this.primaryColor,
     required this.secondaryColor,
     required this.textStyle,
     required this.buttonStyle,
-    required this.achievementService,
   });
 
-  final Achievement achievement;
+  final String achievementId;
   final ThemeData themeData;
   final Color primaryColor;
   final Color secondaryColor;
   final TextStyle textStyle;
   final ButtonStyle buttonStyle;
-  final AchievementService achievementService;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final achievement = this.achievement;
+    final achievement = ref.watch(achievementServiceProvider).getById(
+          achievementId,
+        );
+    if (achievement == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Achievement')),
+        body: const Center(child: Text('Achievement not found')),
+      );
+    }
+
+    final displayProgress = AchievementProgress.displayPercent(
+      progress: achievement.progress,
+      isCompleted: achievement.isCompleted,
+    );
+    final progressLabel = achievement.isCompleted
+        ? 'Complete'
+        : '${displayProgress.toStringAsFixed(1)}%';
+
     final buttonDisabled = ref.watch(
       achievementDetailDisabledProvider(achievement.id),
     );
@@ -60,10 +75,7 @@ class AchievementDetailView extends ConsumerWidget {
               const SizedBox(height: 8),
               Text('Reward: ${achievement.reward}', style: textStyle),
               const SizedBox(height: 8),
-              Text(
-                'Progress: ${achievement.progress.toStringAsFixed(1)}%',
-                style: textStyle,
-              ),
+              Text('Progress: $progressLabel', style: textStyle),
               const SizedBox(height: 8),
               if (achievement.isCompleted && achievement.dateCompleted != null)
                 Text(
@@ -72,7 +84,7 @@ class AchievementDetailView extends ConsumerWidget {
                 ),
               const Spacer(),
               if (!buttonDisabled &&
-                  achievement.progress >= 100 &&
+                  displayProgress >= 100 &&
                   !achievement.isCompleted) ...[
                 CommonUtils.buildElevatedButton(
                   'Complete Achievement',
@@ -83,14 +95,20 @@ class AchievementDetailView extends ConsumerWidget {
                   10,
                   () async {
                     ref
-                        .read(achievementDetailRefreshProvider(achievement.id).notifier)
+                        .read(
+                          achievementDetailRefreshProvider(achievement.id)
+                              .notifier,
+                        )
                         .markRefresh();
-                    await achievementService.completeAchievement(
-                      achievement.id,
-                    );
+                    await ref
+                        .read(achievementServiceProvider)
+                        .completeAchievement(achievement.id);
                     if (!context.mounted) return;
                     ref
-                        .read(achievementDetailDisabledProvider(achievement.id).notifier)
+                        .read(
+                          achievementDetailDisabledProvider(achievement.id)
+                              .notifier,
+                        )
                         .disable();
                     CommonUtils.showSnackBar(
                       context,

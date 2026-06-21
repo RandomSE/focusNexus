@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:focusNexus/progressive_visuals/garden_engine.dart';
 import 'package:focusNexus/progressive_visuals/garden_op_result.dart';
@@ -12,8 +13,8 @@ import 'package:focusNexus/repositories/app_repositories.dart';
 
 part 'zen_garden_session_provider.g.dart';
 
-/// Zen garden sandbox session (auto-dispose when leaving the screen).
-@riverpod
+/// Zen garden sandbox session; persisted via [GardenRepository].
+@Riverpod(keepAlive: true)
 class ZenGardenSession extends _$ZenGardenSession {
   final SandboxSelectionState selection = SandboxSelectionState();
   late final ProgressiveGardenEngine _engine = ProgressiveGardenEngine(
@@ -21,6 +22,8 @@ class ZenGardenSession extends _$ZenGardenSession {
     mutationProbability: 0.5,
   );
   Timer? _growthTicker;
+  bool _hasLoadedFromDisk = false;
+  Future<void>? _persistQueue;
 
   ProgressiveGardenEngine get engine => _engine;
 
@@ -28,7 +31,18 @@ class ZenGardenSession extends _$ZenGardenSession {
 
   @override
   ZenGardenSessionState build() {
-    ref.onDispose(() => _growthTicker?.cancel());
+    final gardenRepo = ref.read(appRepositoriesProvider).garden;
+    ref.onDispose(() {
+      _growthTicker?.cancel();
+      if (_hasLoadedFromDisk) {
+        final snapshot = state.garden;
+        unawaited(
+          gardenRepo.save(snapshot).catchError((Object e, StackTrace st) {
+            debugPrint('Zen garden flush on dispose failed: $e\n$st');
+          }),
+        );
+      }
+    });
     return ZenGardenSessionState.initial();
   }
 
@@ -42,6 +56,7 @@ class ZenGardenSession extends _$ZenGardenSession {
 
   Future<void> loadGarden() async {
     final garden = await _repos.garden.load();
+    _hasLoadedFromDisk = true;
     state = state.copyWith(garden: garden).bump();
     syncGrowthTicker();
   }
@@ -60,8 +75,16 @@ class ZenGardenSession extends _$ZenGardenSession {
     setGarden(garden.copyWith(pointsBalance: balance));
   }
 
-  Future<void> persist() async {
-    await _repos.garden.save(state.garden);
+  /// Persists [snapshot] (or current garden) in order; skips until [loadGarden] completes.
+  Future<void> persist({GardenState? snapshot}) {
+    if (!_hasLoadedFromDisk) return Future.value();
+    final toSave = snapshot ?? state.garden;
+    _persistQueue = (_persistQueue ?? Future.value()).then((_) async {
+      await _repos.garden.save(toSave);
+    }).catchError((Object e, StackTrace st) {
+      debugPrint('Zen garden persist failed: $e\n$st');
+    });
+    return _persistQueue!;
   }
 
   void setGarden(GardenState garden) {
@@ -74,7 +97,7 @@ class ZenGardenSession extends _$ZenGardenSession {
     if (!result.isSuccess) return null;
     final next = result.state!;
     setGarden(next);
-    unawaited(persist());
+    unawaited(persist(snapshot: next));
     return next;
   }
 

@@ -1,4 +1,6 @@
 /// Canonical secure-storage keys (single source of truth).
+///
+/// All persisted keys in production and tests must reference this module.
 abstract final class StorageKeys {
   // Goals
   static const activeGoals = 'activeGoals';
@@ -9,6 +11,7 @@ abstract final class StorageKeys {
   // Templates
   static const userTemplates = 'userTemplates';
   static const templateGroups = 'templateGroups';
+  static const timeWindowRepeatSeries = 'timeWindowRepeatSeries';
 
   // Wallet
   static const points = 'points';

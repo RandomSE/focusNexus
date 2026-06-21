@@ -10,6 +10,8 @@ String _$keyValueStorageHash() => r'e110ff1d09d9c447b1590313745b29172c3069c4';
 
 /// Default secure storage; override in tests with [InMemoryKeyValueStorage].
 ///
+/// All persisted app data uses this single secure KV backend today (no bulk/non-secret split).
+///
 /// Copied from [keyValueStorage].
 @ProviderFor(keyValueStorage)
 final keyValueStorageProvider = Provider<KeyValueStorage>.internal(

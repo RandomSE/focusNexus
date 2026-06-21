@@ -41,7 +41,7 @@ void main() {
       final fields = find.byType(TextFormField);
       await tester.enterText(fields.at(0), 'Fresh Goal');
       await tester.enterText(fields.at(1), '10');
-      await tester.drag(find.byType(CustomScrollView), const Offset(0, -700));
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -850));
       await tester.pumpAndSettle();
 
       final addGoal = find.text('Add Goal');

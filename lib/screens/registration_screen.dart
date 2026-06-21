@@ -1,6 +1,8 @@
 // lib/screens/registration_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:focusNexus/app/app_navigation.dart';
+import 'package:focusNexus/app/app_route.dart';
 import 'package:focusNexus/providers/app_settings_provider.dart';
 import 'package:focusNexus/providers/registration_form_provider.dart';
 import 'package:focusNexus/utils/common_utils.dart';
@@ -39,7 +41,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
       rewardType: form.rewardType!,
     );
     if (!mounted) return;
-    Navigator.pushReplacementNamed(context, 'onboard');
+    ref.pushReplacementRoute(context, AppRoute.onboard);
   }
 
   @override

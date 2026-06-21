@@ -1,37 +1,43 @@
 // lib/services/achievement_tracking_service.dart
 import 'dart:convert';
 import 'package:flutter/cupertino.dart';
-import 'package:focusNexus/services/storage/flutter_secure_key_value_storage.dart';
 import 'package:focusNexus/services/storage/key_value_storage.dart';
+import 'package:focusNexus/services/storage/storage_keys.dart';
 import 'package:focusNexus/utils/achievement_tracking_codec.dart';
 
 /// Global tracking service for goal-related achievement progress.
 class AchievementTrackingVariables {
-  /// singleton setup
-  static final AchievementTrackingVariables _instance =
-      AchievementTrackingVariables._internal();
-  static AchievementTrackingVariables? _testOverride;
+  AchievementTrackingVariables._(this._storage);
 
-  factory AchievementTrackingVariables() => _testOverride ?? _instance;
-
-  AchievementTrackingVariables._internal({KeyValueStorage? storage})
-      : _storage = storage ?? const FlutterSecureKeyValueStorage();
-
-  /// Test-only constructor with injected storage.
+  /// Test-only: direct instance with injected storage (bypasses factory routing).
   AchievementTrackingVariables.test(KeyValueStorage storage) : _storage = storage;
 
-  /// Test-only: route [AchievementTrackingVariables()] to [instance].
-  static void useTestInstance(AchievementTrackingVariables instance) {
-    _testOverride = instance;
+  static KeyValueStorage? _boundStorage;
+  static AchievementTrackingVariables? _singleton;
+
+  factory AchievementTrackingVariables() {
+    final storage = _boundStorage;
+    if (storage == null) {
+      throw StateError(
+        'AchievementTrackingVariables storage not bound. '
+        'Read achievementTrackingWiringProvider before use.',
+      );
+    }
+    return _singleton ??= AchievementTrackingVariables._(storage);
   }
 
-  /// Test-only: restore production singleton.
-  static void resetTestInstance() {
-    _testOverride = null;
+  /// Called once per [ProviderScope] via [achievementTrackingWiringProvider].
+  static void bindStorage(KeyValueStorage storage) {
+    _boundStorage = storage;
+    _singleton = AchievementTrackingVariables._(storage);
   }
 
-  /// secure storage
-  static const _key = 'achievementTrackingData';
+  /// Test-only: restore defaults between tests.
+  static void resetForTesting() {
+    _boundStorage = null;
+    _singleton = null;
+  }
+
   final KeyValueStorage _storage;
 
   /// tracked variables
@@ -57,10 +63,13 @@ class AchievementTrackingVariables {
 
   /// Ensures tracking variables are initialized once on app startup.
   Future<void> initializeIfNeeded() async {
-    final existing = await _storage.read(key: _key);
+    final existing = await _storage.read(key: StorageKeys.achievementTrackingData);
     if (existing == null) {
       await reset(); // creates and saves default values
-      await _storage.write(key: _key, value: jsonEncode(_toJson()));
+      await _storage.write(
+        key: StorageKeys.achievementTrackingData,
+        value: jsonEncode(_toJson()),
+      );
       debugPrint('Achievement tracking initialized with default values.');
     } else {
       await load(); // loads existing values
@@ -70,7 +79,7 @@ class AchievementTrackingVariables {
 
   /// load existing data
   Future<void> load() async {
-    final jsonStr = await _storage.read(key: _key);
+    final jsonStr = await _storage.read(key: StorageKeys.achievementTrackingData);
     if (jsonStr == null) return;
     try {
       final Map<String, dynamic> data = jsonDecode(jsonStr);
@@ -84,7 +93,7 @@ class AchievementTrackingVariables {
   /// save current data
   Future<void> save() async {
     final encoded = jsonEncode(_toJson());
-    await _storage.write(key: _key, value: encoded);
+    await _storage.write(key: StorageKeys.achievementTrackingData, value: encoded);
   }
 
   /// reset all current data

@@ -1,6 +1,5 @@
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:focusNexus/services/storage/flutter_secure_key_value_storage.dart';
 import 'package:focusNexus/services/storage/key_value_storage.dart';
 import 'package:focusNexus/services/storage/storage_keys.dart';
 import 'package:focusNexus/utils/sound_volume.dart';
@@ -14,9 +13,6 @@ class SoundService {
   double? _cachedVolume;
 
   AudioPlayer get _effectivePlayer => _player ??= AudioPlayer();
-
-  /// Test-only: builds with default secure storage.
-  factory SoundService.testing() => SoundService(const FlutterSecureKeyValueStorage());
 
   @visibleForTesting
   void clearPlaybackCacheForTesting() {

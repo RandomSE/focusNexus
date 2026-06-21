@@ -15,8 +15,13 @@ Map<String, dynamic> _$$GoalSetImplToJson(_$GoalSetImpl instance) =>
       'motivation': instance.motivation,
       'time': instance.time,
       'Deadline': instance.deadline,
+      'CompletedAt': instance.completedAt,
       'steps': instance.steps,
       'points': instance.points,
       'stepProgress': instance.stepProgress,
       'Id': instance.goalId,
+      'goalKind': instance.goalKind,
+      'ActionWindowStart': instance.actionWindowStart,
+      'ActionWindowEnd': instance.actionWindowEnd,
+      'repeatSeriesId': instance.repeatSeriesId,
     };

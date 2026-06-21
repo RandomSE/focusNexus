@@ -57,6 +57,20 @@ class TextUtils {
     }
   }
 
+  static String buildActionWindowReminderMessage(
+    String goalName,
+    int goalId,
+    String notificationStyle,
+    DateTime when, {
+    required bool isStart,
+  }) {
+    final formatted = _format(when);
+    if (isStart) {
+      return 'Time-window goal "$goalName" (Id: $goalId) is open now until $formatted.';
+    }
+    return 'Time-window goal "$goalName" (Id: $goalId) closes in about an hour ($formatted).';
+  }
+
   static String buildFollowUpReminderMessage(
     String goalName,
     int goalId,

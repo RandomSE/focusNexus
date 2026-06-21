@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focusNexus/models/classes/theme_bundle.dart';
+import 'package:focusNexus/app/app_navigation.dart';
+import 'package:focusNexus/app/app_route.dart';
 import 'package:focusNexus/providers/app_settings_provider.dart';
 import 'package:focusNexus/providers/screen_ui_providers.dart';
 import 'package:focusNexus/providers/theme_bundle_provider.dart';
@@ -97,7 +99,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     await settings.setOnboardingCompleted(true);
     if (!mounted) return;
-    Navigator.pushReplacementNamed(context, 'dashboard');
+    ref.pushReplacementRoute(context, AppRoute.dashboard);
   }
 
   @override

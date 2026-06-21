@@ -7,7 +7,7 @@ part of 'app_services_provider.dart';
 // **************************************************************************
 
 String _$achievementServiceHash() =>
-    r'219f817556d1b8827c4bc9018dbabbb0f3d3a579';
+    r'30d493fd896a6ec7385ec4da0bb6b84745a088eb';
 
 /// Achievement facade with injected storage and points.
 ///
@@ -86,7 +86,28 @@ final goalNotifierWiringProvider = Provider<void>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef GoalNotifierWiringRef = ProviderRef<void>;
-String _$appServicesWiredHash() => r'7c0d0b6befe1da1f230a29eb9ae75aece1eb4668';
+String _$achievementTrackingWiringHash() =>
+    r'ddf95e8fcbd6c8289b1faac14fafdb7ea96fb166';
+
+/// Binds [AchievementTrackingVariables] to scoped storage.
+///
+/// Copied from [achievementTrackingWiring].
+@ProviderFor(achievementTrackingWiring)
+final achievementTrackingWiringProvider = Provider<void>.internal(
+  achievementTrackingWiring,
+  name: r'achievementTrackingWiringProvider',
+  debugGetCreateSourceHash:
+      const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$achievementTrackingWiringHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef AchievementTrackingWiringRef = ProviderRef<void>;
+String _$appServicesWiredHash() => r'fd6e64f85497d29132a7b026e2dc463e410c1305';
 
 /// Ensures injected app services are constructed for this [ProviderScope].
 ///

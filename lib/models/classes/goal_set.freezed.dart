@@ -25,11 +25,19 @@ mixin _$GoalSet {
   int get time => throw _privateConstructorUsedError;
   @JsonKey(name: 'Deadline')
   String get deadline => throw _privateConstructorUsedError;
+  @JsonKey(name: 'CompletedAt')
+  String get completedAt => throw _privateConstructorUsedError;
   int get steps => throw _privateConstructorUsedError;
   int get points => throw _privateConstructorUsedError;
   int get stepProgress => throw _privateConstructorUsedError;
   @JsonKey(name: 'Id')
   int get goalId => throw _privateConstructorUsedError;
+  String get goalKind => throw _privateConstructorUsedError;
+  @JsonKey(name: 'ActionWindowStart')
+  String get actionWindowStart => throw _privateConstructorUsedError;
+  @JsonKey(name: 'ActionWindowEnd')
+  String get actionWindowEnd => throw _privateConstructorUsedError;
+  int get repeatSeriesId => throw _privateConstructorUsedError;
 
   /// Serializes this GoalSet to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -53,10 +61,15 @@ abstract class $GoalSetCopyWith<$Res> {
     String motivation,
     int time,
     @JsonKey(name: 'Deadline') String deadline,
+    @JsonKey(name: 'CompletedAt') String completedAt,
     int steps,
     int points,
     int stepProgress,
     @JsonKey(name: 'Id') int goalId,
+    String goalKind,
+    @JsonKey(name: 'ActionWindowStart') String actionWindowStart,
+    @JsonKey(name: 'ActionWindowEnd') String actionWindowEnd,
+    int repeatSeriesId,
   });
 }
 
@@ -82,10 +95,15 @@ class _$GoalSetCopyWithImpl<$Res, $Val extends GoalSet>
     Object? motivation = null,
     Object? time = null,
     Object? deadline = null,
+    Object? completedAt = null,
     Object? steps = null,
     Object? points = null,
     Object? stepProgress = null,
     Object? goalId = null,
+    Object? goalKind = null,
+    Object? actionWindowStart = null,
+    Object? actionWindowEnd = null,
+    Object? repeatSeriesId = null,
   }) {
     return _then(
       _value.copyWith(
@@ -124,6 +142,11 @@ class _$GoalSetCopyWithImpl<$Res, $Val extends GoalSet>
                     ? _value.deadline
                     : deadline // ignore: cast_nullable_to_non_nullable
                         as String,
+            completedAt:
+                null == completedAt
+                    ? _value.completedAt
+                    : completedAt // ignore: cast_nullable_to_non_nullable
+                        as String,
             steps:
                 null == steps
                     ? _value.steps
@@ -143,6 +166,26 @@ class _$GoalSetCopyWithImpl<$Res, $Val extends GoalSet>
                 null == goalId
                     ? _value.goalId
                     : goalId // ignore: cast_nullable_to_non_nullable
+                        as int,
+            goalKind:
+                null == goalKind
+                    ? _value.goalKind
+                    : goalKind // ignore: cast_nullable_to_non_nullable
+                        as String,
+            actionWindowStart:
+                null == actionWindowStart
+                    ? _value.actionWindowStart
+                    : actionWindowStart // ignore: cast_nullable_to_non_nullable
+                        as String,
+            actionWindowEnd:
+                null == actionWindowEnd
+                    ? _value.actionWindowEnd
+                    : actionWindowEnd // ignore: cast_nullable_to_non_nullable
+                        as String,
+            repeatSeriesId:
+                null == repeatSeriesId
+                    ? _value.repeatSeriesId
+                    : repeatSeriesId // ignore: cast_nullable_to_non_nullable
                         as int,
           )
           as $Val,
@@ -166,10 +209,15 @@ abstract class _$$GoalSetImplCopyWith<$Res> implements $GoalSetCopyWith<$Res> {
     String motivation,
     int time,
     @JsonKey(name: 'Deadline') String deadline,
+    @JsonKey(name: 'CompletedAt') String completedAt,
     int steps,
     int points,
     int stepProgress,
     @JsonKey(name: 'Id') int goalId,
+    String goalKind,
+    @JsonKey(name: 'ActionWindowStart') String actionWindowStart,
+    @JsonKey(name: 'ActionWindowEnd') String actionWindowEnd,
+    int repeatSeriesId,
   });
 }
 
@@ -194,10 +242,15 @@ class __$$GoalSetImplCopyWithImpl<$Res>
     Object? motivation = null,
     Object? time = null,
     Object? deadline = null,
+    Object? completedAt = null,
     Object? steps = null,
     Object? points = null,
     Object? stepProgress = null,
     Object? goalId = null,
+    Object? goalKind = null,
+    Object? actionWindowStart = null,
+    Object? actionWindowEnd = null,
+    Object? repeatSeriesId = null,
   }) {
     return _then(
       _$GoalSetImpl(
@@ -236,6 +289,11 @@ class __$$GoalSetImplCopyWithImpl<$Res>
                 ? _value.deadline
                 : deadline // ignore: cast_nullable_to_non_nullable
                     as String,
+        completedAt:
+            null == completedAt
+                ? _value.completedAt
+                : completedAt // ignore: cast_nullable_to_non_nullable
+                    as String,
         steps:
             null == steps
                 ? _value.steps
@@ -256,6 +314,26 @@ class __$$GoalSetImplCopyWithImpl<$Res>
                 ? _value.goalId
                 : goalId // ignore: cast_nullable_to_non_nullable
                     as int,
+        goalKind:
+            null == goalKind
+                ? _value.goalKind
+                : goalKind // ignore: cast_nullable_to_non_nullable
+                    as String,
+        actionWindowStart:
+            null == actionWindowStart
+                ? _value.actionWindowStart
+                : actionWindowStart // ignore: cast_nullable_to_non_nullable
+                    as String,
+        actionWindowEnd:
+            null == actionWindowEnd
+                ? _value.actionWindowEnd
+                : actionWindowEnd // ignore: cast_nullable_to_non_nullable
+                    as String,
+        repeatSeriesId:
+            null == repeatSeriesId
+                ? _value.repeatSeriesId
+                : repeatSeriesId // ignore: cast_nullable_to_non_nullable
+                    as int,
       ),
     );
   }
@@ -272,10 +350,15 @@ class _$GoalSetImpl extends _GoalSet {
     this.motivation = '',
     this.time = 0,
     @JsonKey(name: 'Deadline') this.deadline = '',
+    @JsonKey(name: 'CompletedAt') this.completedAt = '',
     this.steps = 0,
     this.points = 0,
     this.stepProgress = 0,
     @JsonKey(name: 'Id') this.goalId = 0,
+    this.goalKind = GoalKind.deadline,
+    @JsonKey(name: 'ActionWindowStart') this.actionWindowStart = '',
+    @JsonKey(name: 'ActionWindowEnd') this.actionWindowEnd = '',
+    this.repeatSeriesId = 0,
   }) : super._();
 
   @override
@@ -300,6 +383,9 @@ class _$GoalSetImpl extends _GoalSet {
   @JsonKey(name: 'Deadline')
   final String deadline;
   @override
+  @JsonKey(name: 'CompletedAt')
+  final String completedAt;
+  @override
   @JsonKey()
   final int steps;
   @override
@@ -311,10 +397,22 @@ class _$GoalSetImpl extends _GoalSet {
   @override
   @JsonKey(name: 'Id')
   final int goalId;
+  @override
+  @JsonKey()
+  final String goalKind;
+  @override
+  @JsonKey(name: 'ActionWindowStart')
+  final String actionWindowStart;
+  @override
+  @JsonKey(name: 'ActionWindowEnd')
+  final String actionWindowEnd;
+  @override
+  @JsonKey()
+  final int repeatSeriesId;
 
   @override
   String toString() {
-    return 'GoalSet(title: $title, category: $category, complexity: $complexity, effort: $effort, motivation: $motivation, time: $time, deadline: $deadline, steps: $steps, points: $points, stepProgress: $stepProgress, goalId: $goalId)';
+    return 'GoalSet(title: $title, category: $category, complexity: $complexity, effort: $effort, motivation: $motivation, time: $time, deadline: $deadline, completedAt: $completedAt, steps: $steps, points: $points, stepProgress: $stepProgress, goalId: $goalId, goalKind: $goalKind, actionWindowStart: $actionWindowStart, actionWindowEnd: $actionWindowEnd, repeatSeriesId: $repeatSeriesId)';
   }
 
   @override
@@ -333,11 +431,21 @@ class _$GoalSetImpl extends _GoalSet {
             (identical(other.time, time) || other.time == time) &&
             (identical(other.deadline, deadline) ||
                 other.deadline == deadline) &&
+            (identical(other.completedAt, completedAt) ||
+                other.completedAt == completedAt) &&
             (identical(other.steps, steps) || other.steps == steps) &&
             (identical(other.points, points) || other.points == points) &&
             (identical(other.stepProgress, stepProgress) ||
                 other.stepProgress == stepProgress) &&
-            (identical(other.goalId, goalId) || other.goalId == goalId));
+            (identical(other.goalId, goalId) || other.goalId == goalId) &&
+            (identical(other.goalKind, goalKind) ||
+                other.goalKind == goalKind) &&
+            (identical(other.actionWindowStart, actionWindowStart) ||
+                other.actionWindowStart == actionWindowStart) &&
+            (identical(other.actionWindowEnd, actionWindowEnd) ||
+                other.actionWindowEnd == actionWindowEnd) &&
+            (identical(other.repeatSeriesId, repeatSeriesId) ||
+                other.repeatSeriesId == repeatSeriesId));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -351,10 +459,15 @@ class _$GoalSetImpl extends _GoalSet {
     motivation,
     time,
     deadline,
+    completedAt,
     steps,
     points,
     stepProgress,
     goalId,
+    goalKind,
+    actionWindowStart,
+    actionWindowEnd,
+    repeatSeriesId,
   );
 
   /// Create a copy of GoalSet
@@ -380,10 +493,15 @@ abstract class _GoalSet extends GoalSet {
     final String motivation,
     final int time,
     @JsonKey(name: 'Deadline') final String deadline,
+    @JsonKey(name: 'CompletedAt') final String completedAt,
     final int steps,
     final int points,
     final int stepProgress,
     @JsonKey(name: 'Id') final int goalId,
+    final String goalKind,
+    @JsonKey(name: 'ActionWindowStart') final String actionWindowStart,
+    @JsonKey(name: 'ActionWindowEnd') final String actionWindowEnd,
+    final int repeatSeriesId,
   }) = _$GoalSetImpl;
   const _GoalSet._() : super._();
 
@@ -403,6 +521,9 @@ abstract class _GoalSet extends GoalSet {
   @JsonKey(name: 'Deadline')
   String get deadline;
   @override
+  @JsonKey(name: 'CompletedAt')
+  String get completedAt;
+  @override
   int get steps;
   @override
   int get points;
@@ -411,6 +532,16 @@ abstract class _GoalSet extends GoalSet {
   @override
   @JsonKey(name: 'Id')
   int get goalId;
+  @override
+  String get goalKind;
+  @override
+  @JsonKey(name: 'ActionWindowStart')
+  String get actionWindowStart;
+  @override
+  @JsonKey(name: 'ActionWindowEnd')
+  String get actionWindowEnd;
+  @override
+  int get repeatSeriesId;
 
   /// Create a copy of GoalSet
   /// with the given fields replaced by the non-null parameter values.

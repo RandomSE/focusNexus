@@ -67,4 +67,26 @@ class GoalPoints {
   static int roundUpToNearestFive(double value) {
     return ((value + 4) ~/ 5) * 5;
   }
+
+  /// Time-slot goals: deadline scoring bonus + 1.5× (or 2× for ≤3h windows).
+  static int calculateTimeWindowPoints({
+    required String complexity,
+    required String effort,
+    required String motivation,
+    required String time,
+    required String steps,
+    required Duration windowDuration,
+  }) {
+    final base = calculatePointsFromTemplate(
+      complexity: complexity,
+      effort: effort,
+      motivation: motivation,
+      time: time,
+      steps: steps,
+      // Time-slot goals are inherently deadline-bound; award deadline bonus.
+      deadline: 'slot',
+    );
+    final multiplier = windowDuration <= const Duration(hours: 3) ? 2.0 : 1.5;
+    return roundUpToNearestFive(base * multiplier);
+  }
 }

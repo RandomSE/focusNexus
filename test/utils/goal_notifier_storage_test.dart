@@ -11,7 +11,7 @@ void main() {
 
   test('checkAiEncouragement reads flag from injected storage', () async {
     final memory = InMemoryKeyValueStorage(
-      initial: {'aiEncouragement': 'true'},
+      initial: {StorageKeys.aiEncouragement: 'true'},
     );
     GoalNotifier.bindStorage(memory);
 
@@ -22,7 +22,7 @@ void main() {
 
   test('checkDailyAffirmations reads flag from injected storage', () async {
     final memory = InMemoryKeyValueStorage(
-      initial: {'dailyAffirmations': 'true'},
+      initial: {StorageKeys.dailyAffirmations: 'true'},
     );
     GoalNotifier.bindStorage(memory);
 
@@ -45,7 +45,7 @@ void main() {
     () async {
       GoalNotifier.bindStorage(
         InMemoryKeyValueStorage(
-          initial: {'notificationFrequency': 'No notifications'},
+          initial: {StorageKeys.notificationFrequency: 'No notifications'},
         ),
       );
 
@@ -60,7 +60,7 @@ void main() {
     () async {
       GoalNotifier.bindStorage(
         InMemoryKeyValueStorage(
-          initial: {'notificationFrequency': 'Medium'},
+          initial: {StorageKeys.notificationFrequency: 'Medium'},
         ),
       );
 

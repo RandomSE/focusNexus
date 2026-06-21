@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:focusNexus/app/app_navigation.dart';
+import 'package:focusNexus/app/app_route.dart';
 import 'package:focusNexus/providers/app_settings_provider.dart';
 import 'package:focusNexus/providers/screen_ui_providers.dart';
 import 'package:focusNexus/utils/appearance_transition.dart';
@@ -494,7 +496,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     try {
       await settings.clearAll();
       if (!context.mounted) return;
-      Navigator.pushNamedAndRemoveUntil(context, 'auth', (_) => false);
+      ref.resetToRoute(context, AppRoute.auth);
     } finally {
       if (mounted) {
         ref.read(settingsDeletingAccountProvider.notifier).set(false);
