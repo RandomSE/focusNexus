@@ -63,9 +63,9 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen>
   late final AnimationController _viewportResetAnim;
   bool _centeringViewport = false;
   Future<void>? _gardenLoadFuture;
+  late final ZenGardenSession _session;
 
   ZenGardenSessionState get _ui => ref.watch(zenGardenSessionProvider);
-  ZenGardenSession get _session => ref.read(zenGardenSessionProvider.notifier);
   SandboxSelectionState get _selection => _session.selection;
   ProgressiveGardenEngine get _engine => _session.engine;
   GardenState get _garden => _ui.garden;
@@ -87,10 +87,14 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen>
   bool get _viewportMoved => _ui.viewportMoved;
 
   void _patch(ZenGardenSessionState Function(ZenGardenSessionState) transform) {
+    if (!mounted) return;
     _session.patch(transform);
   }
 
-  void _touch() => _session.touch();
+  void _touch() {
+    if (!mounted) return;
+    _session.touch();
+  }
 
   static const double _pointerSlop = 14.0;
   static const double _plantVisualW = zenPlantVisualWidth;
@@ -105,11 +109,11 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen>
   @override
   void initState() {
     super.initState();
+    _session = ref.read(zenGardenSessionProvider.notifier);
     _viewportResetAnim = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 450),
     );
-    _viewportTransform.addListener(_syncViewportMoved);
     ref.listenManual(pointsBalanceProvider, (previous, next) {
       next.whenData((balance) {
         ref.read(zenGardenSessionProvider.notifier).applyWalletBalance(balance);
@@ -136,9 +140,21 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen>
   }
 
   @override
-  void dispose() {
+  void activate() {
+    super.activate();
+    _viewportTransform.addListener(_syncViewportMoved);
+  }
+
+  @override
+  void deactivate() {
+    _viewportTransform.removeListener(_syncViewportMoved);
     final garden = ref.read(zenGardenSessionProvider).garden;
-    unawaited(ref.read(zenGardenSessionProvider.notifier).persist(snapshot: garden));
+    unawaited(_session.persist(snapshot: garden));
+    super.deactivate();
+  }
+
+  @override
+  void dispose() {
     _viewportTransform.removeListener(_syncViewportMoved);
     _viewportResetAnim.dispose();
     _viewportTransform.dispose();
@@ -146,8 +162,9 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen>
   }
 
   void _syncViewportMoved() {
+    if (!mounted) return;
     final moved = !sandboxViewportIsDefault(_viewportTransform.value);
-    if (moved != _viewportMoved && mounted) {
+    if (moved != _viewportMoved) {
       _session.setViewportMoved(moved);
     }
   }

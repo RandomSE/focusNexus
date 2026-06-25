@@ -14,6 +14,7 @@ class TimeWindowBulkDraftCard extends StatelessWidget {
     required this.duration,
     required this.repeat,
     required this.onEndChanged,
+    required this.onStartChanged,
     required this.onDurationChanged,
     required this.onRepeatChanged,
     this.showWindow = true,
@@ -26,6 +27,7 @@ class TimeWindowBulkDraftCard extends StatelessWidget {
   final Duration duration;
   final RepeatRule repeat;
   final ValueChanged<DateTime> onEndChanged;
+  final ValueChanged<DateTime> onStartChanged;
   final ValueChanged<Duration> onDurationChanged;
   final ValueChanged<RepeatRule> onRepeatChanged;
   final bool showWindow;
@@ -47,8 +49,10 @@ class TimeWindowBulkDraftCard extends StatelessWidget {
               TimeWindowWindowEditor(
                 bundle: bundle,
                 endAt: endAt,
+                startAt: endAt.subtract(duration),
                 duration: duration,
                 onEndChanged: onEndChanged,
+                onStartChanged: onStartChanged,
                 onDurationChanged: onDurationChanged,
               ),
             ],

@@ -1,12 +1,11 @@
 // lib/main.dart
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:focusNexus/app/app_route.dart';
+import 'package:focusNexus/app/app_navigator.dart';
 import 'package:focusNexus/app/app_routes.dart';
 import 'package:focusNexus/bootstrap/app_bootstrap.dart';
+import 'package:focusNexus/goals/goals_notification_navigation.dart';
 import 'package:focusNexus/providers/app_settings_provider.dart';
 import 'package:focusNexus/utils/theme_styles.dart';
 import 'package:focusNexus/widgets/skeleton_loaders.dart';
@@ -29,8 +28,9 @@ void main() async {
     ),
   );
 
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    unawaited(scheduleDeferredStartupWork(container: container));
+  WidgetsBinding.instance.addPostFrameCallback((_) async {
+    await scheduleDeferredStartupWork(container: container);
+    openGoalsFromPendingNotification();
   });
 }
 
@@ -70,6 +70,7 @@ class FocusNexusApp extends ConsumerWidget {
     );
 
     return MaterialApp(
+      navigatorKey: rootNavigatorKey,
       title: 'FocusNexus',
       debugShowCheckedModeBanner: false,
       theme: appTheme.copyWith(

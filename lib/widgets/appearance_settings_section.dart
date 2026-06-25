@@ -60,28 +60,29 @@ class _FontSizeStepper extends StatelessWidget {
       );
     }
 
-    return labeledFormField(
-      label: 'Font Size',
-      textStyle: textStyle,
-      field: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            _fontSizeLabel(currentSize),
-            style: textStyle,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              stepButton('-5', -5),
-              stepButton('-1', -1),
-              stepButton('+1', 1),
-              stepButton('+5', 5),
-            ],
-          ),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Font size',
+          style: textStyle.copyWith(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          _fontSizeLabel(currentSize),
+          style: textStyle,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            stepButton('-5', -5),
+            stepButton('-1', -1),
+            stepButton('+1', 1),
+            stepButton('+5', 5),
+          ],
+        ),
+      ],
     );
   }
 }

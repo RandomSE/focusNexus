@@ -61,14 +61,14 @@ class TextUtils {
     String goalName,
     int goalId,
     String notificationStyle,
-    DateTime when, {
+    DateTime windowEnd, {
     required bool isStart,
   }) {
-    final formatted = _format(when);
+    final formattedEnd = _format(windowEnd);
     if (isStart) {
-      return 'Time-window goal "$goalName" (Id: $goalId) is open now until $formatted.';
+      return 'Time-window goal "$goalName" (Id: $goalId) is open now until $formattedEnd.';
     }
-    return 'Time-window goal "$goalName" (Id: $goalId) closes in about an hour ($formatted).';
+    return 'Time-window goal "$goalName" (Id: $goalId) closes in about an hour (ends $formattedEnd).';
   }
 
   static String buildFollowUpReminderMessage(

@@ -66,13 +66,13 @@ void main() {
       final route = AppRoute.fromRouteSettings(
         RouteSettings(
           name: ProgressiveVisualSectionRoute.routeName,
-          arguments: VisualThemeId.coralReef,
+          arguments: VisualThemeId.zenGarden,
         ),
       );
       expect(route, isA<ProgressiveVisualSectionRoute>());
       expect(
         (route as ProgressiveVisualSectionRoute).themeId,
-        VisualThemeId.coralReef,
+        VisualThemeId.zenGarden,
       );
     });
 
@@ -80,18 +80,18 @@ void main() {
       final route = AppRoute.fromRouteSettings(
         RouteSettings(
           name: ProgressiveVisualSectionRoute.routeName,
-          arguments: 'bonsai',
+          arguments: 'zenGarden',
         ),
       );
       expect(
         (route as ProgressiveVisualSectionRoute).themeId,
-        VisualThemeId.bonsai,
+        VisualThemeId.zenGarden,
       );
     });
 
     test('ProgressiveVisualSectionRoute carries theme in navigationArguments', () {
-      const route = ProgressiveVisualSectionRoute(VisualThemeId.sandGarden);
-      expect(route.navigationArguments, VisualThemeId.sandGarden);
+      const route = ProgressiveVisualSectionRoute(VisualThemeId.zenGarden);
+      expect(route.navigationArguments, VisualThemeId.zenGarden);
     });
   });
 

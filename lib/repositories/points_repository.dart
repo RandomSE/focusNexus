@@ -83,6 +83,12 @@ class PointsRepository {
   @visibleForTesting
   void clearBalanceCacheForTesting() => _cachedBalance = null;
 
+  /// After storage wipe, re-seed wallet and notify listeners.
+  Future<void> resetToDefaultBalance() async {
+    _cachedBalance = null;
+    await _writeBalance(defaultBalance, notify: true);
+  }
+
   /// Deducts [amount] when sufficient; returns new balance or null if insufficient.
   Future<int?> trySpend(int amount) async {
     final current = await readBalance();

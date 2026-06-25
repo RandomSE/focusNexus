@@ -158,18 +158,34 @@ class GoalsTimeWindowService {
     DateTime now,
   ) async {
     if (!_settings.notificationsEnabled || _settings.pauseGoals) return;
-    final reminder = resolveActionWindowReminderTime(
-      start: window.start,
-      end: window.end,
-      now: now,
-      wasStartClamped: window.wasStartClamped,
-    );
-    if (reminder == null) return;
-    await _notifications.scheduleActionWindow(
-      goal: goal,
-      reminderAt: reminder,
-      notificationStyle: _settings.notificationStyle,
-    );
+    final style = _settings.notificationStyle;
+
+    if (window.end.isAfter(now)) {
+      final openAt = window.start.isAfter(now)
+          ? window.start
+          : now.add(const Duration(seconds: 2));
+      if (openAt.isBefore(window.end)) {
+        await _notifications.scheduleActionWindow(
+          goal: goal,
+          reminderAt: openAt,
+          notificationStyle: style,
+          isStartReminder: true,
+        );
+      }
+    }
+
+    if (window.end.difference(window.start) > longWindowReminderThreshold) {
+      final closeReminder =
+          window.end.subtract(longWindowReminderThreshold);
+      if (closeReminder.isAfter(now)) {
+        await _notifications.scheduleActionWindow(
+          goal: goal,
+          reminderAt: closeReminder,
+          notificationStyle: style,
+          isStartReminder: false,
+        );
+      }
+    }
   }
 
   Future<GoalSet?> spawnNextFromSeries({
@@ -231,6 +247,51 @@ class GoalsTimeWindowService {
     final series = await _repeats.readById(seriesId);
     if (series == null) return;
     await _repeats.upsert(series.copyWith(isActive: false));
+  }
+
+  /// Updates repeat schedule and refreshes the active instance window, if any.
+  Future<({GoalRepeatSeries series, GoalSet? updatedGoal})> updateRepeatSeries({
+    required GoalRepeatSeries series,
+    required DateTime windowEndAt,
+    required Duration windowDuration,
+    required RepeatRule repeatRule,
+    required DateTime now,
+    required List<GoalSet> activeGoals,
+  }) async {
+    final updatedSeries = series.copyWith(
+      repeatRule: repeatRule.copyWith(enabled: true),
+      windowDuration: windowDuration,
+      anchorEndAt: formatGoalDateTime(windowEndAt),
+    );
+    await _repeats.upsert(updatedSeries);
+
+    final index =
+        activeGoals.indexWhere((g) => g.repeatSeriesId == series.seriesId);
+    if (index < 0) {
+      return (series: updatedSeries, updatedGoal: null);
+    }
+
+    final goal = activeGoals[index];
+    final window = computeActionWindow(
+      endAt: windowEndAt,
+      duration: windowDuration,
+      now: now,
+    );
+    final updatedGoal = goal.copyWith(
+      actionWindowStart: formatGoalDateTime(window.start),
+      actionWindowEnd: formatGoalDateTime(window.end),
+      points: GoalPoints.calculateTimeWindowPoints(
+        complexity: goal.complexity,
+        effort: goal.effort,
+        motivation: goal.motivation,
+        time: goal.time.toString(),
+        steps: goal.steps.toString(),
+        windowDuration: window.duration,
+      ),
+    );
+    await _notifications.cancelForGoal(goal);
+    await _scheduleActionWindowNotifications(updatedGoal, window, now);
+    return (series: updatedSeries, updatedGoal: updatedGoal);
   }
 
   /// Deactivates all active repeat series (used when user confirms on clear-active).

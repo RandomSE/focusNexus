@@ -32,6 +32,7 @@ class _TimeSlotGoalCreatePanelState extends ConsumerState<TimeSlotGoalCreatePane
   final _title = TextEditingController();
   DateTime _endAt = DateTime.now().add(const Duration(hours: 2));
   Duration _duration = const Duration(hours: 1);
+  DateTime get _startAt => _endAt.subtract(_duration);
   RepeatRule _repeat = RepeatRule.none;
   String _category = 'Health';
   String _complexity = 'Low';
@@ -157,8 +158,12 @@ class _TimeSlotGoalCreatePanelState extends ConsumerState<TimeSlotGoalCreatePane
           TimeWindowWindowEditor(
             bundle: bundle,
             endAt: _endAt,
+            startAt: _startAt,
             duration: _duration,
             onEndChanged: (v) => setState(() => _endAt = v),
+            onStartChanged: (v) => setState(
+              () => _duration = _endAt.difference(v),
+            ),
             onDurationChanged: (v) => setState(() => _duration = v),
           ),
           Padding(

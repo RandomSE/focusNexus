@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'package:focusNexus/goals/goal_deadline_label.dart';
 import 'package:focusNexus/goals/goal_time_window_label.dart';
-import 'package:focusNexus/goals/time_window_points_label.dart';
+import 'package:focusNexus/goals/repeat_rule.dart';
 import 'package:focusNexus/goals/time_window_goal.dart';
 import 'package:focusNexus/models/classes/goal_set.dart';
 import 'package:focusNexus/models/classes/theme_bundle.dart';
@@ -18,6 +17,7 @@ class GoalsGoalListTile extends StatelessWidget {
     required this.onViewDetails,
     required this.onRemove,
     this.highlight = false,
+    this.repeatRule,
   });
 
   final ThemeBundle bundle;
@@ -28,10 +28,10 @@ class GoalsGoalListTile extends StatelessWidget {
   final VoidCallback onViewDetails;
   final VoidCallback onRemove;
   final bool highlight;
+  final RepeatRule? repeatRule;
 
   @override
   Widget build(BuildContext context) {
-    final steps = goal.steps > 0 ? goal.steps : 1;
     final isTimeWindow = isTimeWindowGoal(goal);
     final inWindow = selectedStatusFilter == 'Active' && isTimeWindow
         ? isActionWindowActive(goal, DateTime.now())
@@ -45,7 +45,8 @@ class GoalsGoalListTile extends StatelessWidget {
       color: outsideTimeWindow
           ? bundle.primaryColor.withValues(alpha: 0.45)
           : bundle.primaryColor,
-      fontWeight: activeInWindow ? FontWeight.w700 : bundle.textStyle.fontWeight,
+      fontWeight:
+          activeInWindow ? FontWeight.w700 : bundle.textStyle.fontWeight,
     );
     final subtitleStyle = bundle.textStyle.copyWith(
       fontSize: (bundle.textStyle.fontSize ?? 14) * 0.92,
@@ -54,96 +55,98 @@ class GoalsGoalListTile extends StatelessWidget {
           : bundle.primaryColor.withValues(alpha: 0.88),
     );
 
-    final dateLabel = selectedStatusFilter == 'Completed'
-        ? 'Completed ${goalCompletedLabel(goal.completedAt)}'
-        : isTimeWindow
-        ? goalTimeWindowLabel(goal)
-        : goalDeadlineLabel(goal.deadline);
-    final subtitleLines = <String>[
-      if (isTimeWindow)
-        timeWindowGoalPointsLabel(goal)
-      else
-        '${goal.points} pts · $dateLabel',
-    ];
-    if (isTimeWindow) {
-      subtitleLines.add(dateLabel);
-    }
-    if (isTimeWindow) {
-      subtitleLines.add(outsideTimeWindow ? 'Outside slot' : 'In slot now');
-    }
-    if (goal.repeatSeriesId != 0) {
-      subtitleLines.add('Repeating');
-    }
-    if (selectedStatusFilter == 'Active' && steps > 1) {
-      subtitleLines.add('Step ${goal.stepProgress.clamp(0, steps)}/$steps');
-    }
+    final subtitleLines = goalListSubtitleLines(
+      goal: goal,
+      selectedStatusFilter: selectedStatusFilter,
+      now: DateTime.now(),
+      repeatRule: repeatRule,
+    );
 
     final actionColor = outsideTimeWindow
         ? Colors.black38
         : bundle.primaryColor;
 
-    final tile = ListTile(
-      key: ValueKey('goal-list-$selectedStatusFilter-${goal.goalId}'),
-      dense: true,
-      visualDensity: VisualDensity.compact,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-      titleTextStyle: titleStyle,
-      textColor: titleStyle.color,
-      tileColor: outsideTimeWindow
-          ? Color.alphaBlend(
-              Colors.black.withValues(alpha: 0.14),
-              bundle.secondaryColor,
-            )
-          : activeInWindow
-          ? Color.alphaBlend(
-              bundle.accentColor.withValues(alpha: 0.14),
-              bundle.secondaryColor,
-            )
-          : null,
-      title: Text(
-        goal.title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: titleStyle,
+    final tileColor = outsideTimeWindow
+        ? Color.alphaBlend(
+            Colors.black.withValues(alpha: 0.14),
+            bundle.secondaryColor,
+          )
+        : activeInWindow
+        ? Color.alphaBlend(
+            bundle.accentColor.withValues(alpha: 0.14),
+            bundle.secondaryColor,
+          )
+        : null;
+
+    final content = Material(
+      color: tileColor ?? Colors.transparent,
+      child: InkWell(
+        onTap: onViewDetails,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      goal.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: titleStyle,
+                    ),
+                  ),
+                  if (selectedStatusFilter == 'Active')
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _CompactGoalAction(
+                          tooltip: inWindow
+                              ? 'Add Step Progress'
+                              : 'Outside action window',
+                          icon: Icons.add_circle_outline,
+                          color: actionColor,
+                          onPressed: inWindow ? onIncrementStep : null,
+                        ),
+                        _CompactGoalAction(
+                          tooltip: inWindow
+                              ? 'Complete Goal'
+                              : 'Outside action window',
+                          icon: Icons.add_task,
+                          color: actionColor,
+                          onPressed: inWindow ? onComplete : null,
+                        ),
+                        _CompactGoalAction(
+                          tooltip: 'Remove Goal',
+                          icon: Icons.delete,
+                          color: bundle.primaryColor,
+                          onPressed: onRemove,
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+              if (subtitleLines.isNotEmpty) const SizedBox(height: 4),
+              for (final line in subtitleLines)
+                Text(
+                  line,
+                  style: subtitleStyle,
+                  softWrap: true,
+                ),
+            ],
+          ),
+        ),
       ),
-      subtitle: Text(
-        subtitleLines.join('\n'),
-        style: subtitleStyle,
-        maxLines: 4,
-      ),
-      onTap: onViewDetails,
-      trailing: selectedStatusFilter == 'Active'
-          ? Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _CompactGoalAction(
-                  tooltip: inWindow
-                      ? 'Add Step Progress'
-                      : 'Outside action window',
-                  icon: Icons.add_circle_outline,
-                  color: actionColor,
-                  onPressed: inWindow ? onIncrementStep : null,
-                ),
-                _CompactGoalAction(
-                  tooltip: inWindow
-                      ? 'Complete Goal'
-                      : 'Outside action window',
-                  icon: Icons.add_task,
-                  color: actionColor,
-                  onPressed: inWindow ? onComplete : null,
-                ),
-                _CompactGoalAction(
-                  tooltip: 'Remove Goal',
-                  icon: Icons.delete,
-                  color: bundle.primaryColor,
-                  onPressed: onRemove,
-                ),
-              ],
-            )
-          : null,
     );
 
-    if (selectedStatusFilter != 'Active') return tile;
+    if (selectedStatusFilter != 'Active') {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+        child: content,
+      );
+    }
 
     Color borderColor;
     double borderWidth;
@@ -168,7 +171,7 @@ class GoalsGoalListTile extends StatelessWidget {
           border: Border.all(color: borderColor, width: borderWidth),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: tile,
+        child: content,
       ),
     );
   }

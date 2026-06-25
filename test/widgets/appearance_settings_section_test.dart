@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:focusNexus/models/classes/theme_bundle.dart';
 import 'package:focusNexus/widgets/appearance_settings_section.dart';
+
+import '../helpers/test_provider_scope.dart';
 
 void main() {
   group('clampUserFontSize', () {
@@ -23,5 +26,40 @@ void main() {
       expect(clampUserFontSize(22 + 5), kMaxFontSize);
       expect(clampUserFontSize(kMinFontSize - 1), kMinFontSize);
     });
+  });
+
+  testWidgets('font size label is visible without dyslexia font', (tester) async {
+    final container = await createTestContainer();
+    await lightTestBootstrap(container);
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      testUncontrolledScope(
+        container: container,
+        child: MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                final theme = Theme.of(context);
+                return VisualSettingsPanel(
+                  bundle: ThemeBundle(
+                    themeData: theme,
+                    textStyle: const TextStyle(fontSize: 14),
+                    primaryColor: Colors.black,
+                    secondaryColor: Colors.white,
+                    accentColor: Colors.blue,
+                    buttonStyle: TextButton.styleFrom(),
+                  ),
+                  onAppearanceChange: (apply) async => apply(),
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Font size'), findsOneWidget);
   });
 }

@@ -44,6 +44,7 @@ Future<void> initialize() async {
     initializationSettings,
     onDidReceiveNotificationResponse: (response) {
       handleGoalsNotificationPayload(response.payload);
+      openGoalsFromPendingNotification();
     },
     onDidReceiveBackgroundNotificationResponse: onNotificationTapBackground,
   );

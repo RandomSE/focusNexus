@@ -19,11 +19,14 @@ class ZenGardenSession extends _$ZenGardenSession {
   final SandboxSelectionState selection = SandboxSelectionState();
   late final ProgressiveGardenEngine _engine = ProgressiveGardenEngine(
     transitionRules: zenGardenTransitionRules(),
-    mutationProbability: 0.5,
   );
   Timer? _growthTicker;
   bool _hasLoadedFromDisk = false;
+  bool _notifierDisposed = false;
   Future<void>? _persistQueue;
+
+  /// True after [loadGarden] has completed at least once this session.
+  bool get hasLoadedFromDisk => _hasLoadedFromDisk;
 
   ProgressiveGardenEngine get engine => _engine;
 
@@ -31,8 +34,10 @@ class ZenGardenSession extends _$ZenGardenSession {
 
   @override
   ZenGardenSessionState build() {
+    _notifierDisposed = false;
     final gardenRepo = ref.read(appRepositoriesProvider).garden;
     ref.onDispose(() {
+      _notifierDisposed = true;
       _growthTicker?.cancel();
       if (_hasLoadedFromDisk) {
         final snapshot = state.garden;
@@ -47,15 +52,18 @@ class ZenGardenSession extends _$ZenGardenSession {
   }
 
   void patch(ZenGardenSessionState Function(ZenGardenSessionState current) transform) {
+    if (_notifierDisposed) return;
     state = transform(state).bump();
   }
 
   void touch() {
+    if (_notifierDisposed) return;
     state = state.bump();
   }
 
   Future<void> loadGarden() async {
     final garden = await _repos.garden.load();
+    if (_notifierDisposed) return;
     _hasLoadedFromDisk = true;
     state = state.copyWith(garden: garden).bump();
     syncGrowthTicker();
@@ -88,6 +96,7 @@ class ZenGardenSession extends _$ZenGardenSession {
   }
 
   void setGarden(GardenState garden) {
+    if (_notifierDisposed) return;
     state = state.copyWith(garden: garden).bump();
     syncGrowthTicker();
   }
@@ -113,6 +122,11 @@ class ZenGardenSession extends _$ZenGardenSession {
       return;
     }
     _growthTicker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (_notifierDisposed) {
+        _growthTicker?.cancel();
+        _growthTicker = null;
+        return;
+      }
       final g = state.garden;
       final still = g.items.any(waiting) || g.decor.any(waiting);
       if (!still) {
@@ -124,6 +138,7 @@ class ZenGardenSession extends _$ZenGardenSession {
   }
 
   void setViewportMoved(bool moved) {
+    if (_notifierDisposed) return;
     if (state.viewportMoved == moved) return;
     patch((s) => s.copyWith(viewportMoved: moved));
   }

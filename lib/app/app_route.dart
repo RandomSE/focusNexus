@@ -14,7 +14,6 @@ import 'package:focusNexus/screens/goals/time_window_manual_create_screen.dart';
 import 'package:focusNexus/screens/goals_screen.dart';
 import 'package:focusNexus/screens/mini_games_screen.dart';
 import 'package:focusNexus/screens/onboarding_screen.dart';
-import 'package:focusNexus/screens/progressive_visual.dart';
 import 'package:focusNexus/screens/progressive_visual_section.dart';
 import 'package:focusNexus/screens/settings_screen.dart';
 import 'package:focusNexus/settings/app_settings.dart';
@@ -304,7 +303,9 @@ abstract final class AppRouteRegistry {
       TimeWindowManualRoute() => const TimeWindowManualCreateScreen(),
       TimeWindowCalendarRoute() => const TimeWindowCalendarPlaceholderScreen(),
       TimeWindowBulkCreateRoute() => const TimeWindowBulkCreateWizard(),
-      ProgressiveVisualRoute() => const ProgressiveVisualScreen(),
+      ProgressiveVisualRoute() => const ProgressiveVisualSectionScreen(
+        themeId: VisualThemeId.zenGarden,
+      ),
       ProgressiveVisualSectionRoute(:final themeId) =>
         ProgressiveVisualSectionScreen(themeId: themeId),
       UnknownRoute(:final requestedPath) => UnknownRouteScreen(
@@ -343,7 +344,9 @@ class RewardRouteScreen extends ConsumerWidget {
     final rewardType = ref.watch(appSettingsProvider).snapshot.rewardType;
     return switch (RewardKind.parse(rewardType)) {
       RewardKind.miniGames => const MiniGamesScreen(),
-      RewardKind.progressiveVisuals => const ProgressiveVisualScreen(),
+      RewardKind.progressiveVisuals => const ProgressiveVisualSectionScreen(
+        themeId: VisualThemeId.zenGarden,
+      ),
       RewardKind.customization => const CustomizationScreen(),
     };
   }

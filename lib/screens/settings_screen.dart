@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focusNexus/app/app_navigation.dart';
 import 'package:focusNexus/app/app_route.dart';
+import 'package:focusNexus/providers/app_repositories_provider.dart';
 import 'package:focusNexus/providers/app_settings_provider.dart';
+import 'package:focusNexus/providers/goals_provider.dart';
+import 'package:focusNexus/providers/points_balance_provider.dart';
 import 'package:focusNexus/providers/screen_ui_providers.dart';
+import 'package:focusNexus/providers/zen_garden_session_provider.dart';
 import 'package:focusNexus/utils/appearance_transition.dart';
 import 'package:focusNexus/utils/common_utils.dart';
 import 'package:focusNexus/utils/notifier.dart';
@@ -494,7 +498,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
 
     ref.read(settingsDeletingAccountProvider.notifier).set(true);
     try {
-      await settings.clearAll();
+      final repos = ref.read(appRepositoriesProvider);
+      await repos.wipeAllUserData();
+      await settings.applyDefaultPreferences();
+      ref.invalidate(pointsBalanceProvider);
+      ref.invalidate(goalsViewProvider);
+      ref.invalidate(zenGardenSessionProvider);
       if (!context.mounted) return;
       ref.resetToRoute(context, AppRoute.auth);
     } finally {

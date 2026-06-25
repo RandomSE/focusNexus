@@ -4,6 +4,7 @@ import 'package:focusNexus/goals/time_window_goal.dart';
 import 'package:focusNexus/models/classes/goal_repeat_series.dart';
 import 'package:focusNexus/providers/goals_provider.dart';
 import 'package:focusNexus/providers/theme_bundle_provider.dart';
+import 'package:focusNexus/screens/goals/widgets/edit_repeat_series_dialog.dart';
 import 'package:focusNexus/utils/common_utils.dart';
 
 class ActiveRepeatSeriesSection extends ConsumerStatefulWidget {
@@ -41,6 +42,17 @@ class _ActiveRepeatSeriesSectionState
 
   void _reload() {
     _future = ref.read(goalsProvider.notifier).readActiveRepeatSeries();
+  }
+
+  Future<void> _editSeries(GoalRepeatSeries item) async {
+    final saved = await showEditRepeatSeriesDialog(
+      context: context,
+      ref: ref,
+      series: item,
+    );
+    if (!mounted || !saved) return;
+    setState(_reload);
+    widget.onSeriesChanged?.call();
   }
 
   Future<void> _stopSeries(int seriesId) async {
@@ -138,17 +150,32 @@ class _ActiveRepeatSeriesSectionState
                   child: ListTile(
                     title: Text(item.title, style: bundle.textStyle),
                     subtitle: Text(
-                      summarizeRepeatRule(item.repeatRule),
+                      '${summarizeRepeatRule(item.repeatRule)}\n'
+                      '${repeatSeriesSlotLabel(item)}',
                       style: bundle.textStyle.copyWith(fontSize: 12),
                     ),
-                    trailing: TextButton(
-                      onPressed: () => _stopSeries(item.seriesId),
-                      child: Text(
-                        'Stop repeating',
-                        style: bundle.textStyle.copyWith(
-                          color: bundle.primaryColor,
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextButton(
+                          onPressed: () => _editSeries(item),
+                          child: Text(
+                            'Edit',
+                            style: bundle.textStyle.copyWith(
+                              color: bundle.primaryColor,
+                            ),
+                          ),
                         ),
-                      ),
+                        TextButton(
+                          onPressed: () => _stopSeries(item.seriesId),
+                          child: Text(
+                            'Stop',
+                            style: bundle.textStyle.copyWith(
+                              color: bundle.primaryColor,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 );

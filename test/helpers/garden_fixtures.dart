@@ -8,7 +8,7 @@ GardenState stateAtStage3({String id = 'm'}) {
     items: [
       GardenItem(
         id: id,
-        themeId: VisualThemeId.coralReef,
+        themeId: VisualThemeId.zenGarden,
         stageIndex: 3,
       ),
     ],

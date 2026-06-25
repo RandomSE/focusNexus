@@ -288,6 +288,11 @@ class AppSettings {
 
   Future<void> clearAll() async {
     await _prefs.deleteAll();
+    await applyDefaultPreferences();
+  }
+
+  /// Restores default prefs after [AppRepositories.wipeAllUserData] cleared storage.
+  Future<void> applyDefaultPreferences() async {
     _snapshot = const UserPrefsSnapshot();
     await setUserFontSize(14.0);
     await setUserTheme('light');

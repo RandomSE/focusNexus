@@ -68,14 +68,14 @@ void main() {
         items: [
           GardenItem(
             id: 'plant-a',
-            themeId: VisualThemeId.coralReef,
+            themeId: VisualThemeId.zenGarden,
             stageIndex: 1,
             positionX: 0.1,
             positionY: 0.9,
           ),
           GardenItem(
             id: 'plant-b',
-            themeId: VisualThemeId.bonsai,
+            themeId: VisualThemeId.zenGarden,
             stageIndex: 4,
             mutation: MutationKind.invertedColors,
             mutationRolledThisCycle: true,
