@@ -40,14 +40,30 @@ List<StageTransitionRule> defaultTransitionRules() {
   ];
 }
 
+/// Base mutation chance on first maturity (5%).
+const double baseMutationChance = 0.05;
+
+/// Extra mutation chance per restart growth cycle (5%).
+const double rebirthMutationBonus = 0.05;
+
+/// Mutation roll probability from how many times the item was restarted.
+double mutationChanceForRebirthCount(int rebirthCount) =>
+    (baseMutationChance + rebirthCount * rebirthMutationBonus).clamp(0.0, 1.0);
+
 class ProgressiveGardenEngine {
   ProgressiveGardenEngine({
     List<StageTransitionRule>? transitionRules,
-    this.mutationProbability = 0.05, 
-  }) : transitionRules = transitionRules ?? defaultTransitionRules();
+    double? mutationProbability,
+  })  : transitionRules = transitionRules ?? defaultTransitionRules(),
+        mutationProbability = mutationProbability;
 
   final List<StageTransitionRule> transitionRules;
-  final double mutationProbability;
+
+  /// When set, fixes mutation chance for tests; otherwise uses [mutationChanceForRebirthCount].
+  final double? mutationProbability;
+
+  double _effectiveMutationChance(int rebirthCount) =>
+      mutationProbability ?? mutationChanceForRebirthCount(rebirthCount);
 
   StageTransitionRule _ruleFor(int fromStageIndex) {
     return transitionRules.firstWhere(
@@ -588,7 +604,8 @@ class ProgressiveGardenEngine {
       return item;
     }
     final roll = random.nextDouble();
-    if (roll > mutationProbability) {
+    final chance = _effectiveMutationChance(item.rebirthCount);
+    if (roll > chance) {
       return item.copyWith(mutationRolledThisCycle: true);
     }
     return item.copyWith(
@@ -608,7 +625,8 @@ class ProgressiveGardenEngine {
       return d;
     }
     final roll = random.nextDouble();
-    if (roll > mutationProbability) {
+    final chance = _effectiveMutationChance(d.rebirthCount);
+    if (roll > chance) {
       return d.copyWith(mutationRolledThisCycle: true);
     }
     return d.copyWith(
@@ -665,13 +683,15 @@ class ProgressiveGardenEngine {
     if (state.pointsBalance < pointCost) {
       return GardenOpResult.failure('Not enough points to restart growth');
     }
-    final item = state.items[idx]
+    final existing = state.items[idx];
+    final item = existing
         .copyWith(
           stageIndex: 0,
           mutation: null,
           awaitingRegrowthForRemutation: false,
           mutationRolledThisCycle: false,
           regrowthDiscountActive: true,
+          rebirthCount: existing.rebirthCount + 1,
         )
         .clearedAdvanceLock();
     final nextItems = [...state.items]..[idx] = item;
@@ -695,12 +715,14 @@ class ProgressiveGardenEngine {
     if (state.pointsBalance < pointCost) {
       return GardenOpResult.failure('Not enough points to restart growth');
     }
-    final d = state.decor[idx]
+    final existing = state.decor[idx];
+    final d = existing
         .copyWith(
           stageIndex: 0,
           mutation: null,
           awaitingRegrowthForRemutation: false,
           mutationRolledThisCycle: false,
+          rebirthCount: existing.rebirthCount + 1,
         )
         .clearedAdvanceLock();
     final next = [...state.decor]..[idx] = d;

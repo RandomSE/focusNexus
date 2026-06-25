@@ -25,14 +25,14 @@ void main() {
     final a = engine.placeItem(
       state: const GardenState(pointsBalance: 0, items: []),
       id: 'a',
-      themeId: VisualThemeId.coralReef,
+      themeId: VisualThemeId.zenGarden,
     );
     expect(a.isSuccess, isTrue);
     expect(a.state!.freeFirstGrowthEligibleItemId, 'a');
     final b = engine.placeItem(
       state: a.state!,
       id: 'a',
-      themeId: VisualThemeId.coralReef,
+      themeId: VisualThemeId.zenGarden,
     );
     expect(b.isSuccess, isFalse);
   });
@@ -42,7 +42,7 @@ void main() {
     var state = engine.placeItem(
       state: const GardenState(pointsBalance: 30, items: []),
       id: 'coral',
-      themeId: VisualThemeId.coralReef,
+      themeId: VisualThemeId.zenGarden,
     ).state!;
     expect(state.freeFirstGrowthEligibleItemId, 'coral');
     expect(state.freeFirstGrowthEverConsumed, isFalse);
@@ -101,7 +101,7 @@ void main() {
     var state = engine.placeItem(
       state: const GardenState(pointsBalance: 100, items: []),
       id: 'x',
-      themeId: VisualThemeId.constellation,
+      themeId: VisualThemeId.zenGarden,
     ).state!;
     state = engine.advanceGrowth(state: state, itemId: 'x', now: t0, random: Random(0)).state!;
 
@@ -206,7 +206,7 @@ void main() {
     var state = engine.placeItem(
       state: const GardenState(pointsBalance: 0, items: []),
       id: 'p',
-      themeId: VisualThemeId.sandGarden,
+      themeId: VisualThemeId.zenGarden,
       x: 0.1,
       y: 0.2,
     ).state!;
@@ -236,7 +236,7 @@ void main() {
     var state = engine.placeItem(
       state: const GardenState(pointsBalance: 0, items: []),
       id: 'q',
-      themeId: VisualThemeId.bonsai,
+      themeId: VisualThemeId.zenGarden,
     ).state!;
     state = engine.advanceGrowth(state: state, itemId: 'q', now: t0, random: Random(0)).state!;
     expect(state.items.single.nextAdvanceAllowedAt, isNull);
@@ -264,7 +264,7 @@ GardenState _stateAtStage3() {
     items: [
       GardenItem(
         id: 'm',
-        themeId: VisualThemeId.coralReef,
+        themeId: VisualThemeId.zenGarden,
         stageIndex: 3,
       ),
     ],

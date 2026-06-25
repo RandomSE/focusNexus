@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import 'package:focusNexus/goals/goal_achievement_tracking_keys.dart';
 import 'package:focusNexus/goals/goals_time_window_service.dart';
+import 'package:focusNexus/goals/repeat_rule.dart';
 import 'package:focusNexus/goals/time_window_goal.dart';
 import 'package:focusNexus/models/classes/goal_repeat_series.dart';
 import 'package:focusNexus/models/classes/goal_set.dart';
@@ -582,6 +583,33 @@ class GoalsUseCase {
 
   Future<void> deactivateAllRepeatingSchedules() =>
       _timeWindow.deactivateAllActiveSeries();
+
+  Future<GoalSet?> updateRepeatSeries({
+    required int seriesId,
+    required DateTime windowEndAt,
+    required Duration windowDuration,
+    required RepeatRule repeatRule,
+    required DateTime now,
+    List<GoalSet>? activeSnapshot,
+  }) async {
+    final series = await _repeats.readById(seriesId);
+    if (series == null || !series.isActive) return null;
+    final active = activeSnapshot ?? await _goals.readActiveGoals();
+    final result = await _timeWindow.updateRepeatSeries(
+      series: series,
+      windowEndAt: windowEndAt,
+      windowDuration: windowDuration,
+      repeatRule: repeatRule,
+      now: now,
+      activeGoals: active,
+    );
+    if (result.updatedGoal == null) return null;
+    final nextActive = active
+        .map((g) => g.repeatSeriesId == seriesId ? result.updatedGoal! : g)
+        .toList();
+    await _goals.writeActiveGoals(nextActive);
+    return result.updatedGoal;
+  }
 
   Future<GoalSet> createTimeWindowGoal({
     required CreateTimeWindowGoalInput input,

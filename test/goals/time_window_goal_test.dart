@@ -1,6 +1,8 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:focusNexus/goals/repeat_rule.dart';
 import 'package:focusNexus/goals/time_window_goal.dart';
+import 'package:focusNexus/models/classes/goal_repeat_series.dart';
 import 'package:focusNexus/models/classes/goal_set.dart';
 import 'package:focusNexus/goals/goal_kind.dart';
 
@@ -163,6 +165,82 @@ void main() {
         ),
         isNull,
       );
+    });
+  });
+
+  group('clampActionWindowStart', () {
+    test('keeps start before end and not before now', () {
+      final now = DateTime(2026, 6, 21, 10);
+      final end = now.add(const Duration(hours: 2));
+      expect(
+        clampActionWindowStart(
+          start: now.subtract(const Duration(hours: 1)),
+          end: end,
+          now: now,
+        ),
+        now,
+      );
+      expect(
+        clampActionWindowStart(
+          start: end,
+          end: end,
+          now: now,
+        ).isBefore(end),
+        isTrue,
+      );
+    });
+  });
+
+  group('repeatSeriesSlotLabel', () {
+    test('describes anchor window times', () {
+      final series = GoalRepeatSeries(
+        seriesId: 1,
+        repeatRule: const RepeatRule(enabled: true, unit: RepeatUnit.days, interval: 1),
+        windowDuration: const Duration(hours: 2),
+        anchorEndAt: DateTime(2026, 6, 21, 18, 50).toIso8601String(),
+        title: 'Walk',
+        category: 'Health',
+        complexity: 'Low',
+        effort: 'Low',
+        motivation: 'Low',
+        time: 10,
+        steps: 1,
+      );
+      final label = repeatSeriesSlotLabel(series);
+      expect(label, contains('16:50'));
+      expect(label, contains('18:50'));
+      expect(label, contains('21/6/2026'));
+      expect(label, contains('16:50-18:50'));
+      expect(label, isNot(contains('–')));
+    });
+  });
+
+  group('repeatSeriesEditWindow', () {
+    test('prefers active goal window over series anchor', () {
+      final series = GoalRepeatSeries(
+        seriesId: 1,
+        repeatRule: RepeatRule.none,
+        windowDuration: const Duration(hours: 1),
+        anchorEndAt: DateTime(2026, 6, 21, 18).toIso8601String(),
+        title: 'Walk',
+        category: 'Health',
+        complexity: 'Low',
+        effort: 'Low',
+        motivation: 'Low',
+        time: 10,
+        steps: 1,
+      );
+      final active = GoalSet(
+        goalId: 9,
+        title: 'Walk',
+        repeatSeriesId: 1,
+        goalKind: GoalKind.timeWindow,
+        actionWindowStart: DateTime(2026, 6, 22, 16, 50).toIso8601String(),
+        actionWindowEnd: DateTime(2026, 6, 22, 18, 50).toIso8601String(),
+      );
+      final window = repeatSeriesEditWindow(series: series, activeGoal: active);
+      expect(window.endAt, DateTime(2026, 6, 22, 18, 50));
+      expect(window.duration, const Duration(hours: 2));
     });
   });
 

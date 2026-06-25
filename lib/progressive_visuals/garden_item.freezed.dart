@@ -34,6 +34,7 @@ mixin _$GardenItem {
   bool get awaitingRegrowthForRemutation => throw _privateConstructorUsedError;
   bool get mutationRolledThisCycle => throw _privateConstructorUsedError;
   bool get regrowthDiscountActive => throw _privateConstructorUsedError;
+  int get rebirthCount => throw _privateConstructorUsedError;
 
   /// Serializes this GardenItem to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -64,6 +65,7 @@ abstract class $GardenItemCopyWith<$Res> {
     bool awaitingRegrowthForRemutation,
     bool mutationRolledThisCycle,
     bool regrowthDiscountActive,
+    int rebirthCount,
   });
 }
 
@@ -93,6 +95,7 @@ class _$GardenItemCopyWithImpl<$Res, $Val extends GardenItem>
     Object? awaitingRegrowthForRemutation = null,
     Object? mutationRolledThisCycle = null,
     Object? regrowthDiscountActive = null,
+    Object? rebirthCount = null,
   }) {
     return _then(
       _value.copyWith(
@@ -151,6 +154,11 @@ class _$GardenItemCopyWithImpl<$Res, $Val extends GardenItem>
                     ? _value.regrowthDiscountActive
                     : regrowthDiscountActive // ignore: cast_nullable_to_non_nullable
                         as bool,
+            rebirthCount:
+                null == rebirthCount
+                    ? _value.rebirthCount
+                    : rebirthCount // ignore: cast_nullable_to_non_nullable
+                        as int,
           )
           as $Val,
     );
@@ -178,6 +186,7 @@ abstract class _$$GardenItemImplCopyWith<$Res>
     bool awaitingRegrowthForRemutation,
     bool mutationRolledThisCycle,
     bool regrowthDiscountActive,
+    int rebirthCount,
   });
 }
 
@@ -206,6 +215,7 @@ class __$$GardenItemImplCopyWithImpl<$Res>
     Object? awaitingRegrowthForRemutation = null,
     Object? mutationRolledThisCycle = null,
     Object? regrowthDiscountActive = null,
+    Object? rebirthCount = null,
   }) {
     return _then(
       _$GardenItemImpl(
@@ -264,6 +274,11 @@ class __$$GardenItemImplCopyWithImpl<$Res>
                 ? _value.regrowthDiscountActive
                 : regrowthDiscountActive // ignore: cast_nullable_to_non_nullable
                     as bool,
+        rebirthCount:
+            null == rebirthCount
+                ? _value.rebirthCount
+                : rebirthCount // ignore: cast_nullable_to_non_nullable
+                    as int,
       ),
     );
   }
@@ -284,6 +299,7 @@ class _$GardenItemImpl extends _GardenItem {
     this.awaitingRegrowthForRemutation = false,
     this.mutationRolledThisCycle = false,
     this.regrowthDiscountActive = false,
+    this.rebirthCount = 0,
   }) : super._();
 
   factory _$GardenItemImpl.fromJson(Map<String, dynamic> json) =>
@@ -319,10 +335,13 @@ class _$GardenItemImpl extends _GardenItem {
   @override
   @JsonKey()
   final bool regrowthDiscountActive;
+  @override
+  @JsonKey()
+  final int rebirthCount;
 
   @override
   String toString() {
-    return 'GardenItem(id: $id, themeId: $themeId, stageIndex: $stageIndex, positionX: $positionX, positionY: $positionY, nextAdvanceAllowedAt: $nextAdvanceAllowedAt, pendingSkipWaitCost: $pendingSkipWaitCost, mutation: $mutation, awaitingRegrowthForRemutation: $awaitingRegrowthForRemutation, mutationRolledThisCycle: $mutationRolledThisCycle, regrowthDiscountActive: $regrowthDiscountActive)';
+    return 'GardenItem(id: $id, themeId: $themeId, stageIndex: $stageIndex, positionX: $positionX, positionY: $positionY, nextAdvanceAllowedAt: $nextAdvanceAllowedAt, pendingSkipWaitCost: $pendingSkipWaitCost, mutation: $mutation, awaitingRegrowthForRemutation: $awaitingRegrowthForRemutation, mutationRolledThisCycle: $mutationRolledThisCycle, regrowthDiscountActive: $regrowthDiscountActive, rebirthCount: $rebirthCount)';
   }
 
   @override
@@ -356,7 +375,9 @@ class _$GardenItemImpl extends _GardenItem {
                 ) ||
                 other.mutationRolledThisCycle == mutationRolledThisCycle) &&
             (identical(other.regrowthDiscountActive, regrowthDiscountActive) ||
-                other.regrowthDiscountActive == regrowthDiscountActive));
+                other.regrowthDiscountActive == regrowthDiscountActive) &&
+            (identical(other.rebirthCount, rebirthCount) ||
+                other.rebirthCount == rebirthCount));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -374,6 +395,7 @@ class _$GardenItemImpl extends _GardenItem {
     awaitingRegrowthForRemutation,
     mutationRolledThisCycle,
     regrowthDiscountActive,
+    rebirthCount,
   );
 
   /// Create a copy of GardenItem
@@ -403,6 +425,7 @@ abstract class _GardenItem extends GardenItem {
     final bool awaitingRegrowthForRemutation,
     final bool mutationRolledThisCycle,
     final bool regrowthDiscountActive,
+    final int rebirthCount,
   }) = _$GardenItemImpl;
   const _GardenItem._() : super._();
 
@@ -433,6 +456,8 @@ abstract class _GardenItem extends GardenItem {
   bool get mutationRolledThisCycle;
   @override
   bool get regrowthDiscountActive;
+  @override
+  int get rebirthCount;
 
   /// Create a copy of GardenItem
   /// with the given fields replaced by the non-null parameter values.

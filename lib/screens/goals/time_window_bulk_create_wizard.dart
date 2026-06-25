@@ -187,11 +187,18 @@ class _TimeWindowBulkCreateWizardState
           child: TimeWindowWindowEditor(
             bundle: bundle,
             endAt: _sharedEnd,
+            startAt: _sharedEnd.subtract(_sharedDuration),
             duration: _sharedDuration,
             onEndChanged: (v) => setState(() {
               _sharedEnd = v;
               for (final d in _drafts) {
                 d.endAt = v;
+              }
+            }),
+            onStartChanged: (v) => setState(() {
+              _sharedDuration = _sharedEnd.difference(v);
+              for (final d in _drafts) {
+                d.duration = _sharedEnd.difference(v);
               }
             }),
             onDurationChanged: (v) => setState(() {
@@ -214,6 +221,8 @@ class _TimeWindowBulkCreateWizardState
             repeat: draft.repeat,
             showRepeat: false,
             onEndChanged: (v) => setState(() => draft.endAt = v),
+            onStartChanged: (v) =>
+                setState(() => draft.duration = draft.endAt.difference(v)),
             onDurationChanged: (v) => setState(() => draft.duration = v),
             onRepeatChanged: (_) {},
           ),
@@ -262,6 +271,7 @@ class _TimeWindowBulkCreateWizardState
             repeat: draft.repeat,
             showWindow: false,
             onEndChanged: (_) {},
+            onStartChanged: (_) {},
             onDurationChanged: (_) {},
             onRepeatChanged: (r) => setState(() => draft.repeat = r),
           ),

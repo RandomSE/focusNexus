@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:focusNexus/goals/goals_time_window_service.dart';
 import 'package:focusNexus/goals/goals_use_case.dart';
+import 'package:focusNexus/goals/repeat_rule.dart';
 import 'package:focusNexus/goals/time_window_goal.dart';
 import 'package:focusNexus/models/classes/goal_repeat_series.dart';
 import 'package:focusNexus/models/classes/goal_set.dart';
@@ -230,6 +231,30 @@ class GoalsView extends _$GoalsView {
   Future<void> deactivateAllRepeatingSchedules() =>
       _useCase.deactivateAllRepeatingSchedules();
 
+  Future<GoalSet?> updateRepeatSeries({
+    required int seriesId,
+    required DateTime windowEndAt,
+    required Duration windowDuration,
+    required RepeatRule repeatRule,
+    required DateTime now,
+  }) async {
+    final updated = await _useCase.updateRepeatSeries(
+      seriesId: seriesId,
+      windowEndAt: windowEndAt,
+      windowDuration: windowDuration,
+      repeatRule: repeatRule,
+      now: now,
+      activeSnapshot: state.activeGoals,
+    );
+    if (updated == null) return null;
+    state = state.copyWith(
+      activeGoals: state.activeGoals
+          .map((g) => g.repeatSeriesId == seriesId ? updated : g)
+          .toList(),
+    );
+    return updated;
+  }
+
   Future<GoalSet> createTimeWindowGoal({
     required CreateTimeWindowGoalInput input,
     required DateTime now,
@@ -275,6 +300,15 @@ class GoalsView extends _$GoalsView {
 
 /// Stable alias used across the app (generated: [goalsViewProvider]).
 final goalsProvider = goalsViewProvider;
+
+/// Active repeat series keyed by id; refreshes when goals state changes.
+final activeRepeatSeriesProvider =
+    FutureProvider<Map<int, GoalRepeatSeries>>((ref) async {
+      ref.watch(goalsProvider);
+      final list =
+          await ref.read(goalsProvider.notifier).readActiveRepeatSeries();
+      return {for (final s in list) s.seriesId: s};
+    });
 
 /// Back-compat type name for the goals notifier.
 typedef GoalsNotifier = GoalsView;

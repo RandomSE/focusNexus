@@ -34,6 +34,7 @@ mixin _$DecorItem {
   MutationKind? get mutation => throw _privateConstructorUsedError;
   bool get awaitingRegrowthForRemutation => throw _privateConstructorUsedError;
   bool get mutationRolledThisCycle => throw _privateConstructorUsedError;
+  int get rebirthCount => throw _privateConstructorUsedError;
 
   /// Serializes this DecorItem to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -62,6 +63,7 @@ abstract class $DecorItemCopyWith<$Res> {
     @MutationKindJsonConverter() MutationKind? mutation,
     bool awaitingRegrowthForRemutation,
     bool mutationRolledThisCycle,
+    int rebirthCount,
   });
 }
 
@@ -91,6 +93,7 @@ class _$DecorItemCopyWithImpl<$Res, $Val extends DecorItem>
     Object? mutation = freezed,
     Object? awaitingRegrowthForRemutation = null,
     Object? mutationRolledThisCycle = null,
+    Object? rebirthCount = null,
   }) {
     return _then(
       _value.copyWith(
@@ -149,6 +152,11 @@ class _$DecorItemCopyWithImpl<$Res, $Val extends DecorItem>
                     ? _value.mutationRolledThisCycle
                     : mutationRolledThisCycle // ignore: cast_nullable_to_non_nullable
                         as bool,
+            rebirthCount:
+                null == rebirthCount
+                    ? _value.rebirthCount
+                    : rebirthCount // ignore: cast_nullable_to_non_nullable
+                        as int,
           )
           as $Val,
     );
@@ -176,6 +184,7 @@ abstract class _$$DecorItemImplCopyWith<$Res>
     @MutationKindJsonConverter() MutationKind? mutation,
     bool awaitingRegrowthForRemutation,
     bool mutationRolledThisCycle,
+    int rebirthCount,
   });
 }
 
@@ -204,6 +213,7 @@ class __$$DecorItemImplCopyWithImpl<$Res>
     Object? mutation = freezed,
     Object? awaitingRegrowthForRemutation = null,
     Object? mutationRolledThisCycle = null,
+    Object? rebirthCount = null,
   }) {
     return _then(
       _$DecorItemImpl(
@@ -262,6 +272,11 @@ class __$$DecorItemImplCopyWithImpl<$Res>
                 ? _value.mutationRolledThisCycle
                 : mutationRolledThisCycle // ignore: cast_nullable_to_non_nullable
                     as bool,
+        rebirthCount:
+            null == rebirthCount
+                ? _value.rebirthCount
+                : rebirthCount // ignore: cast_nullable_to_non_nullable
+                    as int,
       ),
     );
   }
@@ -282,6 +297,7 @@ class _$DecorItemImpl extends _DecorItem {
     @MutationKindJsonConverter() this.mutation,
     this.awaitingRegrowthForRemutation = false,
     this.mutationRolledThisCycle = false,
+    this.rebirthCount = 0,
   }) : super._();
 
   factory _$DecorItemImpl.fromJson(Map<String, dynamic> json) =>
@@ -316,10 +332,13 @@ class _$DecorItemImpl extends _DecorItem {
   @override
   @JsonKey()
   final bool mutationRolledThisCycle;
+  @override
+  @JsonKey()
+  final int rebirthCount;
 
   @override
   String toString() {
-    return 'DecorItem(id: $id, themeId: $themeId, kind: $kind, positionX: $positionX, positionY: $positionY, stageIndex: $stageIndex, nextAdvanceAllowedAt: $nextAdvanceAllowedAt, pendingSkipWaitCost: $pendingSkipWaitCost, mutation: $mutation, awaitingRegrowthForRemutation: $awaitingRegrowthForRemutation, mutationRolledThisCycle: $mutationRolledThisCycle)';
+    return 'DecorItem(id: $id, themeId: $themeId, kind: $kind, positionX: $positionX, positionY: $positionY, stageIndex: $stageIndex, nextAdvanceAllowedAt: $nextAdvanceAllowedAt, pendingSkipWaitCost: $pendingSkipWaitCost, mutation: $mutation, awaitingRegrowthForRemutation: $awaitingRegrowthForRemutation, mutationRolledThisCycle: $mutationRolledThisCycle, rebirthCount: $rebirthCount)';
   }
 
   @override
@@ -352,7 +371,9 @@ class _$DecorItemImpl extends _DecorItem {
                   other.mutationRolledThisCycle,
                   mutationRolledThisCycle,
                 ) ||
-                other.mutationRolledThisCycle == mutationRolledThisCycle));
+                other.mutationRolledThisCycle == mutationRolledThisCycle) &&
+            (identical(other.rebirthCount, rebirthCount) ||
+                other.rebirthCount == rebirthCount));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -370,6 +391,7 @@ class _$DecorItemImpl extends _DecorItem {
     mutation,
     awaitingRegrowthForRemutation,
     mutationRolledThisCycle,
+    rebirthCount,
   );
 
   /// Create a copy of DecorItem
@@ -399,6 +421,7 @@ abstract class _DecorItem extends DecorItem {
     @MutationKindJsonConverter() final MutationKind? mutation,
     final bool awaitingRegrowthForRemutation,
     final bool mutationRolledThisCycle,
+    final int rebirthCount,
   }) = _$DecorItemImpl;
   const _DecorItem._() : super._();
 
@@ -429,6 +452,8 @@ abstract class _DecorItem extends DecorItem {
   bool get awaitingRegrowthForRemutation;
   @override
   bool get mutationRolledThisCycle;
+  @override
+  int get rebirthCount;
 
   /// Create a copy of DecorItem
   /// with the given fields replaced by the non-null parameter values.

@@ -23,7 +23,7 @@ Future<void> scheduleActionWindowReminder({
     goal.title,
     goalId,
     notificationStyle,
-    reminderAt,
+    parseGoalDateTime(goal.actionWindowEnd) ?? reminderAt,
     isStart: isStartReminder,
   );
 

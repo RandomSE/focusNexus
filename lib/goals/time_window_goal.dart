@@ -1,4 +1,5 @@
 import 'package:focusNexus/goals/repeat_rule.dart';
+import 'package:focusNexus/models/classes/goal_repeat_series.dart';
 import 'package:focusNexus/models/classes/goal_set.dart';
 import 'package:focusNexus/goals/goal_kind.dart';
 
@@ -201,4 +202,73 @@ String formatActionWindowEndLabel(DateTime endAt) {
   final h = endAt.hour.toString().padLeft(2, '0');
   final m = endAt.minute.toString().padLeft(2, '0');
   return '${endAt.day}/${endAt.month}/${endAt.year} $h:$m';
+}
+
+String formatActionWindowDateLabel(DateTime value) =>
+    '${value.day}/${value.month}/${value.year}';
+
+String formatActionWindowTimeLabel(DateTime value) {
+  final h = value.hour.toString().padLeft(2, '0');
+  final m = value.minute.toString().padLeft(2, '0');
+  return '$h:$m';
+}
+
+/// Typical slot window for a repeating series (time-of-day from anchor).
+String repeatSeriesSlotLabel(GoalRepeatSeries series) {
+  final end = parseGoalDateTime(series.anchorEndAt);
+  if (end == null || series.windowDuration <= Duration.zero) {
+    return 'Slot time unknown';
+  }
+  final start = end.subtract(series.windowDuration);
+  return 'Slot ${formatActionWindowTimeLabel(start)}-'
+      '${formatActionWindowTimeLabel(end)} '
+      '(ends ${formatActionWindowDateLabel(end)})';
+}
+
+/// Window end + duration for editing a series (prefers live active instance).
+({DateTime endAt, Duration duration}) repeatSeriesEditWindow({
+  required GoalRepeatSeries series,
+  GoalSet? activeGoal,
+}) {
+  final anchorEnd = parseGoalDateTime(series.anchorEndAt);
+  final activeEnd = activeGoal != null
+      ? parseGoalDateTime(activeGoal.actionWindowEnd)
+      : null;
+  final end = activeEnd ?? anchorEnd ?? DateTime.now().add(const Duration(hours: 2));
+  final activeStart = activeGoal != null
+      ? parseGoalDateTime(activeGoal.actionWindowStart)
+      : null;
+  final duration = activeStart != null && activeEnd != null
+      ? activeEnd.difference(activeStart)
+      : series.windowDuration;
+  if (duration <= Duration.zero) {
+    return (endAt: end, duration: series.windowDuration);
+  }
+  return (endAt: end, duration: duration);
+}
+
+/// Keeps [start] before [end] and not before [now] (minute precision).
+DateTime clampActionWindowStart({
+  required DateTime start,
+  required DateTime end,
+  required DateTime now,
+}) {
+  final floor = DateTime(now.year, now.month, now.day, now.hour, now.minute);
+  var clamped = DateTime(
+    start.year,
+    start.month,
+    start.day,
+    start.hour,
+    start.minute,
+  );
+  if (!clamped.isBefore(end)) {
+    clamped = end.subtract(const Duration(minutes: 5));
+  }
+  if (clamped.isBefore(floor)) {
+    clamped = floor;
+  }
+  if (!clamped.isBefore(end)) {
+    clamped = end.subtract(const Duration(minutes: 1));
+  }
+  return clamped;
 }

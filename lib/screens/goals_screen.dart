@@ -12,8 +12,11 @@ import 'package:focusNexus/goals/goals_notification_navigation.dart';
 import 'package:focusNexus/goals/builtin_goal_templates.dart';
 import 'package:focusNexus/goals/goal_categories.dart';
 import 'package:focusNexus/goals/goal_deadline_label.dart';
+import 'package:focusNexus/goals/goal_time_window_label.dart';
 import 'package:focusNexus/goals/goals_filter_sort.dart';
 import 'package:focusNexus/goals/goals_use_case.dart';
+import 'package:focusNexus/goals/time_window_goal.dart';
+import 'package:focusNexus/goals/repeat_rule.dart';
 import 'package:focusNexus/goals/template_group_cleanup.dart';
 import 'package:focusNexus/models/classes/goal_set.dart';
 import 'package:focusNexus/models/classes/theme_bundle.dart';
@@ -446,11 +449,23 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
   }
 
   void _viewGoalDetails(GoalSet goal) {
+    unawaited(_showGoalDetails(goal));
+  }
+
+  Future<void> _showGoalDetails(GoalSet goal) async {
     final bundle = _themeBundle;
     final isCompleted = ref
         .read(goalsProvider)
         .completedGoals
         .any((g) => g.goalId == goal.goalId);
+    final isTimeWindow = isTimeWindowGoal(goal);
+    RepeatRule? repeatRule;
+    if (goal.repeatSeriesId != 0) {
+      final seriesById =
+          await ref.read(activeRepeatSeriesProvider.future);
+      repeatRule = seriesById[goal.repeatSeriesId]?.repeatRule;
+    }
+    if (!mounted) return;
     showDialog(
       context: context,
       barrierColor: bundle.secondaryColor,
@@ -476,9 +491,24 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
                     'Completed: ${goalCompletedLabel(goal.completedAt)}',
                     style: bundle.textStyle,
                   )
-                else
+                else if (isTimeWindow) ...[
+                  Text(goalTimeWindowLabel(goal), style: bundle.textStyle),
+                  Text(
+                    isActionWindowActive(goal, DateTime.now())
+                        ? 'In slot now'
+                        : 'Outside slot',
+                    style: bundle.textStyle,
+                  ),
+                ] else
                   Text(
                     'Deadline: ${goalDeadlineLabel(goal.deadline)}',
+                    style: bundle.textStyle,
+                  ),
+                if (goal.repeatSeriesId != 0)
+                  Text(
+                    repeatRule != null && repeatRule.enabled
+                        ? summarizeRepeatRule(repeatRule)
+                        : 'Repeats',
                     style: bundle.textStyle,
                   ),
                 Text('Steps: ${goal.steps}', style: bundle.textStyle),
@@ -802,11 +832,16 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
                       }
                     }
 
+                    final seriesById =
+                        ref.watch(activeRepeatSeriesProvider).valueOrNull ??
+                        const {};
+
                     return SliverList(
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {
                           final goal = filteredGoals[index];
                           final isHighlight = _highlightGoalId == goal.goalId;
+                          final series = seriesById[goal.repeatSeriesId];
                           return GoalsGoalListTile(
                             key: isHighlight
                                 ? _highlightTileKey
@@ -817,6 +852,7 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
                             selectedStatusFilter: filters.$1,
                             goal: goal,
                             highlight: isHighlight,
+                            repeatRule: series?.repeatRule,
                             onComplete: () => _completeGoal(goal.goalId),
                             onIncrementStep: () =>
                                 _incrementStepProgress(goal.goalId),

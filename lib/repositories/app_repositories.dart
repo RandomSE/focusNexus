@@ -48,4 +48,11 @@ class AppRepositories {
   late final AppSettings settings;
   late final TimeWindowRepeatRepository timeWindowRepeats;
   late final GoalsUseCase goalsUseCase;
+
+  /// Wipes all persisted data and resets in-memory wallet cache to default.
+  Future<void> wipeAllUserData() async {
+    await storage.deleteAll();
+    points.clearBalanceCacheForTesting();
+    await points.resetToDefaultBalance();
+  }
 }

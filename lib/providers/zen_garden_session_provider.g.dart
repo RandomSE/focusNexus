@@ -6,7 +6,7 @@ part of 'zen_garden_session_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$zenGardenSessionHash() => r'0feb1d9d15fc5d68f9cfadd1081a6315942ed1a2';
+String _$zenGardenSessionHash() => r'c41368eed3c58ec1ca5d071346cad8feb02db461';
 
 /// Zen garden sandbox session; persisted via [GardenRepository].
 ///

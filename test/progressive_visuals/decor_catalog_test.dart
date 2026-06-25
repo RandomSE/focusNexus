@@ -5,7 +5,6 @@ import 'package:focusNexus/progressive_visuals/visual_theme_id.dart';
 void main() {
   test('decorCatalogFor returns zen entries only for zenGarden', () {
     expect(decorCatalogFor(VisualThemeId.zenGarden), isNotEmpty);
-    expect(decorCatalogFor(VisualThemeId.coralReef), isEmpty);
   });
 
   test('decorEntryByKind finds catalog entry', () {

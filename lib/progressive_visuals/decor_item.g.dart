@@ -29,6 +29,7 @@ _$DecorItemImpl _$$DecorItemImplFromJson(Map<String, dynamic> json) =>
           json['awaitingRegrowthForRemutation'] as bool? ?? false,
       mutationRolledThisCycle:
           json['mutationRolledThisCycle'] as bool? ?? false,
+      rebirthCount: (json['rebirthCount'] as num?)?.toInt() ?? 0,
     );
 
 Map<String, dynamic> _$$DecorItemImplToJson(_$DecorItemImpl instance) =>
@@ -47,6 +48,7 @@ Map<String, dynamic> _$$DecorItemImplToJson(_$DecorItemImpl instance) =>
       ),
       'awaitingRegrowthForRemutation': instance.awaitingRegrowthForRemutation,
       'mutationRolledThisCycle': instance.mutationRolledThisCycle,
+      'rebirthCount': instance.rebirthCount,
     };
 
 Value? _$JsonConverterFromJson<Json, Value>(

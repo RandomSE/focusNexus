@@ -6,18 +6,40 @@ import 'package:focusNexus/app/app_navigation.dart';
 import 'package:focusNexus/app/app_route.dart';
 import 'package:focusNexus/providers/app_repositories_provider.dart';
 import 'package:focusNexus/providers/app_settings_provider.dart';
+import 'package:focusNexus/goals/dashboard_goals_label.dart';
+import 'package:focusNexus/goals/time_window_goal.dart';
+import 'package:focusNexus/providers/goals_provider.dart';
 import 'package:focusNexus/providers/points_balance_provider.dart';
 import 'package:focusNexus/utils/common_utils.dart';
 import 'package:focusNexus/widgets/settings_themed_builder.dart';
 
-class DashboardScreen extends ConsumerWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(goalsProvider.notifier).load();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final pointsAsync = ref.watch(pointsBalanceProvider);
     final settings = ref.watch(appSettingsProvider).snapshot;
     final repos = ref.read(appRepositoriesProvider);
+    final activeGoals = ref.watch(goalsProvider).activeGoals;
+    final goalsInSlotNow = activeGoals
+        .where((g) => isActionWindowActive(g, DateTime.now()))
+        .length;
+    final goalsButtonLabel = dashboardGoalsButtonLabel(activeGoals.length);
+    final inSlotLine = dashboardInSlotLine(goalsInSlotNow);
 
     return SettingsThemedBuilder(
       builder: (context, bundle) {
@@ -53,6 +75,18 @@ class DashboardScreen extends ConsumerWidget {
                       textAlign: TextAlign.left,
                     ),
                   ),
+                  if (inSlotLine != null) ...[
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        inSlotLine,
+                        style: bundle.textStyle.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
                   if (kDebugMode) ...[
                     const SizedBox(height: 16),
                     CommonUtils.buildCenteredButton(
@@ -69,7 +103,7 @@ class DashboardScreen extends ConsumerWidget {
                   const SizedBox(height: 24),
                   CommonUtils.buildCenteredButton(
                     context,
-                    'Goals',
+                    goalsButtonLabel,
                     () => ref.pushRoute(context, AppRoute.goals),
                     bundle.textStyle,
                     bundle.secondaryColor,

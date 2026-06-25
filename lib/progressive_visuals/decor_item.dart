@@ -25,6 +25,7 @@ class DecorItem with _$DecorItem {
     @MutationKindJsonConverter() MutationKind? mutation,
     @Default(false) bool awaitingRegrowthForRemutation,
     @Default(false) bool mutationRolledThisCycle,
+    @Default(0) int rebirthCount,
   }) = _DecorItem;
 
   factory DecorItem.fromJson(Map<String, dynamic> json) =>

@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:focusNexus/goals/dashboard_goals_label.dart';
+import 'package:focusNexus/goals/time_window_goal.dart';
 import 'package:focusNexus/models/classes/theme_bundle.dart';
 import 'package:focusNexus/app/app_navigation.dart';
 import 'package:focusNexus/app/app_route.dart';
 import 'package:focusNexus/providers/app_settings_provider.dart';
+import 'package:focusNexus/providers/goals_provider.dart';
+import 'package:focusNexus/providers/points_balance_provider.dart';
 import 'package:focusNexus/providers/screen_ui_providers.dart';
 import 'package:focusNexus/providers/theme_bundle_provider.dart';
+import 'package:focusNexus/repositories/points_repository.dart';
+import 'package:focusNexus/screens/onboarding/onboarding_live_stats.dart';
+import 'package:focusNexus/screens/onboarding/onboarding_slides.dart';
 import 'package:focusNexus/utils/common_utils.dart';
 import 'package:focusNexus/utils/notifier.dart';
-import 'package:focusNexus/utils/onboarding_assets.dart';
 import 'package:focusNexus/utils/screen_theme.dart';
 import 'package:focusNexus/widgets/appearance_settings_section.dart';
-import 'package:focusNexus/widgets/deferred_screen.dart';
-import 'package:focusNexus/widgets/skeleton_loaders.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -25,14 +29,22 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final PageController _pageController = PageController();
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(goalsProvider.notifier).load();
+    });
+  }
+
+  @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
   }
 
-  void _goToNextPage(List<String> images) {
+  void _goToNextPage() {
     final currentPage = ref.read(onboardingPageIndexProvider);
-    if (currentPage < images.length - 1) {
+    if (currentPage < kOnboardingSlides.length - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -106,62 +118,32 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Widget build(BuildContext context) {
     return SettingsThemedBuilder(
       builder: (context, bundle) {
-        return DeferredScreen<List<String>>(
-          loadToken: 'onboarding-images',
-          load: loadOnboardingImagePaths,
-          loading: (_) => Scaffold(
-            backgroundColor: bundle.secondaryColor,
-            body: OnboardingSkeleton(bundle: bundle),
-          ),
-          builder: (context, images) =>
-              _buildOnboardingContent(context, bundle, images),
-        );
+        return _buildOnboardingContent(context, bundle);
       },
     );
   }
 
-  Widget _buildOnboardingContent(
-    BuildContext context,
-    ThemeBundle bundle,
-    List<String> onboardingImages,
-  ) {
+  OnboardingLiveStats _liveStats() {
+    final now = DateTime.now();
+    final goals = ref.watch(goalsProvider).activeGoals;
+    final inSlot = goals.where((g) => isActionWindowActive(g, now)).length;
+    final points =
+        ref.watch(pointsBalanceProvider).valueOrNull ??
+        PointsRepository.defaultBalance;
+    return OnboardingLiveStats(
+      points: points,
+      activeGoals: goals.length,
+      goalsInSlotNow: inSlot,
+    );
+  }
+
+  Widget _buildOnboardingContent(BuildContext context, ThemeBundle bundle) {
     final currentPage = ref.watch(onboardingPageIndexProvider);
+    final stats = _liveStats();
     final textStyle = bundle.textStyle;
     final primaryColor = bundle.primaryColor;
     final secondaryColor = bundle.secondaryColor;
-
-    if (onboardingImages.isEmpty) {
-      return Scaffold(
-        backgroundColor: secondaryColor,
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Onboarding images are missing from the app bundle.',
-                  style: textStyle,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                CommonUtils.buildElevatedButton(
-                  'Continue anyway',
-                  primaryColor,
-                  secondaryColor,
-                  textStyle,
-                  0,
-                  0,
-                  _finishOnboarding,
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    final lastIndex = onboardingImages.length - 1;
+    final lastIndex = kOnboardingSlides.length - 1;
 
     return Theme(
       data: bundle.themeData,
@@ -172,19 +154,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
-                itemCount: onboardingImages.length,
+                itemCount: kOnboardingSlides.length,
                 onPageChanged: (index) {
                   ref.read(onboardingPageIndexProvider.notifier).set(index);
                 },
                 itemBuilder: (context, index) {
-                  return Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Center(
-                      child: Image.asset(
-                        onboardingImages[index],
-                        fit: BoxFit.contain,
-                      ),
-                    ),
+                  return buildOnboardingSlide(
+                    id: kOnboardingSlides[index],
+                    bundle: bundle,
+                    stats: stats,
                   );
                 },
               ),
@@ -231,7 +209,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       textStyle,
                       0,
                       0,
-                      () => _goToNextPage(onboardingImages),
+                      _goToNextPage,
                     )
                   else
                     CommonUtils.buildElevatedButton(

@@ -24,6 +24,7 @@ class RecordingGoalNotifications implements GoalNotifications {
     required GoalSet goal,
     required DateTime reminderAt,
     required String notificationStyle,
+    required bool isStartReminder,
   }) async {
     actionWindowScheduled.add(goal);
   }

@@ -24,6 +24,7 @@ class GardenItem with _$GardenItem {
     @Default(false) bool awaitingRegrowthForRemutation,
     @Default(false) bool mutationRolledThisCycle,
     @Default(false) bool regrowthDiscountActive,
+    @Default(0) int rebirthCount,
   }) = _GardenItem;
 
   factory GardenItem.fromJson(Map<String, dynamic> json) =>

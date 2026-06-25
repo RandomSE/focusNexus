@@ -1,4 +1,3 @@
-import 'package:focusNexus/goals/time_window_goal.dart';
 import 'package:focusNexus/models/classes/goal_set.dart';
 import 'package:focusNexus/utils/notifier.dart';
 
@@ -15,6 +14,7 @@ abstract class GoalNotifications {
     required GoalSet goal,
     required DateTime reminderAt,
     required String notificationStyle,
+    required bool isStartReminder,
   });
 
   Future<void> cancelForGoal(GoalSet goal);
@@ -47,14 +47,13 @@ class GoalNotifierNotifications implements GoalNotifications {
     required GoalSet goal,
     required DateTime reminderAt,
     required String notificationStyle,
+    required bool isStartReminder,
   }) {
-    final start = parseGoalDateTime(goal.actionWindowStart);
-    final isStart = start != null && reminderAt.isAtSameMomentAs(start);
     return GoalNotifier.scheduleActionWindowReminder(
       goal: goal,
       reminderAt: reminderAt,
       notificationStyle: notificationStyle,
-      isStartReminder: isStart,
+      isStartReminder: isStartReminder,
     );
   }
 
@@ -87,6 +86,7 @@ class NoopGoalNotifications implements GoalNotifications {
     required GoalSet goal,
     required DateTime reminderAt,
     required String notificationStyle,
+    required bool isStartReminder,
   }) async {}
 
   @override
