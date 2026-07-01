@@ -247,7 +247,7 @@ class ThemeStyles {
           useDyslexiaFont: useDyslexiaFont,
         ).titleLarge?.copyWith(fontWeight: FontWeight.w700),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: Color.alphaBlend(
           primaryColor.withValues(alpha: isDark ? 0.1 : 0.045),
           secondaryColor,

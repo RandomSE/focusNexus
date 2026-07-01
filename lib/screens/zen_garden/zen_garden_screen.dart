@@ -222,6 +222,7 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen>
     }
     _session.applyOp(result);
     if (announce != null && announce.isNotEmpty) {
+      // ignore: deprecated_member_use
       SemanticsService.announce(announce, Directionality.of(context));
     }
   }
@@ -386,6 +387,7 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen>
     _selection.bulkDecor.clear();
     _touch();
     unawaited(_persist(snapshot: next));
+    // ignore: deprecated_member_use
     SemanticsService.announce('Moved selection to inventory.', Directionality.of(context));
   }
 
@@ -469,6 +471,7 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen>
       ),
     );
     unawaited(_persist(snapshot: nextGarden));
+    // ignore: deprecated_member_use
     SemanticsService.announce('Plant placed.', Directionality.of(context));
   }
 
@@ -539,6 +542,7 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen>
       _snack(announce);
     }
     if (announce != null && announce.isNotEmpty && mounted) {
+      // ignore: deprecated_member_use
       SemanticsService.announce(announce, Directionality.of(context));
     }
   }
@@ -626,6 +630,7 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen>
     _session.setGarden(nextGarden);
     _patch((s) => s.copyWith(placingDecorInventoryId: nextDecorId));
     unawaited(_persist(snapshot: nextGarden));
+    // ignore: deprecated_member_use
     SemanticsService.announce('Decoration placed.', Directionality.of(context));
   }
 

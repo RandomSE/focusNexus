@@ -301,6 +301,8 @@ class _TimeWindowWindowEditorState extends State<TimeWindowWindowEditor> {
                       ),
                     );
                     final unitField = DropdownButtonFormField<String>(
+                      key: ValueKey(_durationUnit),
+                      // ignore: deprecated_member_use
                       value: _durationUnit,
                       isExpanded: true,
                       dropdownColor: widget.bundle.secondaryColor,

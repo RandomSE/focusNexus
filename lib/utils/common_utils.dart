@@ -181,9 +181,11 @@ class CommonUtils {
       label: label,
       textStyle: textStyle,
       field: DropdownButtonFormField<T>(
+        key: ValueKey(value),
         isExpanded: true,
         isDense: false,
         dropdownColor: dropdownColor,
+        // ignore: deprecated_member_use
         value: value,
         itemHeight: dropdownButtonClosedHeight(textStyle),
         decoration: formInputDecoration(
@@ -250,6 +252,7 @@ class CommonUtils {
     void Function(bool)? onChanged,
     Color color,
   ) {
+    // ignore: deprecated_member_use
     return Switch(value: value, onChanged: onChanged, activeColor: color);
   }
 
@@ -278,6 +281,7 @@ class CommonUtils {
       ),
       value: value,
       onChanged: onChanged,
+      // ignore: deprecated_member_use
       activeColor: tileColor,
     );
   }
