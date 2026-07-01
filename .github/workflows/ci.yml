@@ -1,18 +1,26 @@
+# Runs on PRs to master and on every branch push (feature branches included).
+# Concurrency groups by branch name so a new push cancels an in-flight run instead of duplicating.
+# After this workflow has run once on master, enable branch protection:
+# Settings → Branches → require status check "Flutter analyze and test".
 name: CI
 
 on:
-  push:
-    branches:
-      - master
-      - main
   pull_request:
+    branches: [master]
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+  merge_group:
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   analyze-and-test:
+    name: Flutter analyze and test
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -22,7 +30,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          flutter-version-file: .flutter-version
           cache: true
 
       - name: Install dependencies

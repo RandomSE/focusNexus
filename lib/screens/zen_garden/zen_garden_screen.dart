@@ -222,7 +222,11 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen>
     }
     _session.applyOp(result);
     if (announce != null && announce.isNotEmpty) {
-      SemanticsService.announce(announce, Directionality.of(context));
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        announce,
+        Directionality.of(context),
+      );
     }
   }
 
@@ -386,7 +390,11 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen>
     _selection.bulkDecor.clear();
     _touch();
     unawaited(_persist(snapshot: next));
-    SemanticsService.announce('Moved selection to inventory.', Directionality.of(context));
+    SemanticsService.sendAnnouncement(
+      View.of(context),
+      'Moved selection to inventory.',
+      Directionality.of(context),
+    );
   }
 
   void _startPlantPlacement() {
@@ -469,7 +477,11 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen>
       ),
     );
     unawaited(_persist(snapshot: nextGarden));
-    SemanticsService.announce('Plant placed.', Directionality.of(context));
+    SemanticsService.sendAnnouncement(
+      View.of(context),
+      'Plant placed.',
+      Directionality.of(context),
+    );
   }
 
   void _showShopToast(String message) {
@@ -539,7 +551,11 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen>
       _snack(announce);
     }
     if (announce != null && announce.isNotEmpty && mounted) {
-      SemanticsService.announce(announce, Directionality.of(context));
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        announce,
+        Directionality.of(context),
+      );
     }
   }
 
@@ -626,7 +642,11 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen>
     _session.setGarden(nextGarden);
     _patch((s) => s.copyWith(placingDecorInventoryId: nextDecorId));
     unawaited(_persist(snapshot: nextGarden));
-    SemanticsService.announce('Decoration placed.', Directionality.of(context));
+    SemanticsService.sendAnnouncement(
+      View.of(context),
+      'Decoration placed.',
+      Directionality.of(context),
+    );
   }
 
   void _growSelected() {

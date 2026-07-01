@@ -81,13 +81,17 @@ void main() {
     });
 
     test('translated matrix is not default', () {
-      final m = Matrix4.identity()..translate(12.0, 8.0);
+      final m = Matrix4.identity()..setTranslationRaw(12.0, 8.0, 0.0);
       expect(sandboxViewportIsDefault(m), isFalse);
     });
   });
 
   test('lerpSandboxViewportMatrix reaches identity at t=1', () {
-    final from = Matrix4.identity()..scale(2.0)..translate(40.0, 20.0);
+    final from = Matrix4.identity()
+      ..setEntry(0, 0, 2.0)
+      ..setEntry(1, 1, 2.0)
+      ..setEntry(2, 2, 2.0)
+      ..setTranslationRaw(40.0, 20.0, 0.0);
     final result = lerpSandboxViewportMatrix(from, Matrix4.identity(), 1);
     expect(sandboxViewportIsDefault(result), isTrue);
   });

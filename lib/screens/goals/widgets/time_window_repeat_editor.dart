@@ -77,7 +77,8 @@ class _TimeWindowRepeatEditorState extends State<TimeWindowRepeatEditor> {
         ),
         if (_rule.enabled) ...[
           DropdownButtonFormField<RepeatUnit>(
-            value: _rule.unit,
+            key: ValueKey(_rule.unit),
+            initialValue: _rule.unit,
             dropdownColor: widget.bundle.secondaryColor,
             style: textStyle,
             decoration: InputDecoration(

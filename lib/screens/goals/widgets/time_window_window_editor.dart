@@ -301,7 +301,8 @@ class _TimeWindowWindowEditorState extends State<TimeWindowWindowEditor> {
                       ),
                     );
                     final unitField = DropdownButtonFormField<String>(
-                      value: _durationUnit,
+                      key: ValueKey(_durationUnit),
+                      initialValue: _durationUnit,
                       isExpanded: true,
                       dropdownColor: widget.bundle.secondaryColor,
                       style: textStyle,

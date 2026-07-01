@@ -181,10 +181,11 @@ class CommonUtils {
       label: label,
       textStyle: textStyle,
       field: DropdownButtonFormField<T>(
+        key: ValueKey('$label::$value'),
         isExpanded: true,
         isDense: false,
         dropdownColor: dropdownColor,
-        value: value,
+        initialValue: value,
         itemHeight: dropdownButtonClosedHeight(textStyle),
         decoration: formInputDecoration(
           label: label,
@@ -250,7 +251,7 @@ class CommonUtils {
     void Function(bool)? onChanged,
     Color color,
   ) {
-    return Switch(value: value, onChanged: onChanged, activeColor: color);
+    return Switch(value: value, onChanged: onChanged, activeThumbColor: color);
   }
 
   static Widget buildSwitchListTile(
@@ -263,7 +264,9 @@ class CommonUtils {
     int titleMaxLines = 1,
   }) {
     final dyslexia = usesOpenDyslexic(textStyle);
-    return SwitchListTile(
+    return Material(
+      color: Colors.transparent,
+      child: SwitchListTile(
       dense: dyslexia ? false : dense,
       contentPadding:
           dyslexia
@@ -278,7 +281,8 @@ class CommonUtils {
       ),
       value: value,
       onChanged: onChanged,
-      activeColor: tileColor,
+      activeThumbColor: tileColor,
+    ),
     );
   }
 
