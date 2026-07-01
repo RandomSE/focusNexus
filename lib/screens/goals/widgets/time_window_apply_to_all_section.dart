@@ -16,14 +16,15 @@ class TimeWindowApplyToAllSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: bundle.primaryColor.withValues(alpha: 0.06),
-        border: Border.all(
+    return Material(
+      color: bundle.primaryColor.withValues(alpha: 0.06),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
           color: bundle.accentColor.withValues(alpha: 0.85),
           width: 2,
         ),
-        borderRadius: BorderRadius.circular(12),
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),

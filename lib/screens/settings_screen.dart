@@ -204,11 +204,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                     iconTheme: IconThemeData(color: primaryColor),
                   ),
                   backgroundColor: secondaryColor,
-                  body: Container(
-                    color: secondaryColor,
-                    child: ListView(
-                      padding: const EdgeInsets.all(16.0),
-                      children: [
+                  body: ListView(
+                    padding: const EdgeInsets.all(16.0),
+                    children: [
                         const SizedBox(height: 8),
                         ScreenSemantics.sectionHeader('Appearance', textStyle),
                         AppearanceSettingsSection(bundle: bundle),
@@ -387,7 +385,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                               ),
                         ),
                       ],
-                    ),
                   ),
                 ),
               ),

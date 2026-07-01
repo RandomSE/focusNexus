@@ -1,5 +1,6 @@
-# Runs on every PR targeting main/master so analyze + test must pass before merge.
-# After this workflow has run once on the default branch, enable branch protection:
+# Runs on PRs to master and on every branch push (feature branches included).
+# Concurrency groups by branch name so a new push cancels an in-flight run instead of duplicating.
+# After this workflow has run once on master, enable branch protection:
 # Settings → Branches → require status check "Flutter analyze and test".
 name: CI
 
@@ -8,11 +9,10 @@ on:
     branches: [master]
     types: [opened, synchronize, reopened, ready_for_review]
   push:
-    branches: [master]
   merge_group:
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}
   cancel-in-progress: true
 
 permissions:
