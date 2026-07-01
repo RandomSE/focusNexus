@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:focusNexus/bootstrap/app_bootstrap.dart';
 import 'package:focusNexus/models/classes/achievement_tracking_variables.dart';
 import 'package:focusNexus/providers/app_repositories_provider.dart';
 import 'package:focusNexus/providers/app_services_provider.dart';

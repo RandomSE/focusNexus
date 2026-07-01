@@ -17,3 +17,4 @@ linter:
   rules:
     avoid_print: true
     use_build_context_synchronously: true
+    package_names: false

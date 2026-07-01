@@ -203,6 +203,7 @@ class _GoalsMultiTemplateManagerDialogState
                     _selectedGroup = groupName;
                     _validationMessage = null;
                   });
+                  if (!context.mounted) return;
                   CommonUtils.showDialogWidget(
                     context,
                     '$groupName has been updated.',

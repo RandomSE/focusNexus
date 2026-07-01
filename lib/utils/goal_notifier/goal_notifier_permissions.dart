@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:focusNexus/services/storage/storage_keys.dart';
+import 'package:focusNexus/utils/debug_log.dart';
 
 import '../theme_styles.dart';
 import 'goal_notifier_bindings.dart';
@@ -29,8 +30,8 @@ Future<void> requestNotificationPermission() async {
     final status = await Permission.notification.status;
     final shouldShow =
         await Permission.notification.shouldShowRequestRationale;
-    debugPrint('Status: $status. Should show: $shouldShow');
-    debugPrint('Critical notification permissions not granted.');
+    debugLog('Status: $status. Should show: $shouldShow');
+    debugLog('Critical notification permissions not granted.');
     if (shouldShow) {
       return; // User denied notification - don't send request
     } else {
@@ -48,10 +49,10 @@ Future<void> requestNotificationPermission() async {
           ?.areNotificationsEnabled();
 
   if (isAllowed == false) {
-    debugPrint('Notifications are disabled in system settings.');
+    debugLog('Notifications are disabled in system settings.');
     await openNotificationSettings();
   } else {
-    debugPrint('Notifications fully enabled.');
+    debugLog('Notifications fully enabled.');
   }
 }
 
@@ -75,10 +76,10 @@ Future<AndroidScheduleMode> getScheduleMode() async {
   final status = await Permission.scheduleExactAlarm.status;
 
   if (status.isGranted) {
-    debugPrint('Exact alarm permission granted.');
+    debugLog('Exact alarm permission granted.');
     return AndroidScheduleMode.exactAllowWhileIdle;
   } else {
-    debugPrint('Exact alarm permission not granted. Using inexact mode.');
+    debugLog('Exact alarm permission not granted. Using inexact mode.');
     return AndroidScheduleMode.inexactAllowWhileIdle;
   }
 }
@@ -87,7 +88,7 @@ Future<void> openNotificationSettings() async {
   try {
     await GoalNotifierRuntime.platform.invokeMethod('openNotificationSettings');
   } catch (e) {
-    debugPrint('Error opening notification settings: $e');
+    debugLog('Error opening notification settings: $e');
   }
 }
 

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:focusNexus/goals/dashboard_goals_label.dart';
 import 'package:focusNexus/goals/time_window_goal.dart';
 import 'package:focusNexus/models/classes/theme_bundle.dart';
 import 'package:focusNexus/app/app_navigation.dart';

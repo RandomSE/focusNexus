@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:focusNexus/bootstrap/app_bootstrap.dart';
 import 'package:focusNexus/providers/achievement_catalog_provider.dart';
 import 'package:focusNexus/providers/app_services_provider.dart';
-import 'package:focusNexus/services/achievement_service.dart';
 
 import '../helpers/in_memory_key_value_storage.dart';
 import '../helpers/test_provider_scope.dart';

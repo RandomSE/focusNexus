@@ -1,9 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:focusNexus/providers/app_repositories_provider.dart';
+import 'package:focusNexus/assistant/local_assistant_service.dart';
 import 'package:focusNexus/providers/app_services_provider.dart';
 import 'package:focusNexus/providers/key_value_storage_provider.dart';
-import 'package:focusNexus/services/ai_chat_service.dart';
 import 'package:focusNexus/services/storage/storage_keys.dart';
 import 'package:focusNexus/utils/notifier.dart';
 
@@ -54,13 +53,13 @@ void main() {
       expect(container.read(soundServiceProvider), isNotNull);
     });
 
-    test('aiChatService defaults to Groq implementation', () async {
+    test('aiChatService defaults to local assistant', () async {
       final container = await createTestContainer();
       addTearDown(container.dispose);
 
       expect(
         container.read(aiChatServiceProvider),
-        isA<GroqAiChatService>(),
+        isA<LocalAssistantService>(),
       );
     });
   });

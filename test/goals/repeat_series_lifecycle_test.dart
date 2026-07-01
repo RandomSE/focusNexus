@@ -1,9 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:focusNexus/goals/goal_kind.dart';
 import 'package:focusNexus/goals/goals_time_window_service.dart';
 import 'package:focusNexus/goals/goals_use_case.dart';
 import 'package:focusNexus/goals/repeat_rule.dart';
-import 'package:focusNexus/goals/time_window_goal.dart';
 import 'package:focusNexus/repositories/achievement_counters_repository.dart';
 import 'package:focusNexus/repositories/goals_repository.dart';
 import 'package:focusNexus/repositories/points_repository.dart';

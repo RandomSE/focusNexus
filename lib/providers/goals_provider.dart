@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:focusNexus/utils/debug_log.dart';
 import 'package:focusNexus/goals/goals_time_window_service.dart';
 import 'package:focusNexus/goals/goals_use_case.dart';
 import 'package:focusNexus/goals/repeat_rule.dart';
@@ -60,12 +60,16 @@ class GoalsView extends _$GoalsView {
   Future<void> _persistAndRefreshAchievements(
     Future<Set<String>> trackingKeysFuture,
   ) async {
+    var alive = true;
+    ref.onDispose(() => alive = false);
     try {
       final keys = await trackingKeysFuture;
+      if (!alive) return;
       if (keys.isEmpty) return;
       final newlyReady = await ref
           .read(achievementServiceProvider)
           .updateProgressForTrackingKeys(keys);
+      if (!alive) return;
       if (newlyReady.isNotEmpty) {
         ref.read(achievementReadyToastQueueProvider.notifier).enqueueTitles(
               newlyReady.map((a) => a.title),
@@ -73,7 +77,8 @@ class GoalsView extends _$GoalsView {
       }
       ref.read(achievementsListRefreshProvider.notifier).bump();
     } catch (e, stack) {
-      debugPrint('Achievement progress refresh failed: $e\n$stack');
+      if (!alive) return;
+      debugLog('Achievement progress refresh failed: $e\n$stack');
     }
   }
   Future<void> load({DateTime? now}) async {

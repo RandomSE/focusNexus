@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:focusNexus/utils/debug_log.dart';
 import 'package:focusNexus/models/classes/goal_set.dart';
 import 'package:focusNexus/services/storage/storage_keys.dart';
 
@@ -14,7 +14,7 @@ Future<void> cancelGoalNotification(GoalSet goalSet) async {
   final goalId = goalSet.goalId;
   final goalName = goalSet.title;
   final deadline = goalSet.deadline;
-  debugPrint('Cancelling notifications for goal: $goalName, goalID: $goalId');
+  debugLog('Cancelling notifications for goal: $goalName, goalID: $goalId');
 
   if (isTimeWindowGoal(goalSet)) {
     await Future.wait([
@@ -60,7 +60,7 @@ Future<void> cancelGoalNotification(GoalSet goalSet) async {
     r.activeTimers.remove(goalName);
   }
 
-  debugPrint('Notifications cancelled for goal: $goalName');
+  debugLog('Notifications cancelled for goal: $goalName');
 }
 
 Future<void> cancelAiEncouragementNotification(int goalId) async {
@@ -68,7 +68,7 @@ Future<void> cancelAiEncouragementNotification(int goalId) async {
   for (final offset in GoalNotifierRuntime.aiEncouragementSlotOffsets) {
     await r.plugin.cancel(goalId + offset);
   }
-  debugPrint(
+  debugLog(
     'AI encouragement for goal canceled due to step progress addition.',
   );
 }
@@ -82,13 +82,13 @@ Future<void> cancelDailyAffirmationsNotification() async {
   ];
   await Future.wait(cancelOps);
   await goalNotifierStorage().delete(key: StorageKeys.dailyAffirmationsScheduledUntil);
-  debugPrint('Daily affirmations canceled.');
+  debugLog('Daily affirmations canceled.');
 }
 
 /// Cancel all notifications and timers indiscriminately
 Future<void> cancelAllGoalNotifications() async {
   final r = GoalNotifierRuntime.I;
-  debugPrint('Cancelling all goal-related notifications and timers…');
+  debugLog('Cancelling all goal-related notifications and timers…');
 
   // Cancel all scheduled notifications
   await r.plugin.cancelAll();
@@ -113,5 +113,5 @@ Future<void> cancelAllGoalNotifications() async {
     await startDailyAffirmations(effectiveTime);
   }
 
-  debugPrint('All goal notifications and timers cancelled.');
+  debugLog('All goal notifications and timers cancelled.');
 }

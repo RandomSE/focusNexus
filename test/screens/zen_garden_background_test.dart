@@ -14,8 +14,8 @@ void main() {
         themeSecondary: Colors.white,
       );
 
-      expect(palette.highlight.red, greaterThan(palette.shadow.red));
-      expect(palette.highlight.green, greaterThan(palette.deepShadow.green));
+      expect(palette.highlight.r, greaterThan(palette.shadow.r));
+      expect(palette.highlight.g, greaterThan(palette.deepShadow.g));
       expect(palette.mossVeil, const Color(0xFF6B9E54));
     });
 

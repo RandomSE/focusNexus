@@ -20,11 +20,14 @@ class GoalsListSectionHeader extends StatelessWidget {
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
-          child: Text(
-            'Your goals',
-            style: bundle.textStyle.copyWith(
-              fontWeight: FontWeight.bold,
-              color: bundle.primaryColor,
+          child: Semantics(
+            header: true,
+            child: Text(
+              'Your goals',
+              style: bundle.textStyle.copyWith(
+                fontWeight: FontWeight.bold,
+                color: bundle.primaryColor,
+              ),
             ),
           ),
         ),

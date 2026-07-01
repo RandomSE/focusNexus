@@ -1,6 +1,6 @@
 // lib/services/achievement_tracking_service.dart
 import 'dart:convert';
-import 'package:flutter/cupertino.dart';
+import 'package:focusNexus/utils/debug_log.dart';
 import 'package:focusNexus/services/storage/key_value_storage.dart';
 import 'package:focusNexus/services/storage/storage_keys.dart';
 import 'package:focusNexus/utils/achievement_tracking_codec.dart';
@@ -70,10 +70,10 @@ class AchievementTrackingVariables {
         key: StorageKeys.achievementTrackingData,
         value: jsonEncode(_toJson()),
       );
-      debugPrint('Achievement tracking initialized with default values.');
+      debugLog('Achievement tracking initialized with default values.');
     } else {
       await load(); // loads existing values
-      debugPrint('Achievement tracking loaded from storage.');
+      debugLog('Achievement tracking loaded from storage.');
     }
   }
 

@@ -11,6 +11,7 @@ import 'package:focusNexus/providers/zen_garden_session_provider.dart';
 import 'package:focusNexus/utils/appearance_transition.dart';
 import 'package:focusNexus/utils/common_utils.dart';
 import 'package:focusNexus/utils/notifier.dart';
+import 'package:focusNexus/utils/screen_semantics.dart';
 import 'package:focusNexus/utils/screen_theme.dart';
 import 'package:focusNexus/widgets/appearance_settings_section.dart';
 import 'package:focusNexus/widgets/deferred_screen.dart';
@@ -209,7 +210,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                       padding: const EdgeInsets.all(16.0),
                       children: [
                         const SizedBox(height: 8),
+                        ScreenSemantics.sectionHeader('Appearance', textStyle),
                         AppearanceSettingsSection(bundle: bundle),
+                        ScreenSemantics.sectionHeader(
+                          'Rewards & notifications',
+                          textStyle,
+                        ),
                         CommonUtils.buildDropdownButtonFormField(
                           'Reward Type',
                           settings.rewardType,
@@ -247,6 +253,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                             textStyle,
                           ),
                         const Divider(),
+                        ScreenSemantics.sectionHeader('Accessibility', textStyle),
                         CommonUtils.buildSwitchListTile(
                           'Dyslexia-friendly Font',
                           textStyle,
@@ -344,6 +351,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                               primaryColor,
                             ),
                         ],
+                        ScreenSemantics.sectionHeader('Goals & sound', textStyle),
                         CommonUtils.buildSwitchListTile(
                           'Pause Goals',
                           textStyle,
@@ -361,6 +369,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                         if (settings.soundEnabled)
                           SoundVolumeControl(bundle: bundle),
                         const Divider(),
+                        ScreenSemantics.sectionHeader('Account', textStyle),
                         CommonUtils.buildElevatedButton(
                           'Clear preferences and delete account',
                           primaryColor,

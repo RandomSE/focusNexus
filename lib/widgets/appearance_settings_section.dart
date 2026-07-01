@@ -63,9 +63,12 @@ class _FontSizeStepper extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          'Font size',
-          style: textStyle.copyWith(fontWeight: FontWeight.bold),
+        Semantics(
+          header: true,
+          child: Text(
+            'Font size',
+            style: textStyle.copyWith(fontWeight: FontWeight.bold),
+          ),
         ),
         const SizedBox(height: 8),
         Text(

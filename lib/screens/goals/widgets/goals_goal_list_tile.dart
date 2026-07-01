@@ -32,9 +32,10 @@ class GoalsGoalListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
     final isTimeWindow = isTimeWindowGoal(goal);
     final inWindow = selectedStatusFilter == 'Active' && isTimeWindow
-        ? isActionWindowActive(goal, DateTime.now())
+        ? isActionWindowActive(goal, now)
         : true;
     final outsideTimeWindow =
         selectedStatusFilter == 'Active' && isTimeWindow && !inWindow;
@@ -58,7 +59,7 @@ class GoalsGoalListTile extends StatelessWidget {
     final subtitleLines = goalListSubtitleLines(
       goal: goal,
       selectedStatusFilter: selectedStatusFilter,
-      now: DateTime.now(),
+      now: now,
       repeatRule: repeatRule,
     );
 
@@ -78,13 +79,21 @@ class GoalsGoalListTile extends StatelessWidget {
           )
         : null;
 
-    final content = Material(
-      color: tileColor ?? Colors.transparent,
-      child: InkWell(
-        onTap: onViewDetails,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          child: Column(
+    final content = Semantics(
+      label: goalTileSemanticsLabel(
+        goal: goal,
+        selectedStatusFilter: selectedStatusFilter,
+        now: now,
+        repeatRule: repeatRule,
+      ),
+      button: true,
+      child: Material(
+        color: tileColor ?? Colors.transparent,
+        child: InkWell(
+          onTap: onViewDetails,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Row(
@@ -139,6 +148,7 @@ class GoalsGoalListTile extends StatelessWidget {
           ),
         ),
       ),
+    ),
     );
 
     if (selectedStatusFilter != 'Active') {
@@ -192,13 +202,20 @@ class _CompactGoalAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      onPressed: onPressed,
-      icon: Icon(icon, color: color, size: 20),
-      tooltip: tooltip,
-      visualDensity: VisualDensity.compact,
-      padding: EdgeInsets.zero,
-      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+    return Semantics(
+      label: tooltip,
+      button: true,
+      enabled: onPressed != null,
+      child: ExcludeSemantics(
+        child: IconButton(
+          onPressed: onPressed,
+          icon: Icon(icon, color: color, size: 20),
+          tooltip: tooltip,
+          visualDensity: VisualDensity.compact,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+        ),
+      ),
     );
   }
 }
