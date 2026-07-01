@@ -52,7 +52,6 @@ class AppRepositories {
   /// Wipes all persisted data and resets in-memory wallet cache to default.
   Future<void> wipeAllUserData() async {
     await storage.deleteAll();
-    points.clearBalanceCacheForTesting();
     await points.resetToDefaultBalance();
   }
 }

@@ -3,6 +3,9 @@ enum VisualThemeId {
   zenGarden,
 }
 
-String visualThemeLabel(VisualThemeId id) => switch (id) {
-      VisualThemeId.zenGarden => 'Zen garden',
-    };
+String visualThemeLabel(VisualThemeId id) {
+  if (id == VisualThemeId.zenGarden) {
+    return 'Zen garden';
+  }
+  return 'Progressive visual';
+}

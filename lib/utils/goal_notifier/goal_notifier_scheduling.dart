@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
+import 'package:focusNexus/utils/debug_log.dart';
 
 import '../goal_notification_android.dart';
 import 'goal_notifier_ids.dart';
@@ -54,9 +54,9 @@ Future<void> scheduleReminder(
       summaryTitle,
       summaryBody,
     );
-    debugPrint('Daily reminder scheduled for $scheduledTime, goalId: $id');
+    debugLog('Daily reminder scheduled for $scheduledTime, goalId: $id');
   } else if (summaryNotificationId == r.goalGroupId) {
-    debugPrint('Reminder scheduled for $scheduledTime, goalId: $id');
+    debugLog('Reminder scheduled for $scheduledTime, goalId: $id');
     await scheduleSummaryNotification(
       scheduledTime,
       mode,
@@ -84,7 +84,7 @@ Future<void> scheduleReminder(
 
   final trigger = tz.TZDateTime.from(scheduledTime, tz.local);
   if (!trigger.isAfter(tz.TZDateTime.now(tz.local))) {
-    debugPrint(
+    debugLog(
       'Skipping reminder id=$id: scheduled time $trigger is not in the future.',
     );
     return;
@@ -154,7 +154,7 @@ Future<void> scheduleSummaryNotification(
     uiLocalNotificationDateInterpretation:
         UILocalNotificationDateInterpretation.absoluteTime,
   );
-  debugPrint(
+  debugLog(
     'Group summary scheduled at $triggerTime (id: $summaryId, group: $groupKey).',
   );
 }
@@ -200,7 +200,7 @@ Future<void> scheduleRepeatingGoalSummaryNotification(
         UILocalNotificationDateInterpretation.absoluteTime,
     matchDateTimeComponents: DateTimeComponents.time,
   );
-  debugPrint(
+  debugLog(
     'Repeating group summary scheduled at $triggerTime (id: $summaryId).',
   );
 }

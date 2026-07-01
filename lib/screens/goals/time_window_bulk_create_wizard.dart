@@ -52,12 +52,12 @@ class _TimeWindowBulkCreateWizardState
     return {...builtinGoalTemplates, ...ui.userTemplates};
   }
 
-  void _goToWindows() {
+  void _goToWindows(List<String> names) {
     final templates = _templates;
     _drafts
       ..clear()
       ..addAll(
-        _selected.map(
+        names.map(
           (name) => _BulkDraft(
             name: name,
             data: templates[name]!,
@@ -143,6 +143,7 @@ class _TimeWindowBulkCreateWizardState
     ThemeBundle bundle,
     Map<String, Map<String, dynamic>> templates,
   ) {
+    final selectedNames = _selected.toList();
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -170,7 +171,7 @@ class _TimeWindowBulkCreateWizardState
           bundle.textStyle,
           8,
           8,
-          _selected.isEmpty ? () {} : _goToWindows,
+          selectedNames.isEmpty ? () {} : () => _goToWindows(selectedNames),
           borderColor: bundle.accentColor,
         ),
       ],

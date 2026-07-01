@@ -1,5 +1,5 @@
-import 'package:flutter/foundation.dart';
 import 'package:focusNexus/services/storage/storage_keys.dart';
+import 'package:focusNexus/utils/debug_log.dart';
 
 import '../theme_styles.dart';
 import 'goal_notifier_bindings.dart';
@@ -29,7 +29,7 @@ Future<void> refreshSchedulesForFrequencyChange({
 
   await checkDailyAffirmations();
   if (!r.dailyAffirmations) {
-    debugPrint(
+    debugLog(
       'Skipped daily affirmations refresh after frequency re-enable: setting disabled.',
     );
     return;

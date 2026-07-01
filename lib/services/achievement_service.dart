@@ -2,6 +2,7 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:focusNexus/utils/debug_log.dart';
 import 'package:focusNexus/repositories/achievement_repository.dart';
 import 'package:focusNexus/repositories/points_repository.dart';
 import 'package:focusNexus/services/achievement_progress.dart';
@@ -68,12 +69,13 @@ class AchievementService {
     _buildAchievementIdsByVariable();
     final stored = await _repository.loadAll();
     if (stored == null) {
-      debugPrint('No achievements. creating');
+      debugLog('No achievements. creating');
       _cachedAchievements = [];
       await initializeAchievements();
     } else {
-      debugPrint('Achievements exist.');
+      debugLog('Achievements exist.');
       _cachedAchievements = stored;
+      await _pruneOrphanedAssistantAchievements();
       await _ensureCategoryAchievements();
     }
     await _sanitizeStoredProgress();
@@ -139,6 +141,32 @@ class AchievementService {
     }
     if (changed) await _saveToStorage();
   }
+
+  /// One-time cleanup for retired assistant-create achievements (ids 106–111).
+  Future<void> _pruneOrphanedAssistantAchievements() async {
+    const orphanIds = {'106', '107', '108', '109', '110', '111'};
+    const orphanStorageKeys = [
+      'goalsCreatedViaAssistant',
+      'templatesSavedViaAssistant',
+      'timeSlotGoalsCreatedViaAssistant',
+      'assistantCreateKindsUsed',
+    ];
+
+    final beforeCount = _cachedAchievements.length;
+    _cachedAchievements.removeWhere((a) => orphanIds.contains(a.id));
+    var changed = beforeCount != _cachedAchievements.length;
+
+    for (final key in orphanStorageKeys) {
+      final existing = await _storage.read(key: key);
+      if (existing != null) {
+        await _storage.delete(key: key);
+        changed = true;
+      }
+    }
+
+    if (changed) await _saveToStorage();
+  }
+
   /// Mirrors scalar counters into the achievement tracking blob (same [KeyValueStorage]).
   Future<void> _syncTrackingVariablesFromStorage() async {
     Future<int> readInt(String key) async {
@@ -288,7 +316,7 @@ class AchievementService {
   }
 
   Future<void> initializeAchievements() async {
-    debugPrint('Achievements not initialized — creating.');
+    debugLog('Achievements not initialized — creating.');
 
     final achievementVariables = achievementVariableMap.values.toList();
     await bulkSetAchievementVariablesInStorage(achievementVariables);
@@ -495,7 +523,7 @@ class AchievementService {
         title: 'Perfectly balanced',
         reward: '1000 points',
         task:
-            'Complete at least 1 goal in every category (${kGoalCategoryCount} categories)',
+            'Complete at least 1 goal in every category ($kGoalCategoryCount categories)',
         isSecret: true,
       ),
     );
@@ -525,7 +553,7 @@ class AchievementService {
           title: 'Perfectly balanced',
           reward: '1000 points',
           task:
-              'Complete at least 1 goal in every category (${kGoalCategoryCount} categories)',
+              'Complete at least 1 goal in every category ($kGoalCategoryCount categories)',
           isSecret: true,
         ),
       );
@@ -557,12 +585,12 @@ class AchievementService {
     updateProgressInvocationCount++;
     try {      final index = _cachedAchievements.indexWhere((a) => a.id == id);
       if (index == -1) {
-        debugPrint('updateProgress: achievement not found. id: $id');
+        debugLog('updateProgress: achievement not found. id: $id');
         return null;
       }
       final variableName = getVariableForAchievement(id);
       if (variableName == null) {
-        debugPrint('No tracking variable found for achievement $id');
+        debugLog('No tracking variable found for achievement $id');
         return null;
       }
       final repetitionsNeeded = achievementRepetitions[index];
@@ -582,7 +610,7 @@ class AchievementService {
         currentProgress,
         achievementProgress,
       )) {
-        debugPrint('Achievement progress will not decrease here for id: $id.');
+        debugLog('Achievement progress will not decrease here for id: $id.');
         return null;
       }
 
@@ -595,7 +623,7 @@ class AchievementService {
 
       if (currentProgress != achievementProgress) {
         await _saveToStorage();
-        debugPrint(
+        debugLog(
           'Achievement successfully saved. title: ${_cachedAchievements[index].title}, progress: ${_cachedAchievements[index].progress}%',
         );
       }
@@ -605,7 +633,7 @@ class AchievementService {
       }
       return null;
     } catch (e) {
-      debugPrint('updateProgress: failed. id: $id, error: $e');
+      debugLog('updateProgress: failed. id: $id, error: $e');
       return null;
     }
   }
@@ -615,11 +643,11 @@ class AchievementService {
   }
 
   Future<void> completeAchievement(String id) async {
-    debugPrint('Achievement completed for id: $id');
+    debugLog('Achievement completed for id: $id');
     final index = _cachedAchievements.indexWhere((a) => a.id == id);
     final currentAchievement = _cachedAchievements[index];
     if (currentAchievement.isCompleted) {
-      debugPrint('This achievement is already completed!');
+      debugLog('This achievement is already completed!');
       return;
     }
     _cachedAchievements[index] = currentAchievement.copyWith(
@@ -631,11 +659,11 @@ class AchievementService {
       final pointsToAdd = AchievementProgress.parsePointsFromReward(reward);
       await _addPoints(pointsToAdd);
     } else {
-      debugPrint('Special reward spotted. ID: $id reward: $reward');
+      debugLog('Special reward spotted. ID: $id reward: $reward');
     }
     await _saveToStorage();
     await _soundService.playAchievementCompleted();
-    debugPrint(
+    debugLog(
       'Achievement successfully saved. title: ${_cachedAchievements[index].title}, progress: ${_cachedAchievements[index].progress}%',
     );
   }
@@ -663,7 +691,7 @@ class AchievementService {
     try {
       return _cachedAchievements.firstWhere((a) => a.id == id);
     } catch (_) {
-      debugPrint('getByID: failed. id: $id');
+      debugLog('getByID: failed. id: $id');
       return null;
     }
   }

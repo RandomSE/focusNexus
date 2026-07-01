@@ -53,9 +53,8 @@ double mutationChanceForRebirthCount(int rebirthCount) =>
 class ProgressiveGardenEngine {
   ProgressiveGardenEngine({
     List<StageTransitionRule>? transitionRules,
-    double? mutationProbability,
-  })  : transitionRules = transitionRules ?? defaultTransitionRules(),
-        mutationProbability = mutationProbability;
+    this.mutationProbability,
+  }) : transitionRules = transitionRules ?? defaultTransitionRules();
 
   final List<StageTransitionRule> transitionRules;
 

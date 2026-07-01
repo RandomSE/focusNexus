@@ -11,6 +11,7 @@ import 'package:focusNexus/goals/time_window_goal.dart';
 import 'package:focusNexus/providers/goals_provider.dart';
 import 'package:focusNexus/providers/points_balance_provider.dart';
 import 'package:focusNexus/utils/common_utils.dart';
+import 'package:focusNexus/utils/screen_semantics.dart';
 import 'package:focusNexus/widgets/settings_themed_builder.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -69,9 +70,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 children: [
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: Text(
+                    child: ScreenSemantics.statusText(
                       pointsLabel,
-                      style: bundle.textStyle,
+                      bundle.textStyle,
                       textAlign: TextAlign.left,
                     ),
                   ),
@@ -79,11 +80,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     const SizedBox(height: 8),
                     Align(
                       alignment: Alignment.centerLeft,
-                      child: Text(
+                      child: ScreenSemantics.statusText(
                         inSlotLine,
-                        style: bundle.textStyle.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                        bundle.textStyle,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
@@ -108,6 +108,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     bundle.textStyle,
                     bundle.secondaryColor,
                     borderColor: bundle.primaryColor,
+                    semanticsHint: 'Opens goals screen',
                   ),
                   const SizedBox(height: 12),
                   CommonUtils.buildCenteredButton(
@@ -117,6 +118,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     bundle.textStyle,
                     bundle.secondaryColor,
                     borderColor: bundle.primaryColor,
+                    semanticsHint: 'Opens settings',
                   ),
                   const SizedBox(height: 12),
                   CommonUtils.buildCenteredButton(
@@ -126,6 +128,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     bundle.textStyle,
                     bundle.secondaryColor,
                     borderColor: bundle.primaryColor,
+                    semanticsHint: 'Opens achievements',
                   ),
                   const SizedBox(height: 12),
                   CommonUtils.buildCenteredButton(
@@ -137,15 +140,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     bundle.textStyle,
                     bundle.secondaryColor,
                     borderColor: bundle.primaryColor,
+                    semanticsHint: 'Opens reward screen',
                   ),
                   const SizedBox(height: 12),
                   CommonUtils.buildCenteredButton(
                     context,
-                    'AI Chat',
+                    'Assistant',
                     () => ref.pushRoute(context, AppRoute.chat),
                     bundle.textStyle,
                     bundle.secondaryColor,
                     borderColor: bundle.primaryColor,
+                    semanticsHint: 'Opens app assistant',
                   ),
                 ],
               ),

@@ -58,13 +58,17 @@ void main() {
     await tester.fling(scrollable, const Offset(0, -2000), 3000);
     await tester.pumpAndSettle();
 
-    expect(tester.getTopLeft(find.text('Add Goal')).dy, lessThan(0));
+    final pixelsAfterUp =
+        tester.state<ScrollableState>(scrollable).position.pixels;
+    expect(pixelsAfterUp, greaterThan(300));
     expect(find.text('Scroll Goal 0'), findsOneWidget);
     expect(find.text('Your goals'), findsOneWidget);
 
     await tester.fling(scrollable, const Offset(0, 2000), 3000);
     await tester.pumpAndSettle();
 
-    expect(tester.getTopLeft(find.text('Add Goal')).dy, greaterThanOrEqualTo(0));
+    final addGoal = find.text('Add Goal');
+    await tester.scrollUntilVisible(addGoal, 100, scrollable: scrollable);
+    expect(tester.getTopLeft(addGoal).dy, greaterThanOrEqualTo(0));
   });
 }

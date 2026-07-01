@@ -1,5 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import 'package:focusNexus/assistant/assistant_message_codec.dart';
+
 part 'screen_ui_providers.g.dart';
 
 @riverpod
@@ -39,9 +41,11 @@ class AiChatMessages extends _$AiChatMessages {
   @override
   List<Map<String, String>> build() => [];
 
-  void replace(List<Map<String, String>> messages) => state = messages;
+  void replace(List<Map<String, String>> messages) =>
+      state = sanitizeAssistantMessages(messages);
 
-  void append(Map<String, String> message) => state = [...state, message];
+  void append(Map<String, String> message) =>
+      state = [...state, sanitizeAssistantMessage(message)];
 }
 
 /// Session flag: user accepted the AI chat legal notice for this app run.

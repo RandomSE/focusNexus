@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:focusNexus/utils/debug_log.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 import 'package:focusNexus/services/storage/storage_keys.dart';
@@ -41,7 +41,7 @@ Future<void> refreshDailyAffirmationSchedules({
       );
 
   if (!needsRefresh) {
-    debugPrint('Daily affirmations schedule still has sufficient runway.');
+    debugLog('Daily affirmations schedule still has sufficient runway.');
     return;
   }
 
@@ -54,7 +54,7 @@ int dailyAffirmationNotificationIdForDay(int dayOffset) =>
 Future<void> startDailyAffirmations(String? timeToTrigger) async {
   final r = GoalNotifierRuntime.I;
   if (!await areNotificationsEnabledByFrequency()) {
-    debugPrint(
+    debugLog(
       'Skipping daily affirmations scheduling because notifications are disabled by frequency.',
     );
     return;
@@ -69,7 +69,7 @@ Future<void> startDailyAffirmations(String? timeToTrigger) async {
   );
 
   if (firstTrigger == null) {
-    debugPrint('Invalid timeToTrigger: $timeToTrigger');
+    debugLog('Invalid timeToTrigger: $timeToTrigger');
     return;
   }
 
@@ -86,7 +86,7 @@ Future<void> startDailyAffirmations(String? timeToTrigger) async {
     days: r.dailyAffirmationsHorizonDays,
   );
 
-  debugPrint(
+  debugLog(
     'Scheduling ${triggers.length} daily affirmations from $firstTrigger ($effectiveTime).',
   );
 
@@ -120,5 +120,5 @@ Future<void> startDailyAffirmations(String? timeToTrigger) async {
     );
   }
 
-  debugPrint('Scheduled $scheduledCount daily affirmation notifications.');
+  debugLog('Scheduled $scheduledCount daily affirmation notifications.');
 }

@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:focusNexus/providers/customization_preview_provider.dart';
 
-import '../helpers/test_provider_scope.dart';
-
 void main() {
   test('selectColor rejects matching primary and secondary', () {
     final container = ProviderContainer();

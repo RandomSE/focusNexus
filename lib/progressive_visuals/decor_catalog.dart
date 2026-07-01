@@ -65,10 +65,10 @@ const List<DecorCatalogEntry> _zenDecorCatalog = [
 ];
 
 List<DecorCatalogEntry> decorCatalogFor(VisualThemeId theme) {
-  return switch (theme) {
-    VisualThemeId.zenGarden => _zenDecorCatalog,
-    _ => const [],
-  };
+  if (theme == VisualThemeId.zenGarden) {
+    return _zenDecorCatalog;
+  }
+  return const [];
 }
 
 DecorCatalogEntry? decorEntryByKind(String kind) {

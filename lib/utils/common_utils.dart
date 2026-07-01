@@ -91,30 +91,36 @@ class CommonUtils {
     TextStyle style,
     Color backgroundColor, {
     Color? borderColor,
+    String? semanticsHint,
   }) {
     final primaryColor = style.color ?? Colors.black87;
     final outlineColor = borderColor ?? primaryColor;
+    final button = ElevatedButton(
+      onPressed: onPressed,
+      style: ThemeStyles.outlinedActionButtonStyle(
+        primaryColor: primaryColor,
+        secondaryColor: backgroundColor,
+        borderColor: outlineColor,
+        verticalPadding: 16,
+      ),
+      child: Text(
+        label,
+        style: ThemeStyles.buttonLabelStyle(style, primaryColor),
+        textAlign: TextAlign.center,
+      ),
+    );
+    final sized = SizedBox(width: double.infinity, child: button);
+    final child = semanticsHint == null
+        ? sized
+        : Semantics(
+            button: true,
+            label: label,
+            hint: semanticsHint,
+            child: ExcludeSemantics(child: sized),
+          );
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10.0),
-      child: Center(
-        child: SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: onPressed,
-            style: ThemeStyles.outlinedActionButtonStyle(
-              primaryColor: primaryColor,
-              secondaryColor: backgroundColor,
-              borderColor: outlineColor,
-              verticalPadding: 16,
-            ),
-            child: Text(
-              label,
-              style: ThemeStyles.buttonLabelStyle(style, primaryColor),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ),
-      ),
+      child: Center(child: child),
     );
   }
 

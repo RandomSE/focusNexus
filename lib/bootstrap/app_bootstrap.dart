@@ -1,5 +1,5 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:focusNexus/utils/debug_log.dart';
 import 'package:focusNexus/models/classes/achievement_tracking_variables.dart';
 import 'package:focusNexus/providers/app_repositories_provider.dart';
 import 'package:focusNexus/providers/app_services_provider.dart';
@@ -47,6 +47,6 @@ Future<void> scheduleDeferredStartupWork({
       await GoalNotifier.initialize();
     }
   } catch (e, stack) {
-    debugPrint('Deferred startup work failed: $e\n$stack');
+    debugLog('Deferred startup work failed: $e\n$stack');
   }
 }

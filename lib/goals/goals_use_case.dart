@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
+import 'package:focusNexus/utils/debug_log.dart';
 
 import 'package:focusNexus/goals/goal_achievement_tracking_keys.dart';
 import 'package:focusNexus/goals/goals_time_window_service.dart';
@@ -426,14 +426,6 @@ class GoalsUseCase {
     }
   }
 
-  Future<void> _removeActiveWithoutNotificationCancel() async {
-    var active = await _goals.readActiveGoals();
-    if (active.isEmpty) return;
-    active.removeAt(0);
-    await _goals.writeActiveGoals(active);
-    await _streaks.decrement('totalGoalsActive');
-  }
-
   Future<List<GoalSet>> _removeExpiredGoals(
     List<GoalSet> active, {
     required DateTime now,
@@ -516,7 +508,7 @@ class GoalsUseCase {
     if (!_settings.notificationsEnabled ||
         deadlineHours <= 0 ||
         _settings.pauseGoals) {
-      debugPrint(
+      debugLog(
         'Notifications not enabled — skipping goal check scheduling',
       );
       return;

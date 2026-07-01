@@ -9,6 +9,7 @@ import 'zen_garden_stage_labels.dart';
 
 class ZenGardenBottomActions extends StatelessWidget {
   const ZenGardenBottomActions({
+    super.key,
     required this.textStyle,
     required this.primary,
     required this.secondary,
@@ -282,6 +283,7 @@ class ZenGardenBottomActions extends StatelessWidget {
 
 class ZenGardenCountdownRow extends StatelessWidget {
   const ZenGardenCountdownRow({
+    super.key,
     required this.remaining,
     required this.skipCost,
     required this.balance,

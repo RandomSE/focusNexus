@@ -1,6 +1,5 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focusNexus/app/app_navigator.dart';
 import 'package:focusNexus/app/app_routes.dart';
@@ -12,7 +11,6 @@ import 'package:focusNexus/widgets/skeleton_loaders.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: '.env');
 
   final container = ProviderContainer();
   await ensureAppReady(container);

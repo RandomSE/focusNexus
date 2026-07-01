@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:focusNexus/providers/app_repositories_provider.dart';
 import 'package:focusNexus/providers/goals_provider.dart';
 import 'package:focusNexus/providers/points_balance_provider.dart';
 
@@ -115,6 +114,13 @@ void main() {
       await container.read(goalsProvider.notifier).removeGoal(goalId);
 
       expect(container.read(goalsProvider).activeGoals, isEmpty);
+    });
+
+    test('achievement refresh tolerates disposed container', () async {
+      final container = await goalsContainer();
+      await createTestGoal(container);
+      container.dispose();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
     });
   });
 }

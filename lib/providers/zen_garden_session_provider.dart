@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:focusNexus/utils/debug_log.dart';
 import 'package:focusNexus/progressive_visuals/garden_engine.dart';
 import 'package:focusNexus/progressive_visuals/garden_op_result.dart';
 import 'package:focusNexus/progressive_visuals/garden_state.dart';
@@ -43,7 +43,7 @@ class ZenGardenSession extends _$ZenGardenSession {
         final snapshot = state.garden;
         unawaited(
           gardenRepo.save(snapshot).catchError((Object e, StackTrace st) {
-            debugPrint('Zen garden flush on dispose failed: $e\n$st');
+            debugLog('Zen garden flush on dispose failed: $e\n$st');
           }),
         );
       }
@@ -90,7 +90,7 @@ class ZenGardenSession extends _$ZenGardenSession {
     _persistQueue = (_persistQueue ?? Future.value()).then((_) async {
       await _repos.garden.save(toSave);
     }).catchError((Object e, StackTrace st) {
-      debugPrint('Zen garden persist failed: $e\n$st');
+      debugLog('Zen garden persist failed: $e\n$st');
     });
     return _persistQueue!;
   }

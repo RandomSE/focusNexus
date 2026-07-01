@@ -51,6 +51,28 @@ List<String> goalListSubtitleLines({
   return lines;
 }
 
+/// Single announcement for a goal list row (title, status, and actions context).
+String goalTileSemanticsLabel({
+  required GoalSet goal,
+  required String selectedStatusFilter,
+  required DateTime now,
+  RepeatRule? repeatRule,
+}) {
+  final parts = <String>[goal.title];
+  parts.addAll(
+    goalListSubtitleLines(
+      goal: goal,
+      selectedStatusFilter: selectedStatusFilter,
+      now: now,
+      repeatRule: repeatRule,
+    ),
+  );
+  if (selectedStatusFilter == 'Active') {
+    parts.add('Tap for goal details');
+  }
+  return parts.join('. ');
+}
+
 String _short(DateTime value) {
   final h = value.hour.toString().padLeft(2, '0');
   final m = value.minute.toString().padLeft(2, '0');

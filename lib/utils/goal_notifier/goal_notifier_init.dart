@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart';
 import 'package:timezone/timezone.dart' as tz;
+import 'package:focusNexus/utils/debug_log.dart';
 
 import 'package:focusNexus/goals/goals_notification_navigation.dart';
 import 'goal_notifier_bindings.dart';
@@ -26,10 +26,10 @@ Future<void> initialize() async {
   try {
     final String currentTimeZone = await getLocalTimezone();
     tz.setLocalLocation(tz.getLocation(currentTimeZone));
-    debugPrint('Timezone set to $currentTimeZone');
+    debugLog('Timezone set to $currentTimeZone');
   } catch (e) {
     tz.setLocalLocation(tz.getLocation('America/Chicago'));
-    debugPrint(
+    debugLog(
       'Unable to get timezone. Set to America/Chicago (notifications will be scheduled at  unexpected times.)',
     );
   }
@@ -55,7 +55,7 @@ Future<void> initialize() async {
   }
 
   r.initialized = true;
-  debugPrint('Notifications initialized.');
+  debugLog('Notifications initialized.');
   await refreshDailyAffirmationSchedules();
 }
 
@@ -63,7 +63,7 @@ Future<void> checkAdditionalNotificationSettings() async {
   final r = GoalNotifierRuntime.I;
   await checkAiEncouragement();
   await checkDailyAffirmations();
-  debugPrint(
+  debugLog(
     'Notification additional settings confirmed. aiEncouragement: ${r.aiEncouragement}, dailyAffirmations: ${r.dailyAffirmations}',
   );
 }

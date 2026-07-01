@@ -1,7 +1,8 @@
 import 'package:audioplayers/audioplayers.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:focusNexus/services/storage/key_value_storage.dart';
 import 'package:focusNexus/services/storage/storage_keys.dart';
+import 'package:focusNexus/utils/debug_log.dart';
 import 'package:focusNexus/utils/sound_volume.dart';
 
 class SoundService {
@@ -53,7 +54,7 @@ class SoundService {
     final soundVolume = await _storage.read(key: StorageKeys.soundVolume);
     final parsed = double.tryParse(soundVolume ?? '0.0') ?? 0.0;
     final normalized = normalizeSoundVolume(parsed);
-    debugPrint('played volume: $parsed (normalized: $normalized)');
+    debugLog('played volume: $parsed (normalized: $normalized)');
     _cachedVolume = normalized;
     return normalized;
   }

@@ -1,7 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:focusNexus/assistant/assistant_live_context.dart';
+import 'package:focusNexus/assistant/local_assistant_service.dart';
 import 'package:focusNexus/models/classes/achievement_tracking_variables.dart';
 import 'package:focusNexus/providers/app_repositories_provider.dart';
+import 'package:focusNexus/providers/points_balance_provider.dart';
 import 'package:focusNexus/services/achievement_service.dart';
 import 'package:focusNexus/services/ai_chat_service.dart';
 import 'package:focusNexus/services/sound_service.dart';
@@ -27,9 +30,29 @@ SoundService soundService(Ref ref) {
   return SoundService(ref.watch(appRepositoriesProvider).storage);
 }
 
-/// AI chat client (override in tests with a fake implementation).
+/// Built-in offline Assistant (override in tests with a fake implementation).
 @Riverpod(keepAlive: true)
-AiChatService aiChatService(Ref ref) => const GroqAiChatService();
+AiChatService aiChatService(Ref ref) {
+  return LocalAssistantService(
+    readLiveContext: () async {
+      final points = await ref.read(pointsBalanceProvider.future);
+      final achievements = ref.read(achievementServiceProvider);
+      if (!achievements.isInitialized) {
+        await achievements.initialize();
+      }
+      return AssistantLiveContext(
+        pointsBalance: points,
+        achievements: [
+          for (final achievement in achievements.all)
+            AssistantAchievementHint(
+              title: achievement.title,
+              task: achievement.task,
+            ),
+        ],
+      );
+    },
+  );
+}
 
 /// Binds [GoalNotifier] to scoped storage (replaces static storage assignment).
 @Riverpod(keepAlive: true)

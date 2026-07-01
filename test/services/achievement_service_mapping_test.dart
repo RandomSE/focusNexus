@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:focusNexus/repositories/points_repository.dart';
 import 'package:focusNexus/services/achievement_service.dart';
 import 'package:focusNexus/services/sound_service.dart';
 import 'package:focusNexus/services/storage/storage_keys.dart';
