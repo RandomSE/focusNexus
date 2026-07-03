@@ -19,10 +19,9 @@ _$GardenPersistedPayloadImpl _$$GardenPersistedPayloadImplFromJson(
           ?.map((e) => DecorItem.fromJson(e as Map<String, dynamic>))
           .toList() ??
       const <DecorItem>[],
-  decorStash:
-      json['decorStash'] == null
-          ? const <String, int>{}
-          : const DecorStashJsonConverter().fromJson(json['decorStash']),
+  decorStash: json['decorStash'] == null
+      ? const <String, int>{}
+      : const DecorStashJsonConverter().fromJson(json['decorStash']),
   decorInventory:
       (json['decorInventory'] as List<dynamic>?)
           ?.map((e) => DecorItem.fromJson(e as Map<String, dynamic>))
@@ -38,6 +37,19 @@ _$GardenPersistedPayloadImpl _$$GardenPersistedPayloadImplFromJson(
   freeFirstGrowthEligibleItemId:
       json['freeFirstGrowthEligibleItemId'] as String?,
   legacyFreeFirst: json['legacyFreeFirst'] as bool?,
+  lifetimeZenPointsSpent:
+      (json['lifetimeZenPointsSpent'] as num?)?.toInt() ?? 0,
+  cherryBlossomTreeUnlocked:
+      json['cherryBlossomTreeUnlocked'] as bool? ?? false,
+  suppressRestartGrowthPrompt:
+      json['suppressRestartGrowthPrompt'] as bool? ?? false,
+  cherryBlossomUnlockToastShown:
+      json['cherryBlossomUnlockToastShown'] as bool? ?? false,
+  cherryBlossomTree: json['cherryBlossomTree'] == null
+      ? const CherryBlossomTreeState()
+      : CherryBlossomTreeState.fromJson(
+          json['cherryBlossomTree'] as Map<String, dynamic>,
+        ),
 );
 
 Map<String, dynamic> _$$GardenPersistedPayloadImplToJson(
@@ -51,4 +63,9 @@ Map<String, dynamic> _$$GardenPersistedPayloadImplToJson(
   'freeFirstGrowthEverConsumed': instance.freeFirstGrowthEverConsumed,
   'freeFirstGrowthEligibleItemId': instance.freeFirstGrowthEligibleItemId,
   'legacyFreeFirst': instance.legacyFreeFirst,
+  'lifetimeZenPointsSpent': instance.lifetimeZenPointsSpent,
+  'cherryBlossomTreeUnlocked': instance.cherryBlossomTreeUnlocked,
+  'suppressRestartGrowthPrompt': instance.suppressRestartGrowthPrompt,
+  'cherryBlossomUnlockToastShown': instance.cherryBlossomUnlockToastShown,
+  'cherryBlossomTree': instance.cherryBlossomTree,
 };

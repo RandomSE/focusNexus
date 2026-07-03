@@ -11,19 +11,19 @@ String _$customizationPreviewHash() =>
 
 /// See also [CustomizationPreview].
 @ProviderFor(CustomizationPreview)
-final customizationPreviewProvider = AutoDisposeNotifierProvider<
-  CustomizationPreview,
-  CustomizationPreviewState
->.internal(
-  CustomizationPreview.new,
-  name: r'customizationPreviewProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product')
+final customizationPreviewProvider =
+    AutoDisposeNotifierProvider<
+      CustomizationPreview,
+      CustomizationPreviewState
+    >.internal(
+      CustomizationPreview.new,
+      name: r'customizationPreviewProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
           ? null
           : _$customizationPreviewHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
 
 typedef _$CustomizationPreview = AutoDisposeNotifier<CustomizationPreviewState>;
 // ignore_for_file: type=lint

@@ -66,26 +66,22 @@ class _$StageTransitionRuleCopyWithImpl<$Res, $Val extends StageTransitionRule>
   }) {
     return _then(
       _value.copyWith(
-            fromStageIndex:
-                null == fromStageIndex
-                    ? _value.fromStageIndex
-                    : fromStageIndex // ignore: cast_nullable_to_non_nullable
-                        as int,
-            pointCost:
-                null == pointCost
-                    ? _value.pointCost
-                    : pointCost // ignore: cast_nullable_to_non_nullable
-                        as int,
-            waitBeforeNextAdvance:
-                freezed == waitBeforeNextAdvance
-                    ? _value.waitBeforeNextAdvance
-                    : waitBeforeNextAdvance // ignore: cast_nullable_to_non_nullable
-                        as Duration?,
-            skipWaitPointCost:
-                freezed == skipWaitPointCost
-                    ? _value.skipWaitPointCost
-                    : skipWaitPointCost // ignore: cast_nullable_to_non_nullable
-                        as int?,
+            fromStageIndex: null == fromStageIndex
+                ? _value.fromStageIndex
+                : fromStageIndex // ignore: cast_nullable_to_non_nullable
+                      as int,
+            pointCost: null == pointCost
+                ? _value.pointCost
+                : pointCost // ignore: cast_nullable_to_non_nullable
+                      as int,
+            waitBeforeNextAdvance: freezed == waitBeforeNextAdvance
+                ? _value.waitBeforeNextAdvance
+                : waitBeforeNextAdvance // ignore: cast_nullable_to_non_nullable
+                      as Duration?,
+            skipWaitPointCost: freezed == skipWaitPointCost
+                ? _value.skipWaitPointCost
+                : skipWaitPointCost // ignore: cast_nullable_to_non_nullable
+                      as int?,
           )
           as $Val,
     );
@@ -130,26 +126,22 @@ class __$$StageTransitionRuleImplCopyWithImpl<$Res>
   }) {
     return _then(
       _$StageTransitionRuleImpl(
-        fromStageIndex:
-            null == fromStageIndex
-                ? _value.fromStageIndex
-                : fromStageIndex // ignore: cast_nullable_to_non_nullable
-                    as int,
-        pointCost:
-            null == pointCost
-                ? _value.pointCost
-                : pointCost // ignore: cast_nullable_to_non_nullable
-                    as int,
-        waitBeforeNextAdvance:
-            freezed == waitBeforeNextAdvance
-                ? _value.waitBeforeNextAdvance
-                : waitBeforeNextAdvance // ignore: cast_nullable_to_non_nullable
-                    as Duration?,
-        skipWaitPointCost:
-            freezed == skipWaitPointCost
-                ? _value.skipWaitPointCost
-                : skipWaitPointCost // ignore: cast_nullable_to_non_nullable
-                    as int?,
+        fromStageIndex: null == fromStageIndex
+            ? _value.fromStageIndex
+            : fromStageIndex // ignore: cast_nullable_to_non_nullable
+                  as int,
+        pointCost: null == pointCost
+            ? _value.pointCost
+            : pointCost // ignore: cast_nullable_to_non_nullable
+                  as int,
+        waitBeforeNextAdvance: freezed == waitBeforeNextAdvance
+            ? _value.waitBeforeNextAdvance
+            : waitBeforeNextAdvance // ignore: cast_nullable_to_non_nullable
+                  as Duration?,
+        skipWaitPointCost: freezed == skipWaitPointCost
+            ? _value.skipWaitPointCost
+            : skipWaitPointCost // ignore: cast_nullable_to_non_nullable
+                  as int?,
       ),
     );
   }

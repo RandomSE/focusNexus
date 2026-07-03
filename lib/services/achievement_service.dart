@@ -25,7 +25,7 @@ class AchievementService {
         _soundService = soundService ?? SoundService(storage),
         _cachedAchievements = List.of(cachedAchievements ?? []);
 
-  static const _numOfAchievements = 105;
+  static const _numOfAchievements = 107;
 
   final KeyValueStorage _storage;
   final AchievementRepository _repository;
@@ -77,6 +77,7 @@ class AchievementService {
       _cachedAchievements = stored;
       await _pruneOrphanedAssistantAchievements();
       await _ensureCategoryAchievements();
+      await _ensureZenGardenAchievements();
     }
     await _sanitizeStoredProgress();
     _initialized = true;
@@ -239,6 +240,8 @@ class AchievementService {
       ...weeklyStreakRepetitions,
       ...categoryTripletsRepetitions,
       kGoalCategoryCount,
+      1,
+      1,
     ];
 
     achievementVariableMap = {
@@ -264,6 +267,8 @@ class AchievementService {
       [103]: StorageKeys.categoriesWithAtLeast10Goals,
       [104]: StorageKeys.categoriesWithAtLeast25Goals,
       [105]: StorageKeys.categoriesWithAllTypesCompleted,
+      [112]: StorageKeys.cherryBlossomTreeUnlockedFlag,
+      [113]: StorageKeys.cherryBlossomTreeMaxedFlag,
     };
   }
 
@@ -495,6 +500,39 @@ class AchievementService {
       6,
     );
     await _addCategoryAchievements();
+    await _addZenGardenAchievements();
+  }
+
+  Future<void> _addZenGardenAchievements() async {
+    await addAchievement(
+      Achievement(
+        id: '112',
+        title: 'Sakura Gate',
+        reward: '500 points',
+        task: 'Unlock the Cherry Blossom Tree in the Zen garden',
+        isSecret: false,
+      ),
+    );
+    await addAchievement(
+      Achievement(
+        id: '113',
+        title: 'Eternal Bloom',
+        reward: '5000 points',
+        task: 'Fully grow the Cherry Blossom Tree (~1,000,000 points invested)',
+        isSecret: true,
+      ),
+    );
+  }
+
+  Future<void> _ensureZenGardenAchievements() async {
+    if (_cachedAchievements.any((a) => a.id == '112')) return;
+
+    await bulkSetAchievementVariablesInStorage([
+      StorageKeys.cherryBlossomTreeUnlockedFlag,
+      StorageKeys.cherryBlossomTreeMaxedFlag,
+    ]);
+    await _addZenGardenAchievements();
+    _buildAchievementIdsByVariable();
   }
 
   Future<void> _addCategoryAchievements() async {
@@ -610,7 +648,6 @@ class AchievementService {
         currentProgress,
         achievementProgress,
       )) {
-        debugLog('Achievement progress will not decrease here for id: $id.');
         return null;
       }
 

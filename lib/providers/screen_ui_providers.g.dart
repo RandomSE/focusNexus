@@ -15,10 +15,9 @@ final dashboardPointsGenerationProvider =
     AutoDisposeNotifierProvider<DashboardPointsGeneration, int>.internal(
       DashboardPointsGeneration.new,
       name: r'dashboardPointsGenerationProvider',
-      debugGetCreateSourceHash:
-          const bool.fromEnvironment('dart.vm.product')
-              ? null
-              : _$dashboardPointsGenerationHash,
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$dashboardPointsGenerationHash,
       dependencies: null,
       allTransitiveDependencies: null,
     );
@@ -33,10 +32,9 @@ final settingsNotificationsAllowedProvider =
     AutoDisposeNotifierProvider<SettingsNotificationsAllowed, bool>.internal(
       SettingsNotificationsAllowed.new,
       name: r'settingsNotificationsAllowedProvider',
-      debugGetCreateSourceHash:
-          const bool.fromEnvironment('dart.vm.product')
-              ? null
-              : _$settingsNotificationsAllowedHash,
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$settingsNotificationsAllowedHash,
       dependencies: null,
       allTransitiveDependencies: null,
     );
@@ -51,10 +49,9 @@ final settingsDeletingAccountProvider =
     AutoDisposeNotifierProvider<SettingsDeletingAccount, bool>.internal(
       SettingsDeletingAccount.new,
       name: r'settingsDeletingAccountProvider',
-      debugGetCreateSourceHash:
-          const bool.fromEnvironment('dart.vm.product')
-              ? null
-              : _$settingsDeletingAccountHash,
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$settingsDeletingAccountHash,
       dependencies: null,
       allTransitiveDependencies: null,
     );
@@ -69,32 +66,31 @@ final onboardingPageIndexProvider =
     AutoDisposeNotifierProvider<OnboardingPageIndex, int>.internal(
       OnboardingPageIndex.new,
       name: r'onboardingPageIndexProvider',
-      debugGetCreateSourceHash:
-          const bool.fromEnvironment('dart.vm.product')
-              ? null
-              : _$onboardingPageIndexHash,
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$onboardingPageIndexHash,
       dependencies: null,
       allTransitiveDependencies: null,
     );
 
 typedef _$OnboardingPageIndex = AutoDisposeNotifier<int>;
-String _$aiChatMessagesHash() => r'6a2b8c77c118ee6bb287b06eb3a08c189e806c65';
+String _$aiChatMessagesHash() => r'bfec6d9e1856372d56cdcce21ae5dd978fd0f8e6';
 
 /// See also [AiChatMessages].
 @ProviderFor(AiChatMessages)
-final aiChatMessagesProvider = AutoDisposeNotifierProvider<
-  AiChatMessages,
-  List<Map<String, String>>
->.internal(
-  AiChatMessages.new,
-  name: r'aiChatMessagesProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product')
+final aiChatMessagesProvider =
+    AutoDisposeNotifierProvider<
+      AiChatMessages,
+      List<Map<String, String>>
+    >.internal(
+      AiChatMessages.new,
+      name: r'aiChatMessagesProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
           ? null
           : _$aiChatMessagesHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
 
 typedef _$AiChatMessages = AutoDisposeNotifier<List<Map<String, String>>>;
 String _$aiChatDisclaimerAcceptedHash() =>
@@ -108,10 +104,9 @@ final aiChatDisclaimerAcceptedProvider =
     AutoDisposeNotifierProvider<AiChatDisclaimerAccepted, bool>.internal(
       AiChatDisclaimerAccepted.new,
       name: r'aiChatDisclaimerAcceptedProvider',
-      debugGetCreateSourceHash:
-          const bool.fromEnvironment('dart.vm.product')
-              ? null
-              : _$aiChatDisclaimerAcceptedHash,
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$aiChatDisclaimerAcceptedHash,
       dependencies: null,
       allTransitiveDependencies: null,
     );
@@ -125,10 +120,9 @@ final soundVolumeLiveProvider =
     AutoDisposeNotifierProvider<SoundVolumeLive, int?>.internal(
       SoundVolumeLive.new,
       name: r'soundVolumeLiveProvider',
-      debugGetCreateSourceHash:
-          const bool.fromEnvironment('dart.vm.product')
-              ? null
-              : _$soundVolumeLiveHash,
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$soundVolumeLiveHash,
       dependencies: null,
       allTransitiveDependencies: null,
     );
@@ -210,10 +204,9 @@ class AchievementDetailDisabledProvider
         () => AchievementDetailDisabled()..achievementId = achievementId,
         from: achievementDetailDisabledProvider,
         name: r'achievementDetailDisabledProvider',
-        debugGetCreateSourceHash:
-            const bool.fromEnvironment('dart.vm.product')
-                ? null
-                : _$achievementDetailDisabledHash,
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$achievementDetailDisabledHash,
         dependencies: AchievementDetailDisabledFamily._dependencies,
         allTransitiveDependencies:
             AchievementDetailDisabledFamily._allTransitiveDependencies,
@@ -346,10 +339,9 @@ class AchievementDetailRefreshProvider
         () => AchievementDetailRefresh()..achievementId = achievementId,
         from: achievementDetailRefreshProvider,
         name: r'achievementDetailRefreshProvider',
-        debugGetCreateSourceHash:
-            const bool.fromEnvironment('dart.vm.product')
-                ? null
-                : _$achievementDetailRefreshHash,
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$achievementDetailRefreshHash,
         dependencies: AchievementDetailRefreshFamily._dependencies,
         allTransitiveDependencies:
             AchievementDetailRefreshFamily._allTransitiveDependencies,

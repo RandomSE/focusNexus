@@ -17,10 +17,9 @@ final achievementsListRefreshProvider =
     AutoDisposeNotifierProvider<AchievementsListRefresh, int>.internal(
       AchievementsListRefresh.new,
       name: r'achievementsListRefreshProvider',
-      debugGetCreateSourceHash:
-          const bool.fromEnvironment('dart.vm.product')
-              ? null
-              : _$achievementsListRefreshHash,
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$achievementsListRefreshHash,
       dependencies: null,
       allTransitiveDependencies: null,
     );

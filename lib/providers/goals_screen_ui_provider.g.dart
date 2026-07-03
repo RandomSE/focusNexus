@@ -14,10 +14,9 @@ final goalsScreenUiProvider =
     NotifierProvider<GoalsScreenUi, GoalsScreenUiState>.internal(
       GoalsScreenUi.new,
       name: r'goalsScreenUiProvider',
-      debugGetCreateSourceHash:
-          const bool.fromEnvironment('dart.vm.product')
-              ? null
-              : _$goalsScreenUiHash,
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$goalsScreenUiHash,
       dependencies: null,
       allTransitiveDependencies: null,
     );

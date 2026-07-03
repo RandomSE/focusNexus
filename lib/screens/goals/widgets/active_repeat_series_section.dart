@@ -147,6 +147,14 @@ class _ActiveRepeatSeriesSectionState
               ...series.map((item) {
                 return Card(
                   color: bundle.secondaryColor,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: bundle.primaryColor.withValues(alpha: 0.5),
+                      width: 1.5,
+                    ),
+                  ),
                   child: ListTile(
                     title: Text(item.title, style: bundle.textStyle),
                     subtitle: Text(

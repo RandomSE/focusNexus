@@ -13,6 +13,7 @@ import 'package:focusNexus/screens/goals/widgets/time_window_bulk_draft_card.dar
 import 'package:focusNexus/screens/goals/widgets/time_window_repeat_editor.dart';
 import 'package:focusNexus/screens/goals/widgets/time_window_window_editor.dart';
 import 'package:focusNexus/utils/common_utils.dart';
+import 'package:focusNexus/utils/theme_styles.dart';
 
 class TimeWindowBulkCreateWizard extends ConsumerStatefulWidget {
   const TimeWindowBulkCreateWizard({super.key});
@@ -116,7 +117,7 @@ class _TimeWindowBulkCreateWizardState
         appBar: AppBar(
           title: Text(_stepTitle(), style: bundle.textStyle),
           backgroundColor: bundle.secondaryColor,
-          iconTheme: IconThemeData(color: bundle.primaryColor),
+          iconTheme: ThemeStyles.iconThemeFor( bundle.primaryColor),
           leading: _step > 0
               ? IconButton(
                   icon: Icon(Icons.arrow_back, color: bundle.primaryColor),

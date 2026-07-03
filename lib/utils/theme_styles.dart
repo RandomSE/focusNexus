@@ -6,6 +6,12 @@ import 'package:focusNexus/utils/user_prefs_codec.dart';
 class ThemeStyles {
   ThemeStyles._();
 
+  /// Keeps [Icon] widgets on the Material Icons font (not dyslexia text face).
+  static IconThemeData iconThemeFor(Color color) => IconThemeData(
+        color: color,
+        applyTextScaling: false,
+      );
+
   static const Color _lightPrimary = Color(0xFF1D2730);
   static const Color _lightSurface = Color(0xFFF3F6F4);
   static const Color _lightAccent = Color(0xFF5B6FF6);
@@ -137,6 +143,9 @@ class ThemeStyles {
         fontSize: baseFontSize * factor,
         color: bodyColor,
         fontFamily: fontFamily,
+        fontFamilyFallback: useDyslexiaFont
+            ? const ['Roboto', 'Helvetica', 'Arial', 'sans-serif']
+            : style.fontFamilyFallback,
         height: useDyslexiaFont ? 1.35 : style.height,
         leadingDistribution:
             useDyslexiaFont ? TextLeadingDistribution.even : null,
@@ -176,10 +185,14 @@ class ThemeStyles {
       vertical: useDyslexiaFont ? fontSize * 0.5 : fontSize * 0.3,
     );
 
+    final iconTheme = iconThemeFor(primaryColor);
+
     return ThemeData(
       brightness: isDark ? Brightness.dark : Brightness.light,
       primaryColor: primaryColor,
       scaffoldBackgroundColor: secondaryColor,
+      iconTheme: iconTheme,
+      primaryIconTheme: iconTheme,
       colorScheme: ColorScheme(
         brightness: isDark ? Brightness.dark : Brightness.light,
         primary: accentColor,
@@ -240,6 +253,8 @@ class ThemeStyles {
         elevation: 0,
         foregroundColor: primaryColor,
         centerTitle: true,
+        iconTheme: iconTheme,
+        actionsIconTheme: iconTheme,
         titleTextStyle: scaledTextTheme(
           base: baseTheme.textTheme,
           fontSize: fontSize,

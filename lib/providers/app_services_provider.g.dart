@@ -16,10 +16,9 @@ String _$achievementServiceHash() =>
 final achievementServiceProvider = Provider<AchievementService>.internal(
   achievementService,
   name: r'achievementServiceProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$achievementServiceHash,
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$achievementServiceHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );
@@ -36,8 +35,9 @@ String _$soundServiceHash() => r'eff7bbec075f4c82f19389144d9a3bea00684edf';
 final soundServiceProvider = Provider<SoundService>.internal(
   soundService,
   name: r'soundServiceProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product') ? null : _$soundServiceHash,
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$soundServiceHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );
@@ -45,19 +45,18 @@ final soundServiceProvider = Provider<SoundService>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef SoundServiceRef = ProviderRef<SoundService>;
-String _$aiChatServiceHash() => r'e7fdd2a8b8730caf3efc85b35e4569000626a51c';
+String _$aiChatServiceHash() => r'550d97d33857eb78ec6627e1ef3274f1259fa89c';
 
-/// AI chat client (override in tests with a fake implementation).
+/// Built-in offline Assistant (override in tests with a fake implementation).
 ///
 /// Copied from [aiChatService].
 @ProviderFor(aiChatService)
 final aiChatServiceProvider = Provider<AiChatService>.internal(
   aiChatService,
   name: r'aiChatServiceProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$aiChatServiceHash,
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$aiChatServiceHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );
@@ -75,10 +74,9 @@ String _$goalNotifierWiringHash() =>
 final goalNotifierWiringProvider = Provider<void>.internal(
   goalNotifierWiring,
   name: r'goalNotifierWiringProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$goalNotifierWiringHash,
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$goalNotifierWiringHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );
@@ -96,10 +94,9 @@ String _$achievementTrackingWiringHash() =>
 final achievementTrackingWiringProvider = Provider<void>.internal(
   achievementTrackingWiring,
   name: r'achievementTrackingWiringProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$achievementTrackingWiringHash,
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$achievementTrackingWiringHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );
@@ -116,10 +113,9 @@ String _$appServicesWiredHash() => r'fd6e64f85497d29132a7b026e2dc463e410c1305';
 final appServicesWiredProvider = Provider<void>.internal(
   appServicesWired,
   name: r'appServicesWiredProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$appServicesWiredHash,
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$appServicesWiredHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:focusNexus/progressive_visuals/visual_theme_id.dart';
 import 'package:focusNexus/screens/zen_garden/zen_garden_screen.dart';
 import '../utils/screen_theme.dart';
+import 'package:focusNexus/utils/theme_styles.dart';
 
 /// Zen garden progressive visual section.
 class ProgressiveVisualSectionScreen extends StatelessWidget {
@@ -25,7 +26,7 @@ class ProgressiveVisualSectionScreen extends StatelessWidget {
                 style: TextStyle(color: bundle.primaryColor),
               ),
               backgroundColor: bundle.secondaryColor,
-              iconTheme: IconThemeData(color: bundle.primaryColor),
+              iconTheme: ThemeStyles.iconThemeFor( bundle.primaryColor),
             ),
             body: ZenGardenScreen(
               themeData: bundle.themeData,

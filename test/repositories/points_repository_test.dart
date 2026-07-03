@@ -63,5 +63,17 @@ void main() {
       expect(notifyCount, 1);
       expect(await repo.readBalance(), 75);
     });
+
+    test('setCachedBalance notifies listeners without writing storage', () async {
+      await repo.ensureInitialized();
+
+      var notifyCount = 0;
+      repo.addBalanceListener(() => notifyCount++);
+
+      repo.setCachedBalance(88);
+      expect(notifyCount, 1);
+      expect(await repo.readBalance(), 88);
+      expect(await storage.read(key: StorageKeys.points), '50');
+    });
   });
 }

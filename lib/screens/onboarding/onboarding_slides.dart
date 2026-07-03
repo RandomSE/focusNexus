@@ -237,8 +237,10 @@ class _DashboardSlide extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = bundle.textStyle.copyWith(fontWeight: FontWeight.w700);
-    final goalsLabel = dashboardGoalsButtonLabel(stats.activeGoals);
-    final inSlotLine = dashboardInSlotLine(stats.goalsInSlotNow);
+    final goalsLabel = dashboardGoalsButtonLabel(
+      stats.activeGoals,
+      goalsInSlotNow: stats.goalsInSlotNow,
+    );
     return _OnboardingSlideScaffold(
       header: _SlideHeader(
         bundle: bundle,
@@ -259,15 +261,9 @@ class _DashboardSlide extends StatelessWidget {
             ],
           ),
         ),
-        if (inSlotLine != null)
-          _MockCard(
-            bundle: bundle,
-            accentBorder: true,
-            child: Text(inSlotLine, style: label),
-          ),
         _MockCard(
           bundle: bundle,
-          accentBorder: inSlotLine == null,
+          accentBorder: true,
           child: Text(goalsLabel, style: label, textAlign: TextAlign.center),
         ),
         _MockCard(

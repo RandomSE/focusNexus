@@ -132,101 +132,87 @@ class _$AchievementTrackingSnapshotCopyWithImpl<
   }) {
     return _then(
       _value.copyWith(
-            totalGoalsCreated:
-                null == totalGoalsCreated
-                    ? _value.totalGoalsCreated
-                    : totalGoalsCreated // ignore: cast_nullable_to_non_nullable
-                        as int,
-            totalGoalsActive:
-                null == totalGoalsActive
-                    ? _value.totalGoalsActive
-                    : totalGoalsActive // ignore: cast_nullable_to_non_nullable
-                        as int,
-            totalGoalsCompleted:
-                null == totalGoalsCompleted
-                    ? _value.totalGoalsCompleted
-                    : totalGoalsCompleted // ignore: cast_nullable_to_non_nullable
-                        as int,
-            goalsCompletedToday:
-                null == goalsCompletedToday
-                    ? _value.goalsCompletedToday
-                    : goalsCompletedToday // ignore: cast_nullable_to_non_nullable
-                        as int,
-            goalsCompletedThisWeek:
-                null == goalsCompletedThisWeek
-                    ? _value.goalsCompletedThisWeek
-                    : goalsCompletedThisWeek // ignore: cast_nullable_to_non_nullable
-                        as int,
-            goalsCompletedThisMonth:
-                null == goalsCompletedThisMonth
-                    ? _value.goalsCompletedThisMonth
-                    : goalsCompletedThisMonth // ignore: cast_nullable_to_non_nullable
-                        as int,
-            goalsCompletedWithHighPoints:
-                null == goalsCompletedWithHighPoints
-                    ? _value.goalsCompletedWithHighPoints
-                    : goalsCompletedWithHighPoints // ignore: cast_nullable_to_non_nullable
-                        as int,
+            totalGoalsCreated: null == totalGoalsCreated
+                ? _value.totalGoalsCreated
+                : totalGoalsCreated // ignore: cast_nullable_to_non_nullable
+                      as int,
+            totalGoalsActive: null == totalGoalsActive
+                ? _value.totalGoalsActive
+                : totalGoalsActive // ignore: cast_nullable_to_non_nullable
+                      as int,
+            totalGoalsCompleted: null == totalGoalsCompleted
+                ? _value.totalGoalsCompleted
+                : totalGoalsCompleted // ignore: cast_nullable_to_non_nullable
+                      as int,
+            goalsCompletedToday: null == goalsCompletedToday
+                ? _value.goalsCompletedToday
+                : goalsCompletedToday // ignore: cast_nullable_to_non_nullable
+                      as int,
+            goalsCompletedThisWeek: null == goalsCompletedThisWeek
+                ? _value.goalsCompletedThisWeek
+                : goalsCompletedThisWeek // ignore: cast_nullable_to_non_nullable
+                      as int,
+            goalsCompletedThisMonth: null == goalsCompletedThisMonth
+                ? _value.goalsCompletedThisMonth
+                : goalsCompletedThisMonth // ignore: cast_nullable_to_non_nullable
+                      as int,
+            goalsCompletedWithHighPoints: null == goalsCompletedWithHighPoints
+                ? _value.goalsCompletedWithHighPoints
+                : goalsCompletedWithHighPoints // ignore: cast_nullable_to_non_nullable
+                      as int,
             goalsCompletedWithHighComplexity:
                 null == goalsCompletedWithHighComplexity
-                    ? _value.goalsCompletedWithHighComplexity
-                    : goalsCompletedWithHighComplexity // ignore: cast_nullable_to_non_nullable
-                        as int,
-            goalsCompletedWithHighEffort:
-                null == goalsCompletedWithHighEffort
-                    ? _value.goalsCompletedWithHighEffort
-                    : goalsCompletedWithHighEffort // ignore: cast_nullable_to_non_nullable
-                        as int,
+                ? _value.goalsCompletedWithHighComplexity
+                : goalsCompletedWithHighComplexity // ignore: cast_nullable_to_non_nullable
+                      as int,
+            goalsCompletedWithHighEffort: null == goalsCompletedWithHighEffort
+                ? _value.goalsCompletedWithHighEffort
+                : goalsCompletedWithHighEffort // ignore: cast_nullable_to_non_nullable
+                      as int,
             goalsCompletedWithHighMotivation:
                 null == goalsCompletedWithHighMotivation
-                    ? _value.goalsCompletedWithHighMotivation
-                    : goalsCompletedWithHighMotivation // ignore: cast_nullable_to_non_nullable
-                        as int,
-            goalsCompletedWithAllHigh:
-                null == goalsCompletedWithAllHigh
-                    ? _value.goalsCompletedWithAllHigh
-                    : goalsCompletedWithAllHigh // ignore: cast_nullable_to_non_nullable
-                        as int,
+                ? _value.goalsCompletedWithHighMotivation
+                : goalsCompletedWithHighMotivation // ignore: cast_nullable_to_non_nullable
+                      as int,
+            goalsCompletedWithAllHigh: null == goalsCompletedWithAllHigh
+                ? _value.goalsCompletedWithAllHigh
+                : goalsCompletedWithAllHigh // ignore: cast_nullable_to_non_nullable
+                      as int,
             goalsCompletedWithHighTimeRequirement:
                 null == goalsCompletedWithHighTimeRequirement
-                    ? _value.goalsCompletedWithHighTimeRequirement
-                    : goalsCompletedWithHighTimeRequirement // ignore: cast_nullable_to_non_nullable
-                        as int,
-            goalsCompletedWithManySteps:
-                null == goalsCompletedWithManySteps
-                    ? _value.goalsCompletedWithManySteps
-                    : goalsCompletedWithManySteps // ignore: cast_nullable_to_non_nullable
-                        as int,
-            goalsCompletedEarly:
-                null == goalsCompletedEarly
-                    ? _value.goalsCompletedEarly
-                    : goalsCompletedEarly // ignore: cast_nullable_to_non_nullable
-                        as int,
-            datesGoalsCompleted:
-                null == datesGoalsCompleted
-                    ? _value.datesGoalsCompleted
-                    : datesGoalsCompleted // ignore: cast_nullable_to_non_nullable
-                        as String,
-            lastWeekGoalWasCompleted:
-                null == lastWeekGoalWasCompleted
-                    ? _value.lastWeekGoalWasCompleted
-                    : lastWeekGoalWasCompleted // ignore: cast_nullable_to_non_nullable
-                        as String,
-            lastMonthGoalWasCompleted:
-                null == lastMonthGoalWasCompleted
-                    ? _value.lastMonthGoalWasCompleted
-                    : lastMonthGoalWasCompleted // ignore: cast_nullable_to_non_nullable
-                        as String,
+                ? _value.goalsCompletedWithHighTimeRequirement
+                : goalsCompletedWithHighTimeRequirement // ignore: cast_nullable_to_non_nullable
+                      as int,
+            goalsCompletedWithManySteps: null == goalsCompletedWithManySteps
+                ? _value.goalsCompletedWithManySteps
+                : goalsCompletedWithManySteps // ignore: cast_nullable_to_non_nullable
+                      as int,
+            goalsCompletedEarly: null == goalsCompletedEarly
+                ? _value.goalsCompletedEarly
+                : goalsCompletedEarly // ignore: cast_nullable_to_non_nullable
+                      as int,
+            datesGoalsCompleted: null == datesGoalsCompleted
+                ? _value.datesGoalsCompleted
+                : datesGoalsCompleted // ignore: cast_nullable_to_non_nullable
+                      as String,
+            lastWeekGoalWasCompleted: null == lastWeekGoalWasCompleted
+                ? _value.lastWeekGoalWasCompleted
+                : lastWeekGoalWasCompleted // ignore: cast_nullable_to_non_nullable
+                      as String,
+            lastMonthGoalWasCompleted: null == lastMonthGoalWasCompleted
+                ? _value.lastMonthGoalWasCompleted
+                : lastMonthGoalWasCompleted // ignore: cast_nullable_to_non_nullable
+                      as String,
             consecutiveDaysWithGoalsCompleted:
                 null == consecutiveDaysWithGoalsCompleted
-                    ? _value.consecutiveDaysWithGoalsCompleted
-                    : consecutiveDaysWithGoalsCompleted // ignore: cast_nullable_to_non_nullable
-                        as int,
+                ? _value.consecutiveDaysWithGoalsCompleted
+                : consecutiveDaysWithGoalsCompleted // ignore: cast_nullable_to_non_nullable
+                      as int,
             consecutiveWeeksWithGoalsCompleted:
                 null == consecutiveWeeksWithGoalsCompleted
-                    ? _value.consecutiveWeeksWithGoalsCompleted
-                    : consecutiveWeeksWithGoalsCompleted // ignore: cast_nullable_to_non_nullable
-                        as int,
+                ? _value.consecutiveWeeksWithGoalsCompleted
+                : consecutiveWeeksWithGoalsCompleted // ignore: cast_nullable_to_non_nullable
+                      as int,
           )
           as $Val,
     );
@@ -305,101 +291,87 @@ class __$$AchievementTrackingSnapshotImplCopyWithImpl<$Res>
   }) {
     return _then(
       _$AchievementTrackingSnapshotImpl(
-        totalGoalsCreated:
-            null == totalGoalsCreated
-                ? _value.totalGoalsCreated
-                : totalGoalsCreated // ignore: cast_nullable_to_non_nullable
-                    as int,
-        totalGoalsActive:
-            null == totalGoalsActive
-                ? _value.totalGoalsActive
-                : totalGoalsActive // ignore: cast_nullable_to_non_nullable
-                    as int,
-        totalGoalsCompleted:
-            null == totalGoalsCompleted
-                ? _value.totalGoalsCompleted
-                : totalGoalsCompleted // ignore: cast_nullable_to_non_nullable
-                    as int,
-        goalsCompletedToday:
-            null == goalsCompletedToday
-                ? _value.goalsCompletedToday
-                : goalsCompletedToday // ignore: cast_nullable_to_non_nullable
-                    as int,
-        goalsCompletedThisWeek:
-            null == goalsCompletedThisWeek
-                ? _value.goalsCompletedThisWeek
-                : goalsCompletedThisWeek // ignore: cast_nullable_to_non_nullable
-                    as int,
-        goalsCompletedThisMonth:
-            null == goalsCompletedThisMonth
-                ? _value.goalsCompletedThisMonth
-                : goalsCompletedThisMonth // ignore: cast_nullable_to_non_nullable
-                    as int,
-        goalsCompletedWithHighPoints:
-            null == goalsCompletedWithHighPoints
-                ? _value.goalsCompletedWithHighPoints
-                : goalsCompletedWithHighPoints // ignore: cast_nullable_to_non_nullable
-                    as int,
+        totalGoalsCreated: null == totalGoalsCreated
+            ? _value.totalGoalsCreated
+            : totalGoalsCreated // ignore: cast_nullable_to_non_nullable
+                  as int,
+        totalGoalsActive: null == totalGoalsActive
+            ? _value.totalGoalsActive
+            : totalGoalsActive // ignore: cast_nullable_to_non_nullable
+                  as int,
+        totalGoalsCompleted: null == totalGoalsCompleted
+            ? _value.totalGoalsCompleted
+            : totalGoalsCompleted // ignore: cast_nullable_to_non_nullable
+                  as int,
+        goalsCompletedToday: null == goalsCompletedToday
+            ? _value.goalsCompletedToday
+            : goalsCompletedToday // ignore: cast_nullable_to_non_nullable
+                  as int,
+        goalsCompletedThisWeek: null == goalsCompletedThisWeek
+            ? _value.goalsCompletedThisWeek
+            : goalsCompletedThisWeek // ignore: cast_nullable_to_non_nullable
+                  as int,
+        goalsCompletedThisMonth: null == goalsCompletedThisMonth
+            ? _value.goalsCompletedThisMonth
+            : goalsCompletedThisMonth // ignore: cast_nullable_to_non_nullable
+                  as int,
+        goalsCompletedWithHighPoints: null == goalsCompletedWithHighPoints
+            ? _value.goalsCompletedWithHighPoints
+            : goalsCompletedWithHighPoints // ignore: cast_nullable_to_non_nullable
+                  as int,
         goalsCompletedWithHighComplexity:
             null == goalsCompletedWithHighComplexity
-                ? _value.goalsCompletedWithHighComplexity
-                : goalsCompletedWithHighComplexity // ignore: cast_nullable_to_non_nullable
-                    as int,
-        goalsCompletedWithHighEffort:
-            null == goalsCompletedWithHighEffort
-                ? _value.goalsCompletedWithHighEffort
-                : goalsCompletedWithHighEffort // ignore: cast_nullable_to_non_nullable
-                    as int,
+            ? _value.goalsCompletedWithHighComplexity
+            : goalsCompletedWithHighComplexity // ignore: cast_nullable_to_non_nullable
+                  as int,
+        goalsCompletedWithHighEffort: null == goalsCompletedWithHighEffort
+            ? _value.goalsCompletedWithHighEffort
+            : goalsCompletedWithHighEffort // ignore: cast_nullable_to_non_nullable
+                  as int,
         goalsCompletedWithHighMotivation:
             null == goalsCompletedWithHighMotivation
-                ? _value.goalsCompletedWithHighMotivation
-                : goalsCompletedWithHighMotivation // ignore: cast_nullable_to_non_nullable
-                    as int,
-        goalsCompletedWithAllHigh:
-            null == goalsCompletedWithAllHigh
-                ? _value.goalsCompletedWithAllHigh
-                : goalsCompletedWithAllHigh // ignore: cast_nullable_to_non_nullable
-                    as int,
+            ? _value.goalsCompletedWithHighMotivation
+            : goalsCompletedWithHighMotivation // ignore: cast_nullable_to_non_nullable
+                  as int,
+        goalsCompletedWithAllHigh: null == goalsCompletedWithAllHigh
+            ? _value.goalsCompletedWithAllHigh
+            : goalsCompletedWithAllHigh // ignore: cast_nullable_to_non_nullable
+                  as int,
         goalsCompletedWithHighTimeRequirement:
             null == goalsCompletedWithHighTimeRequirement
-                ? _value.goalsCompletedWithHighTimeRequirement
-                : goalsCompletedWithHighTimeRequirement // ignore: cast_nullable_to_non_nullable
-                    as int,
-        goalsCompletedWithManySteps:
-            null == goalsCompletedWithManySteps
-                ? _value.goalsCompletedWithManySteps
-                : goalsCompletedWithManySteps // ignore: cast_nullable_to_non_nullable
-                    as int,
-        goalsCompletedEarly:
-            null == goalsCompletedEarly
-                ? _value.goalsCompletedEarly
-                : goalsCompletedEarly // ignore: cast_nullable_to_non_nullable
-                    as int,
-        datesGoalsCompleted:
-            null == datesGoalsCompleted
-                ? _value.datesGoalsCompleted
-                : datesGoalsCompleted // ignore: cast_nullable_to_non_nullable
-                    as String,
-        lastWeekGoalWasCompleted:
-            null == lastWeekGoalWasCompleted
-                ? _value.lastWeekGoalWasCompleted
-                : lastWeekGoalWasCompleted // ignore: cast_nullable_to_non_nullable
-                    as String,
-        lastMonthGoalWasCompleted:
-            null == lastMonthGoalWasCompleted
-                ? _value.lastMonthGoalWasCompleted
-                : lastMonthGoalWasCompleted // ignore: cast_nullable_to_non_nullable
-                    as String,
+            ? _value.goalsCompletedWithHighTimeRequirement
+            : goalsCompletedWithHighTimeRequirement // ignore: cast_nullable_to_non_nullable
+                  as int,
+        goalsCompletedWithManySteps: null == goalsCompletedWithManySteps
+            ? _value.goalsCompletedWithManySteps
+            : goalsCompletedWithManySteps // ignore: cast_nullable_to_non_nullable
+                  as int,
+        goalsCompletedEarly: null == goalsCompletedEarly
+            ? _value.goalsCompletedEarly
+            : goalsCompletedEarly // ignore: cast_nullable_to_non_nullable
+                  as int,
+        datesGoalsCompleted: null == datesGoalsCompleted
+            ? _value.datesGoalsCompleted
+            : datesGoalsCompleted // ignore: cast_nullable_to_non_nullable
+                  as String,
+        lastWeekGoalWasCompleted: null == lastWeekGoalWasCompleted
+            ? _value.lastWeekGoalWasCompleted
+            : lastWeekGoalWasCompleted // ignore: cast_nullable_to_non_nullable
+                  as String,
+        lastMonthGoalWasCompleted: null == lastMonthGoalWasCompleted
+            ? _value.lastMonthGoalWasCompleted
+            : lastMonthGoalWasCompleted // ignore: cast_nullable_to_non_nullable
+                  as String,
         consecutiveDaysWithGoalsCompleted:
             null == consecutiveDaysWithGoalsCompleted
-                ? _value.consecutiveDaysWithGoalsCompleted
-                : consecutiveDaysWithGoalsCompleted // ignore: cast_nullable_to_non_nullable
-                    as int,
+            ? _value.consecutiveDaysWithGoalsCompleted
+            : consecutiveDaysWithGoalsCompleted // ignore: cast_nullable_to_non_nullable
+                  as int,
         consecutiveWeeksWithGoalsCompleted:
             null == consecutiveWeeksWithGoalsCompleted
-                ? _value.consecutiveWeeksWithGoalsCompleted
-                : consecutiveWeeksWithGoalsCompleted // ignore: cast_nullable_to_non_nullable
-                    as int,
+            ? _value.consecutiveWeeksWithGoalsCompleted
+            : consecutiveWeeksWithGoalsCompleted // ignore: cast_nullable_to_non_nullable
+                  as int,
       ),
     );
   }
@@ -618,9 +590,10 @@ class _$AchievementTrackingSnapshotImpl
   @override
   @pragma('vm:prefer-inline')
   _$$AchievementTrackingSnapshotImplCopyWith<_$AchievementTrackingSnapshotImpl>
-  get copyWith => __$$AchievementTrackingSnapshotImplCopyWithImpl<
-    _$AchievementTrackingSnapshotImpl
-  >(this, _$identity);
+  get copyWith =>
+      __$$AchievementTrackingSnapshotImplCopyWithImpl<
+        _$AchievementTrackingSnapshotImpl
+      >(this, _$identity);
 
   @override
   Map<String, dynamic> toJson() {

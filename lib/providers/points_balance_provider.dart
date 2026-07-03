@@ -23,4 +23,10 @@ class PointsBalance extends _$PointsBalance {
       await ref.read(appRepositoriesProvider).points.readBalance(),
     );
   }
+
+  /// Aligns provider state with an authoritative wallet value (e.g. zen garden spend).
+  void adoptBalance(int balance) {
+    ref.read(appRepositoriesProvider).points.primeCachedBalance(balance);
+    state = AsyncData(balance);
+  }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focusNexus/providers/theme_bundle_provider.dart';
 import 'package:focusNexus/screens/goals/widgets/time_slot_goal_create_panel.dart';
+import 'package:focusNexus/utils/theme_styles.dart';
 
 /// Full-screen route wrapper for the inline time-slot create form.
 class TimeWindowManualCreateScreen extends ConsumerWidget {
@@ -17,7 +18,7 @@ class TimeWindowManualCreateScreen extends ConsumerWidget {
         appBar: AppBar(
           title: Text('Create time-slot goal', style: bundle.textStyle),
           backgroundColor: bundle.secondaryColor,
-          iconTheme: IconThemeData(color: bundle.primaryColor),
+          iconTheme: ThemeStyles.iconThemeFor( bundle.primaryColor),
         ),
         body: ListView(
           padding: const EdgeInsets.all(16),

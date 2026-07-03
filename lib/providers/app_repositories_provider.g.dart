@@ -15,10 +15,9 @@ String _$appRepositoriesHash() => r'ca7cc51e0a961f2939195dfad2a8d9bd03617556';
 final appRepositoriesProvider = Provider<AppRepositories>.internal(
   appRepositories,
   name: r'appRepositoriesProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$appRepositoriesHash,
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$appRepositoriesHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );

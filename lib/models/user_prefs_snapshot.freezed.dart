@@ -120,116 +120,94 @@ class _$UserPrefsSnapshotCopyWithImpl<$Res, $Val extends UserPrefsSnapshot>
   }) {
     return _then(
       _value.copyWith(
-            theme:
-                null == theme
-                    ? _value.theme
-                    : theme // ignore: cast_nullable_to_non_nullable
-                        as String,
-            fontSize:
-                null == fontSize
-                    ? _value.fontSize
-                    : fontSize // ignore: cast_nullable_to_non_nullable
-                        as double,
-            useDyslexiaFont:
-                null == useDyslexiaFont
-                    ? _value.useDyslexiaFont
-                    : useDyslexiaFont // ignore: cast_nullable_to_non_nullable
-                        as bool,
-            highContrastMode:
-                null == highContrastMode
-                    ? _value.highContrastMode
-                    : highContrastMode // ignore: cast_nullable_to_non_nullable
-                        as bool,
-            dailyAffirmations:
-                null == dailyAffirmations
-                    ? _value.dailyAffirmations
-                    : dailyAffirmations // ignore: cast_nullable_to_non_nullable
-                        as bool,
-            aiEncouragement:
-                null == aiEncouragement
-                    ? _value.aiEncouragement
-                    : aiEncouragement // ignore: cast_nullable_to_non_nullable
-                        as bool,
-            notificationFrequency:
-                null == notificationFrequency
-                    ? _value.notificationFrequency
-                    : notificationFrequency // ignore: cast_nullable_to_non_nullable
-                        as String,
-            notificationStyle:
-                null == notificationStyle
-                    ? _value.notificationStyle
-                    : notificationStyle // ignore: cast_nullable_to_non_nullable
-                        as String,
-            customizationEnabled:
-                null == customizationEnabled
-                    ? _value.customizationEnabled
-                    : customizationEnabled // ignore: cast_nullable_to_non_nullable
-                        as bool,
-            useCustomColorPalette:
-                null == useCustomColorPalette
-                    ? _value.useCustomColorPalette
-                    : useCustomColorPalette // ignore: cast_nullable_to_non_nullable
-                        as bool,
-            allowedColors:
-                null == allowedColors
-                    ? _value.allowedColors
-                    : allowedColors // ignore: cast_nullable_to_non_nullable
-                        as List<Color>,
-            customizedFont:
-                null == customizedFont
-                    ? _value.customizedFont
-                    : customizedFont // ignore: cast_nullable_to_non_nullable
-                        as String,
-            customizedPrimary:
-                null == customizedPrimary
-                    ? _value.customizedPrimary
-                    : customizedPrimary // ignore: cast_nullable_to_non_nullable
-                        as Color,
-            customizedSecondary:
-                null == customizedSecondary
-                    ? _value.customizedSecondary
-                    : customizedSecondary // ignore: cast_nullable_to_non_nullable
-                        as Color,
-            rewardType:
-                null == rewardType
-                    ? _value.rewardType
-                    : rewardType // ignore: cast_nullable_to_non_nullable
-                        as String,
-            skipToday:
-                null == skipToday
-                    ? _value.skipToday
-                    : skipToday // ignore: cast_nullable_to_non_nullable
-                        as bool,
-            pauseGoals:
-                null == pauseGoals
-                    ? _value.pauseGoals
-                    : pauseGoals // ignore: cast_nullable_to_non_nullable
-                        as bool,
-            registrationComplete:
-                null == registrationComplete
-                    ? _value.registrationComplete
-                    : registrationComplete // ignore: cast_nullable_to_non_nullable
-                        as bool,
-            onboardingCompleted:
-                null == onboardingCompleted
-                    ? _value.onboardingCompleted
-                    : onboardingCompleted // ignore: cast_nullable_to_non_nullable
-                        as bool,
-            soundEnabled:
-                null == soundEnabled
-                    ? _value.soundEnabled
-                    : soundEnabled // ignore: cast_nullable_to_non_nullable
-                        as bool,
-            soundVolume:
-                null == soundVolume
-                    ? _value.soundVolume
-                    : soundVolume // ignore: cast_nullable_to_non_nullable
-                        as double,
-            dailyAffirmationsTime:
-                null == dailyAffirmationsTime
-                    ? _value.dailyAffirmationsTime
-                    : dailyAffirmationsTime // ignore: cast_nullable_to_non_nullable
-                        as String,
+            theme: null == theme
+                ? _value.theme
+                : theme // ignore: cast_nullable_to_non_nullable
+                      as String,
+            fontSize: null == fontSize
+                ? _value.fontSize
+                : fontSize // ignore: cast_nullable_to_non_nullable
+                      as double,
+            useDyslexiaFont: null == useDyslexiaFont
+                ? _value.useDyslexiaFont
+                : useDyslexiaFont // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            highContrastMode: null == highContrastMode
+                ? _value.highContrastMode
+                : highContrastMode // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            dailyAffirmations: null == dailyAffirmations
+                ? _value.dailyAffirmations
+                : dailyAffirmations // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            aiEncouragement: null == aiEncouragement
+                ? _value.aiEncouragement
+                : aiEncouragement // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            notificationFrequency: null == notificationFrequency
+                ? _value.notificationFrequency
+                : notificationFrequency // ignore: cast_nullable_to_non_nullable
+                      as String,
+            notificationStyle: null == notificationStyle
+                ? _value.notificationStyle
+                : notificationStyle // ignore: cast_nullable_to_non_nullable
+                      as String,
+            customizationEnabled: null == customizationEnabled
+                ? _value.customizationEnabled
+                : customizationEnabled // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            useCustomColorPalette: null == useCustomColorPalette
+                ? _value.useCustomColorPalette
+                : useCustomColorPalette // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            allowedColors: null == allowedColors
+                ? _value.allowedColors
+                : allowedColors // ignore: cast_nullable_to_non_nullable
+                      as List<Color>,
+            customizedFont: null == customizedFont
+                ? _value.customizedFont
+                : customizedFont // ignore: cast_nullable_to_non_nullable
+                      as String,
+            customizedPrimary: null == customizedPrimary
+                ? _value.customizedPrimary
+                : customizedPrimary // ignore: cast_nullable_to_non_nullable
+                      as Color,
+            customizedSecondary: null == customizedSecondary
+                ? _value.customizedSecondary
+                : customizedSecondary // ignore: cast_nullable_to_non_nullable
+                      as Color,
+            rewardType: null == rewardType
+                ? _value.rewardType
+                : rewardType // ignore: cast_nullable_to_non_nullable
+                      as String,
+            skipToday: null == skipToday
+                ? _value.skipToday
+                : skipToday // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            pauseGoals: null == pauseGoals
+                ? _value.pauseGoals
+                : pauseGoals // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            registrationComplete: null == registrationComplete
+                ? _value.registrationComplete
+                : registrationComplete // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            onboardingCompleted: null == onboardingCompleted
+                ? _value.onboardingCompleted
+                : onboardingCompleted // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            soundEnabled: null == soundEnabled
+                ? _value.soundEnabled
+                : soundEnabled // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            soundVolume: null == soundVolume
+                ? _value.soundVolume
+                : soundVolume // ignore: cast_nullable_to_non_nullable
+                      as double,
+            dailyAffirmationsTime: null == dailyAffirmationsTime
+                ? _value.dailyAffirmationsTime
+                : dailyAffirmationsTime // ignore: cast_nullable_to_non_nullable
+                      as String,
           )
           as $Val,
     );
@@ -310,116 +288,94 @@ class __$$UserPrefsSnapshotImplCopyWithImpl<$Res>
   }) {
     return _then(
       _$UserPrefsSnapshotImpl(
-        theme:
-            null == theme
-                ? _value.theme
-                : theme // ignore: cast_nullable_to_non_nullable
-                    as String,
-        fontSize:
-            null == fontSize
-                ? _value.fontSize
-                : fontSize // ignore: cast_nullable_to_non_nullable
-                    as double,
-        useDyslexiaFont:
-            null == useDyslexiaFont
-                ? _value.useDyslexiaFont
-                : useDyslexiaFont // ignore: cast_nullable_to_non_nullable
-                    as bool,
-        highContrastMode:
-            null == highContrastMode
-                ? _value.highContrastMode
-                : highContrastMode // ignore: cast_nullable_to_non_nullable
-                    as bool,
-        dailyAffirmations:
-            null == dailyAffirmations
-                ? _value.dailyAffirmations
-                : dailyAffirmations // ignore: cast_nullable_to_non_nullable
-                    as bool,
-        aiEncouragement:
-            null == aiEncouragement
-                ? _value.aiEncouragement
-                : aiEncouragement // ignore: cast_nullable_to_non_nullable
-                    as bool,
-        notificationFrequency:
-            null == notificationFrequency
-                ? _value.notificationFrequency
-                : notificationFrequency // ignore: cast_nullable_to_non_nullable
-                    as String,
-        notificationStyle:
-            null == notificationStyle
-                ? _value.notificationStyle
-                : notificationStyle // ignore: cast_nullable_to_non_nullable
-                    as String,
-        customizationEnabled:
-            null == customizationEnabled
-                ? _value.customizationEnabled
-                : customizationEnabled // ignore: cast_nullable_to_non_nullable
-                    as bool,
-        useCustomColorPalette:
-            null == useCustomColorPalette
-                ? _value.useCustomColorPalette
-                : useCustomColorPalette // ignore: cast_nullable_to_non_nullable
-                    as bool,
-        allowedColors:
-            null == allowedColors
-                ? _value._allowedColors
-                : allowedColors // ignore: cast_nullable_to_non_nullable
-                    as List<Color>,
-        customizedFont:
-            null == customizedFont
-                ? _value.customizedFont
-                : customizedFont // ignore: cast_nullable_to_non_nullable
-                    as String,
-        customizedPrimary:
-            null == customizedPrimary
-                ? _value.customizedPrimary
-                : customizedPrimary // ignore: cast_nullable_to_non_nullable
-                    as Color,
-        customizedSecondary:
-            null == customizedSecondary
-                ? _value.customizedSecondary
-                : customizedSecondary // ignore: cast_nullable_to_non_nullable
-                    as Color,
-        rewardType:
-            null == rewardType
-                ? _value.rewardType
-                : rewardType // ignore: cast_nullable_to_non_nullable
-                    as String,
-        skipToday:
-            null == skipToday
-                ? _value.skipToday
-                : skipToday // ignore: cast_nullable_to_non_nullable
-                    as bool,
-        pauseGoals:
-            null == pauseGoals
-                ? _value.pauseGoals
-                : pauseGoals // ignore: cast_nullable_to_non_nullable
-                    as bool,
-        registrationComplete:
-            null == registrationComplete
-                ? _value.registrationComplete
-                : registrationComplete // ignore: cast_nullable_to_non_nullable
-                    as bool,
-        onboardingCompleted:
-            null == onboardingCompleted
-                ? _value.onboardingCompleted
-                : onboardingCompleted // ignore: cast_nullable_to_non_nullable
-                    as bool,
-        soundEnabled:
-            null == soundEnabled
-                ? _value.soundEnabled
-                : soundEnabled // ignore: cast_nullable_to_non_nullable
-                    as bool,
-        soundVolume:
-            null == soundVolume
-                ? _value.soundVolume
-                : soundVolume // ignore: cast_nullable_to_non_nullable
-                    as double,
-        dailyAffirmationsTime:
-            null == dailyAffirmationsTime
-                ? _value.dailyAffirmationsTime
-                : dailyAffirmationsTime // ignore: cast_nullable_to_non_nullable
-                    as String,
+        theme: null == theme
+            ? _value.theme
+            : theme // ignore: cast_nullable_to_non_nullable
+                  as String,
+        fontSize: null == fontSize
+            ? _value.fontSize
+            : fontSize // ignore: cast_nullable_to_non_nullable
+                  as double,
+        useDyslexiaFont: null == useDyslexiaFont
+            ? _value.useDyslexiaFont
+            : useDyslexiaFont // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        highContrastMode: null == highContrastMode
+            ? _value.highContrastMode
+            : highContrastMode // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        dailyAffirmations: null == dailyAffirmations
+            ? _value.dailyAffirmations
+            : dailyAffirmations // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        aiEncouragement: null == aiEncouragement
+            ? _value.aiEncouragement
+            : aiEncouragement // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        notificationFrequency: null == notificationFrequency
+            ? _value.notificationFrequency
+            : notificationFrequency // ignore: cast_nullable_to_non_nullable
+                  as String,
+        notificationStyle: null == notificationStyle
+            ? _value.notificationStyle
+            : notificationStyle // ignore: cast_nullable_to_non_nullable
+                  as String,
+        customizationEnabled: null == customizationEnabled
+            ? _value.customizationEnabled
+            : customizationEnabled // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        useCustomColorPalette: null == useCustomColorPalette
+            ? _value.useCustomColorPalette
+            : useCustomColorPalette // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        allowedColors: null == allowedColors
+            ? _value._allowedColors
+            : allowedColors // ignore: cast_nullable_to_non_nullable
+                  as List<Color>,
+        customizedFont: null == customizedFont
+            ? _value.customizedFont
+            : customizedFont // ignore: cast_nullable_to_non_nullable
+                  as String,
+        customizedPrimary: null == customizedPrimary
+            ? _value.customizedPrimary
+            : customizedPrimary // ignore: cast_nullable_to_non_nullable
+                  as Color,
+        customizedSecondary: null == customizedSecondary
+            ? _value.customizedSecondary
+            : customizedSecondary // ignore: cast_nullable_to_non_nullable
+                  as Color,
+        rewardType: null == rewardType
+            ? _value.rewardType
+            : rewardType // ignore: cast_nullable_to_non_nullable
+                  as String,
+        skipToday: null == skipToday
+            ? _value.skipToday
+            : skipToday // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        pauseGoals: null == pauseGoals
+            ? _value.pauseGoals
+            : pauseGoals // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        registrationComplete: null == registrationComplete
+            ? _value.registrationComplete
+            : registrationComplete // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        onboardingCompleted: null == onboardingCompleted
+            ? _value.onboardingCompleted
+            : onboardingCompleted // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        soundEnabled: null == soundEnabled
+            ? _value.soundEnabled
+            : soundEnabled // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        soundVolume: null == soundVolume
+            ? _value.soundVolume
+            : soundVolume // ignore: cast_nullable_to_non_nullable
+                  as double,
+        dailyAffirmationsTime: null == dailyAffirmationsTime
+            ? _value.dailyAffirmationsTime
+            : dailyAffirmationsTime // ignore: cast_nullable_to_non_nullable
+                  as String,
       ),
     );
   }

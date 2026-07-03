@@ -11,19 +11,19 @@ String _$achievementReadyToastQueueHash() =>
 
 /// See also [AchievementReadyToastQueue].
 @ProviderFor(AchievementReadyToastQueue)
-final achievementReadyToastQueueProvider = NotifierProvider<
-  AchievementReadyToastQueue,
-  List<AchievementReadyToast>
->.internal(
-  AchievementReadyToastQueue.new,
-  name: r'achievementReadyToastQueueProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product')
+final achievementReadyToastQueueProvider =
+    NotifierProvider<
+      AchievementReadyToastQueue,
+      List<AchievementReadyToast>
+    >.internal(
+      AchievementReadyToastQueue.new,
+      name: r'achievementReadyToastQueueProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
           ? null
           : _$achievementReadyToastQueueHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
 
 typedef _$AchievementReadyToastQueue = Notifier<List<AchievementReadyToast>>;
 // ignore_for_file: type=lint

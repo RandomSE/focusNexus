@@ -11,6 +11,7 @@ import 'package:focusNexus/providers/points_balance_provider.dart';
 import 'package:focusNexus/settings/app_settings.dart';
 import 'package:focusNexus/utils/common_utils.dart';
 import 'package:focusNexus/utils/screen_theme.dart';
+import 'package:focusNexus/utils/theme_styles.dart';
 
 class CustomizationScreen extends ConsumerStatefulWidget {
   const CustomizationScreen({super.key});
@@ -341,7 +342,7 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
               ),
             ),
             backgroundColor: secondary,
-            iconTheme: IconThemeData(color: primary),
+            iconTheme: ThemeStyles.iconThemeFor( primary),
           ),
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(16),

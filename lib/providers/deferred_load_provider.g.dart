@@ -86,10 +86,9 @@ class DeferredScreenLoadProvider extends AutoDisposeFutureProvider<Object?> {
         (ref) => deferredScreenLoad(ref as DeferredScreenLoadRef, params),
         from: deferredScreenLoadProvider,
         name: r'deferredScreenLoadProvider',
-        debugGetCreateSourceHash:
-            const bool.fromEnvironment('dart.vm.product')
-                ? null
-                : _$deferredScreenLoadHash,
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$deferredScreenLoadHash,
         dependencies: DeferredScreenLoadFamily._dependencies,
         allTransitiveDependencies:
             DeferredScreenLoadFamily._allTransitiveDependencies,

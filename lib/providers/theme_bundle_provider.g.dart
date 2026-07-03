@@ -15,8 +15,9 @@ String _$themeBundleHash() => r'e4cb40c8ad9931a85b2117afc3d873da95fa6ad6';
 final themeBundleProvider = Provider<ThemeBundle>.internal(
   themeBundle,
   name: r'themeBundleProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product') ? null : _$themeBundleHash,
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$themeBundleHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );

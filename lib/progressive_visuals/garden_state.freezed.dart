@@ -26,6 +26,12 @@ mixin _$GardenState {
   bool get freeFirstGrowthEverConsumed => throw _privateConstructorUsedError;
   String? get freeFirstGrowthEligibleItemId =>
       throw _privateConstructorUsedError;
+  int get lifetimeZenPointsSpent => throw _privateConstructorUsedError;
+  bool get cherryBlossomTreeUnlocked => throw _privateConstructorUsedError;
+  bool get suppressRestartGrowthPrompt => throw _privateConstructorUsedError;
+  bool get cherryBlossomUnlockToastShown => throw _privateConstructorUsedError;
+  CherryBlossomTreeState get cherryBlossomTree =>
+      throw _privateConstructorUsedError;
 
   /// Create a copy of GardenState
   /// with the given fields replaced by the non-null parameter values.
@@ -50,7 +56,14 @@ abstract class $GardenStateCopyWith<$Res> {
     List<GardenItem> plantInventory,
     bool freeFirstGrowthEverConsumed,
     String? freeFirstGrowthEligibleItemId,
+    int lifetimeZenPointsSpent,
+    bool cherryBlossomTreeUnlocked,
+    bool suppressRestartGrowthPrompt,
+    bool cherryBlossomUnlockToastShown,
+    CherryBlossomTreeState cherryBlossomTree,
   });
+
+  $CherryBlossomTreeStateCopyWith<$Res> get cherryBlossomTree;
 }
 
 /// @nodoc
@@ -76,52 +89,82 @@ class _$GardenStateCopyWithImpl<$Res, $Val extends GardenState>
     Object? plantInventory = null,
     Object? freeFirstGrowthEverConsumed = null,
     Object? freeFirstGrowthEligibleItemId = freezed,
+    Object? lifetimeZenPointsSpent = null,
+    Object? cherryBlossomTreeUnlocked = null,
+    Object? suppressRestartGrowthPrompt = null,
+    Object? cherryBlossomUnlockToastShown = null,
+    Object? cherryBlossomTree = null,
   }) {
     return _then(
       _value.copyWith(
-            pointsBalance:
-                null == pointsBalance
-                    ? _value.pointsBalance
-                    : pointsBalance // ignore: cast_nullable_to_non_nullable
-                        as int,
-            items:
-                null == items
-                    ? _value.items
-                    : items // ignore: cast_nullable_to_non_nullable
-                        as List<GardenItem>,
-            decor:
-                null == decor
-                    ? _value.decor
-                    : decor // ignore: cast_nullable_to_non_nullable
-                        as List<DecorItem>,
-            decorStash:
-                null == decorStash
-                    ? _value.decorStash
-                    : decorStash // ignore: cast_nullable_to_non_nullable
-                        as Map<String, int>,
-            decorInventory:
-                null == decorInventory
-                    ? _value.decorInventory
-                    : decorInventory // ignore: cast_nullable_to_non_nullable
-                        as List<DecorItem>,
-            plantInventory:
-                null == plantInventory
-                    ? _value.plantInventory
-                    : plantInventory // ignore: cast_nullable_to_non_nullable
-                        as List<GardenItem>,
-            freeFirstGrowthEverConsumed:
-                null == freeFirstGrowthEverConsumed
-                    ? _value.freeFirstGrowthEverConsumed
-                    : freeFirstGrowthEverConsumed // ignore: cast_nullable_to_non_nullable
-                        as bool,
+            pointsBalance: null == pointsBalance
+                ? _value.pointsBalance
+                : pointsBalance // ignore: cast_nullable_to_non_nullable
+                      as int,
+            items: null == items
+                ? _value.items
+                : items // ignore: cast_nullable_to_non_nullable
+                      as List<GardenItem>,
+            decor: null == decor
+                ? _value.decor
+                : decor // ignore: cast_nullable_to_non_nullable
+                      as List<DecorItem>,
+            decorStash: null == decorStash
+                ? _value.decorStash
+                : decorStash // ignore: cast_nullable_to_non_nullable
+                      as Map<String, int>,
+            decorInventory: null == decorInventory
+                ? _value.decorInventory
+                : decorInventory // ignore: cast_nullable_to_non_nullable
+                      as List<DecorItem>,
+            plantInventory: null == plantInventory
+                ? _value.plantInventory
+                : plantInventory // ignore: cast_nullable_to_non_nullable
+                      as List<GardenItem>,
+            freeFirstGrowthEverConsumed: null == freeFirstGrowthEverConsumed
+                ? _value.freeFirstGrowthEverConsumed
+                : freeFirstGrowthEverConsumed // ignore: cast_nullable_to_non_nullable
+                      as bool,
             freeFirstGrowthEligibleItemId:
                 freezed == freeFirstGrowthEligibleItemId
-                    ? _value.freeFirstGrowthEligibleItemId
-                    : freeFirstGrowthEligibleItemId // ignore: cast_nullable_to_non_nullable
-                        as String?,
+                ? _value.freeFirstGrowthEligibleItemId
+                : freeFirstGrowthEligibleItemId // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            lifetimeZenPointsSpent: null == lifetimeZenPointsSpent
+                ? _value.lifetimeZenPointsSpent
+                : lifetimeZenPointsSpent // ignore: cast_nullable_to_non_nullable
+                      as int,
+            cherryBlossomTreeUnlocked: null == cherryBlossomTreeUnlocked
+                ? _value.cherryBlossomTreeUnlocked
+                : cherryBlossomTreeUnlocked // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            suppressRestartGrowthPrompt: null == suppressRestartGrowthPrompt
+                ? _value.suppressRestartGrowthPrompt
+                : suppressRestartGrowthPrompt // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            cherryBlossomUnlockToastShown: null == cherryBlossomUnlockToastShown
+                ? _value.cherryBlossomUnlockToastShown
+                : cherryBlossomUnlockToastShown // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            cherryBlossomTree: null == cherryBlossomTree
+                ? _value.cherryBlossomTree
+                : cherryBlossomTree // ignore: cast_nullable_to_non_nullable
+                      as CherryBlossomTreeState,
           )
           as $Val,
     );
+  }
+
+  /// Create a copy of GardenState
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $CherryBlossomTreeStateCopyWith<$Res> get cherryBlossomTree {
+    return $CherryBlossomTreeStateCopyWith<$Res>(_value.cherryBlossomTree, (
+      value,
+    ) {
+      return _then(_value.copyWith(cherryBlossomTree: value) as $Val);
+    });
   }
 }
 
@@ -143,7 +186,15 @@ abstract class _$$GardenStateImplCopyWith<$Res>
     List<GardenItem> plantInventory,
     bool freeFirstGrowthEverConsumed,
     String? freeFirstGrowthEligibleItemId,
+    int lifetimeZenPointsSpent,
+    bool cherryBlossomTreeUnlocked,
+    bool suppressRestartGrowthPrompt,
+    bool cherryBlossomUnlockToastShown,
+    CherryBlossomTreeState cherryBlossomTree,
   });
+
+  @override
+  $CherryBlossomTreeStateCopyWith<$Res> get cherryBlossomTree;
 }
 
 /// @nodoc
@@ -168,49 +219,66 @@ class __$$GardenStateImplCopyWithImpl<$Res>
     Object? plantInventory = null,
     Object? freeFirstGrowthEverConsumed = null,
     Object? freeFirstGrowthEligibleItemId = freezed,
+    Object? lifetimeZenPointsSpent = null,
+    Object? cherryBlossomTreeUnlocked = null,
+    Object? suppressRestartGrowthPrompt = null,
+    Object? cherryBlossomUnlockToastShown = null,
+    Object? cherryBlossomTree = null,
   }) {
     return _then(
       _$GardenStateImpl(
-        pointsBalance:
-            null == pointsBalance
-                ? _value.pointsBalance
-                : pointsBalance // ignore: cast_nullable_to_non_nullable
-                    as int,
-        items:
-            null == items
-                ? _value._items
-                : items // ignore: cast_nullable_to_non_nullable
-                    as List<GardenItem>,
-        decor:
-            null == decor
-                ? _value._decor
-                : decor // ignore: cast_nullable_to_non_nullable
-                    as List<DecorItem>,
-        decorStash:
-            null == decorStash
-                ? _value._decorStash
-                : decorStash // ignore: cast_nullable_to_non_nullable
-                    as Map<String, int>,
-        decorInventory:
-            null == decorInventory
-                ? _value._decorInventory
-                : decorInventory // ignore: cast_nullable_to_non_nullable
-                    as List<DecorItem>,
-        plantInventory:
-            null == plantInventory
-                ? _value._plantInventory
-                : plantInventory // ignore: cast_nullable_to_non_nullable
-                    as List<GardenItem>,
-        freeFirstGrowthEverConsumed:
-            null == freeFirstGrowthEverConsumed
-                ? _value.freeFirstGrowthEverConsumed
-                : freeFirstGrowthEverConsumed // ignore: cast_nullable_to_non_nullable
-                    as bool,
-        freeFirstGrowthEligibleItemId:
-            freezed == freeFirstGrowthEligibleItemId
-                ? _value.freeFirstGrowthEligibleItemId
-                : freeFirstGrowthEligibleItemId // ignore: cast_nullable_to_non_nullable
-                    as String?,
+        pointsBalance: null == pointsBalance
+            ? _value.pointsBalance
+            : pointsBalance // ignore: cast_nullable_to_non_nullable
+                  as int,
+        items: null == items
+            ? _value._items
+            : items // ignore: cast_nullable_to_non_nullable
+                  as List<GardenItem>,
+        decor: null == decor
+            ? _value._decor
+            : decor // ignore: cast_nullable_to_non_nullable
+                  as List<DecorItem>,
+        decorStash: null == decorStash
+            ? _value._decorStash
+            : decorStash // ignore: cast_nullable_to_non_nullable
+                  as Map<String, int>,
+        decorInventory: null == decorInventory
+            ? _value._decorInventory
+            : decorInventory // ignore: cast_nullable_to_non_nullable
+                  as List<DecorItem>,
+        plantInventory: null == plantInventory
+            ? _value._plantInventory
+            : plantInventory // ignore: cast_nullable_to_non_nullable
+                  as List<GardenItem>,
+        freeFirstGrowthEverConsumed: null == freeFirstGrowthEverConsumed
+            ? _value.freeFirstGrowthEverConsumed
+            : freeFirstGrowthEverConsumed // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        freeFirstGrowthEligibleItemId: freezed == freeFirstGrowthEligibleItemId
+            ? _value.freeFirstGrowthEligibleItemId
+            : freeFirstGrowthEligibleItemId // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        lifetimeZenPointsSpent: null == lifetimeZenPointsSpent
+            ? _value.lifetimeZenPointsSpent
+            : lifetimeZenPointsSpent // ignore: cast_nullable_to_non_nullable
+                  as int,
+        cherryBlossomTreeUnlocked: null == cherryBlossomTreeUnlocked
+            ? _value.cherryBlossomTreeUnlocked
+            : cherryBlossomTreeUnlocked // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        suppressRestartGrowthPrompt: null == suppressRestartGrowthPrompt
+            ? _value.suppressRestartGrowthPrompt
+            : suppressRestartGrowthPrompt // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        cherryBlossomUnlockToastShown: null == cherryBlossomUnlockToastShown
+            ? _value.cherryBlossomUnlockToastShown
+            : cherryBlossomUnlockToastShown // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        cherryBlossomTree: null == cherryBlossomTree
+            ? _value.cherryBlossomTree
+            : cherryBlossomTree // ignore: cast_nullable_to_non_nullable
+                  as CherryBlossomTreeState,
       ),
     );
   }
@@ -228,6 +296,11 @@ class _$GardenStateImpl extends _GardenState {
     final List<GardenItem> plantInventory = const <GardenItem>[],
     this.freeFirstGrowthEverConsumed = false,
     this.freeFirstGrowthEligibleItemId,
+    this.lifetimeZenPointsSpent = 0,
+    this.cherryBlossomTreeUnlocked = false,
+    this.suppressRestartGrowthPrompt = false,
+    this.cherryBlossomUnlockToastShown = false,
+    this.cherryBlossomTree = const CherryBlossomTreeState(),
   }) : _items = items,
        _decor = decor,
        _decorStash = decorStash,
@@ -287,10 +360,25 @@ class _$GardenStateImpl extends _GardenState {
   final bool freeFirstGrowthEverConsumed;
   @override
   final String? freeFirstGrowthEligibleItemId;
+  @override
+  @JsonKey()
+  final int lifetimeZenPointsSpent;
+  @override
+  @JsonKey()
+  final bool cherryBlossomTreeUnlocked;
+  @override
+  @JsonKey()
+  final bool suppressRestartGrowthPrompt;
+  @override
+  @JsonKey()
+  final bool cherryBlossomUnlockToastShown;
+  @override
+  @JsonKey()
+  final CherryBlossomTreeState cherryBlossomTree;
 
   @override
   String toString() {
-    return 'GardenState(pointsBalance: $pointsBalance, items: $items, decor: $decor, decorStash: $decorStash, decorInventory: $decorInventory, plantInventory: $plantInventory, freeFirstGrowthEverConsumed: $freeFirstGrowthEverConsumed, freeFirstGrowthEligibleItemId: $freeFirstGrowthEligibleItemId)';
+    return 'GardenState(pointsBalance: $pointsBalance, items: $items, decor: $decor, decorStash: $decorStash, decorInventory: $decorInventory, plantInventory: $plantInventory, freeFirstGrowthEverConsumed: $freeFirstGrowthEverConsumed, freeFirstGrowthEligibleItemId: $freeFirstGrowthEligibleItemId, lifetimeZenPointsSpent: $lifetimeZenPointsSpent, cherryBlossomTreeUnlocked: $cherryBlossomTreeUnlocked, suppressRestartGrowthPrompt: $suppressRestartGrowthPrompt, cherryBlossomUnlockToastShown: $cherryBlossomUnlockToastShown, cherryBlossomTree: $cherryBlossomTree)';
   }
 
   @override
@@ -325,7 +413,28 @@ class _$GardenStateImpl extends _GardenState {
                   freeFirstGrowthEligibleItemId,
                 ) ||
                 other.freeFirstGrowthEligibleItemId ==
-                    freeFirstGrowthEligibleItemId));
+                    freeFirstGrowthEligibleItemId) &&
+            (identical(other.lifetimeZenPointsSpent, lifetimeZenPointsSpent) ||
+                other.lifetimeZenPointsSpent == lifetimeZenPointsSpent) &&
+            (identical(
+                  other.cherryBlossomTreeUnlocked,
+                  cherryBlossomTreeUnlocked,
+                ) ||
+                other.cherryBlossomTreeUnlocked == cherryBlossomTreeUnlocked) &&
+            (identical(
+                  other.suppressRestartGrowthPrompt,
+                  suppressRestartGrowthPrompt,
+                ) ||
+                other.suppressRestartGrowthPrompt ==
+                    suppressRestartGrowthPrompt) &&
+            (identical(
+                  other.cherryBlossomUnlockToastShown,
+                  cherryBlossomUnlockToastShown,
+                ) ||
+                other.cherryBlossomUnlockToastShown ==
+                    cherryBlossomUnlockToastShown) &&
+            (identical(other.cherryBlossomTree, cherryBlossomTree) ||
+                other.cherryBlossomTree == cherryBlossomTree));
   }
 
   @override
@@ -339,6 +448,11 @@ class _$GardenStateImpl extends _GardenState {
     const DeepCollectionEquality().hash(_plantInventory),
     freeFirstGrowthEverConsumed,
     freeFirstGrowthEligibleItemId,
+    lifetimeZenPointsSpent,
+    cherryBlossomTreeUnlocked,
+    suppressRestartGrowthPrompt,
+    cherryBlossomUnlockToastShown,
+    cherryBlossomTree,
   );
 
   /// Create a copy of GardenState
@@ -360,6 +474,11 @@ abstract class _GardenState extends GardenState {
     final List<GardenItem> plantInventory,
     final bool freeFirstGrowthEverConsumed,
     final String? freeFirstGrowthEligibleItemId,
+    final int lifetimeZenPointsSpent,
+    final bool cherryBlossomTreeUnlocked,
+    final bool suppressRestartGrowthPrompt,
+    final bool cherryBlossomUnlockToastShown,
+    final CherryBlossomTreeState cherryBlossomTree,
   }) = _$GardenStateImpl;
   const _GardenState._() : super._();
 
@@ -379,6 +498,16 @@ abstract class _GardenState extends GardenState {
   bool get freeFirstGrowthEverConsumed;
   @override
   String? get freeFirstGrowthEligibleItemId;
+  @override
+  int get lifetimeZenPointsSpent;
+  @override
+  bool get cherryBlossomTreeUnlocked;
+  @override
+  bool get suppressRestartGrowthPrompt;
+  @override
+  bool get cherryBlossomUnlockToastShown;
+  @override
+  CherryBlossomTreeState get cherryBlossomTree;
 
   /// Create a copy of GardenState
   /// with the given fields replaced by the non-null parameter values.

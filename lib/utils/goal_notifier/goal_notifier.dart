@@ -111,6 +111,9 @@ class GoalNotifier {
   static Future<void> cancelAllGoalNotifications() =>
       cancellation.cancelAllGoalNotifications();
 
+  static Future<void> purgeAllScheduledNotifications() =>
+      cancellation.purgeAllScheduledNotifications();
+
   static Future<bool> areNotificationsEnabledByFrequency() =>
       permissions.areNotificationsEnabledByFrequency();
 

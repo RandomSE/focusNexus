@@ -12,6 +12,7 @@ class TimeWindowSlotSection extends StatelessWidget {
     required this.timeLabel,
     required this.onPickDate,
     required this.onPickTime,
+    this.showTimeRow = true,
   });
 
   final ThemeBundle bundle;
@@ -21,6 +22,7 @@ class TimeWindowSlotSection extends StatelessWidget {
   final String timeLabel;
   final VoidCallback onPickDate;
   final VoidCallback onPickTime;
+  final bool showTimeRow;
 
   @override
   Widget build(BuildContext context) {
@@ -69,14 +71,16 @@ class TimeWindowSlotSection extends StatelessWidget {
               trailingIcon: Icons.calendar_today,
               onTap: onPickDate,
             ),
-            Divider(height: 1, color: borderColor.withValues(alpha: 0.6)),
-            _PickerRow(
-              bundle: bundle,
-              rowTitle: 'Time',
-              value: timeLabel,
-              trailingIcon: Icons.access_time,
-              onTap: onPickTime,
-            ),
+            if (showTimeRow) ...[
+              Divider(height: 1, color: borderColor.withValues(alpha: 0.6)),
+              _PickerRow(
+                bundle: bundle,
+                rowTitle: 'Time',
+                value: timeLabel,
+                trailingIcon: Icons.access_time,
+                onTap: onPickTime,
+              ),
+            ],
           ],
         ),
       ),

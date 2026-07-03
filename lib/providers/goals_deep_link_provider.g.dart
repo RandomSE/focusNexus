@@ -15,10 +15,9 @@ String _$goalsDeepLinkHash() => r'27e32dfa61601dc783db6a831c041785a6407dd5';
 final goalsDeepLinkProvider = NotifierProvider<GoalsDeepLink, int?>.internal(
   GoalsDeepLink.new,
   name: r'goalsDeepLinkProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$goalsDeepLinkHash,
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$goalsDeepLinkHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );

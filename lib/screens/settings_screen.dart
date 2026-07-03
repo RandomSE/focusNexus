@@ -4,8 +4,6 @@ import 'package:focusNexus/app/app_navigation.dart';
 import 'package:focusNexus/app/app_route.dart';
 import 'package:focusNexus/providers/app_repositories_provider.dart';
 import 'package:focusNexus/providers/app_settings_provider.dart';
-import 'package:focusNexus/providers/goals_provider.dart';
-import 'package:focusNexus/providers/points_balance_provider.dart';
 import 'package:focusNexus/providers/screen_ui_providers.dart';
 import 'package:focusNexus/providers/zen_garden_session_provider.dart';
 import 'package:focusNexus/utils/appearance_transition.dart';
@@ -18,6 +16,7 @@ import 'package:focusNexus/widgets/deferred_screen.dart';
 import 'package:focusNexus/widgets/settings_themed_builder.dart';
 import 'package:focusNexus/widgets/skeleton_loaders.dart';
 import 'package:focusNexus/widgets/sound_volume_control.dart';
+import 'package:focusNexus/utils/theme_styles.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -201,7 +200,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                       ),
                     ),
                     backgroundColor: secondaryColor,
-                    iconTheme: IconThemeData(color: primaryColor),
+                    iconTheme: ThemeStyles.iconThemeFor( primaryColor),
                   ),
                   backgroundColor: secondaryColor,
                   body: ListView(
@@ -349,6 +348,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                               primaryColor,
                             ),
                         ],
+                        if (settings.rewardType == 'Progressive visuals') ...[
+                          ScreenSemantics.sectionHeader('Zen garden', textStyle),
+                          CommonUtils.buildSwitchListTile(
+                            'Confirm before restart growth',
+                            textStyle,
+                            !ref.watch(zenGardenSessionProvider).garden
+                                .suppressRestartGrowthPrompt,
+                            (enabled) async {
+                              final session =
+                                  ref.read(zenGardenSessionProvider.notifier);
+                              if (!session.hasLoadedFromDisk) {
+                                await session.loadGarden();
+                              }
+                              session.setSuppressRestartGrowthPrompt(!enabled);
+                            },
+                            primaryColor,
+                          ),
+                        ],
+                        const Divider(),
                         ScreenSemantics.sectionHeader('Goals & sound', textStyle),
                         CommonUtils.buildSwitchListTile(
                           'Pause Goals',
@@ -506,10 +524,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     try {
       final repos = ref.read(appRepositoriesProvider);
       await repos.wipeAllUserData();
+      await GoalNotifier.purgeAllScheduledNotifications();
       await settings.applyDefaultPreferences();
-      ref.invalidate(pointsBalanceProvider);
-      ref.invalidate(goalsViewProvider);
-      ref.invalidate(zenGardenSessionProvider);
       if (!context.mounted) return;
       ref.resetToRoute(context, AppRoute.auth);
     } finally {

@@ -85,46 +85,38 @@ class _$AchievementCopyWithImpl<$Res, $Val extends Achievement>
   }) {
     return _then(
       _value.copyWith(
-            id:
-                null == id
-                    ? _value.id
-                    : id // ignore: cast_nullable_to_non_nullable
-                        as String,
-            title:
-                null == title
-                    ? _value.title
-                    : title // ignore: cast_nullable_to_non_nullable
-                        as String,
-            reward:
-                null == reward
-                    ? _value.reward
-                    : reward // ignore: cast_nullable_to_non_nullable
-                        as String,
-            task:
-                null == task
-                    ? _value.task
-                    : task // ignore: cast_nullable_to_non_nullable
-                        as String,
-            dateCompleted:
-                freezed == dateCompleted
-                    ? _value.dateCompleted
-                    : dateCompleted // ignore: cast_nullable_to_non_nullable
-                        as DateTime?,
-            isCompleted:
-                null == isCompleted
-                    ? _value.isCompleted
-                    : isCompleted // ignore: cast_nullable_to_non_nullable
-                        as bool,
-            isSecret:
-                null == isSecret
-                    ? _value.isSecret
-                    : isSecret // ignore: cast_nullable_to_non_nullable
-                        as bool,
-            progress:
-                null == progress
-                    ? _value.progress
-                    : progress // ignore: cast_nullable_to_non_nullable
-                        as double,
+            id: null == id
+                ? _value.id
+                : id // ignore: cast_nullable_to_non_nullable
+                      as String,
+            title: null == title
+                ? _value.title
+                : title // ignore: cast_nullable_to_non_nullable
+                      as String,
+            reward: null == reward
+                ? _value.reward
+                : reward // ignore: cast_nullable_to_non_nullable
+                      as String,
+            task: null == task
+                ? _value.task
+                : task // ignore: cast_nullable_to_non_nullable
+                      as String,
+            dateCompleted: freezed == dateCompleted
+                ? _value.dateCompleted
+                : dateCompleted // ignore: cast_nullable_to_non_nullable
+                      as DateTime?,
+            isCompleted: null == isCompleted
+                ? _value.isCompleted
+                : isCompleted // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            isSecret: null == isSecret
+                ? _value.isSecret
+                : isSecret // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            progress: null == progress
+                ? _value.progress
+                : progress // ignore: cast_nullable_to_non_nullable
+                      as double,
           )
           as $Val,
     );
@@ -177,46 +169,38 @@ class __$$AchievementImplCopyWithImpl<$Res>
   }) {
     return _then(
       _$AchievementImpl(
-        id:
-            null == id
-                ? _value.id
-                : id // ignore: cast_nullable_to_non_nullable
-                    as String,
-        title:
-            null == title
-                ? _value.title
-                : title // ignore: cast_nullable_to_non_nullable
-                    as String,
-        reward:
-            null == reward
-                ? _value.reward
-                : reward // ignore: cast_nullable_to_non_nullable
-                    as String,
-        task:
-            null == task
-                ? _value.task
-                : task // ignore: cast_nullable_to_non_nullable
-                    as String,
-        dateCompleted:
-            freezed == dateCompleted
-                ? _value.dateCompleted
-                : dateCompleted // ignore: cast_nullable_to_non_nullable
-                    as DateTime?,
-        isCompleted:
-            null == isCompleted
-                ? _value.isCompleted
-                : isCompleted // ignore: cast_nullable_to_non_nullable
-                    as bool,
-        isSecret:
-            null == isSecret
-                ? _value.isSecret
-                : isSecret // ignore: cast_nullable_to_non_nullable
-                    as bool,
-        progress:
-            null == progress
-                ? _value.progress
-                : progress // ignore: cast_nullable_to_non_nullable
-                    as double,
+        id: null == id
+            ? _value.id
+            : id // ignore: cast_nullable_to_non_nullable
+                  as String,
+        title: null == title
+            ? _value.title
+            : title // ignore: cast_nullable_to_non_nullable
+                  as String,
+        reward: null == reward
+            ? _value.reward
+            : reward // ignore: cast_nullable_to_non_nullable
+                  as String,
+        task: null == task
+            ? _value.task
+            : task // ignore: cast_nullable_to_non_nullable
+                  as String,
+        dateCompleted: freezed == dateCompleted
+            ? _value.dateCompleted
+            : dateCompleted // ignore: cast_nullable_to_non_nullable
+                  as DateTime?,
+        isCompleted: null == isCompleted
+            ? _value.isCompleted
+            : isCompleted // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        isSecret: null == isSecret
+            ? _value.isSecret
+            : isSecret // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        progress: null == progress
+            ? _value.progress
+            : progress // ignore: cast_nullable_to_non_nullable
+                  as double,
       ),
     );
   }

@@ -10,6 +10,7 @@ import 'package:focusNexus/services/achievement_service.dart';
 import 'package:focusNexus/utils/common_utils.dart';
 import 'package:focusNexus/views/achievement_detail_view.dart';
 import 'package:focusNexus/widgets/settings_themed_builder.dart';
+import 'package:focusNexus/utils/theme_styles.dart';
 
 class AchievementScreen extends ConsumerWidget {
   const AchievementScreen({super.key});
@@ -58,7 +59,7 @@ class AchievementScreen extends ConsumerWidget {
                 ),
               ),
               backgroundColor: bundle.secondaryColor,
-              iconTheme: IconThemeData(color: bundle.primaryColor),
+              iconTheme: ThemeStyles.iconThemeFor( bundle.primaryColor),
             ),
             backgroundColor: bundle.secondaryColor,
             body: Container(

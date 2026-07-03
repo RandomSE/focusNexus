@@ -32,6 +32,7 @@ import 'package:focusNexus/utils/common_utils.dart';
 import 'package:focusNexus/utils/screen_theme.dart';
 import 'package:focusNexus/widgets/deferred_screen.dart';
 import 'package:focusNexus/widgets/skeleton_loaders.dart';
+import 'package:focusNexus/utils/theme_styles.dart';
 
 class GoalsScreen extends ConsumerStatefulWidget {
   const GoalsScreen({super.key, this.highlightGoalId});
@@ -274,7 +275,7 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
         appBar: AppBar(
           title: Text('Goals', style: bundle.textStyle),
           backgroundColor: bundle.secondaryColor,
-          iconTheme: IconThemeData(color: bundle.primaryColor),
+          iconTheme: ThemeStyles.iconThemeFor( bundle.primaryColor),
         ),
         backgroundColor: bundle.secondaryColor,
         body: GoalsConfettiOverlay(

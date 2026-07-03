@@ -54,6 +54,14 @@ const _goldenCases = <({String query, String expectedId})>[
   (query: 'Delete my account', expectedId: 'settings.delete_account'),
   (query: 'How does the Zen garden work?', expectedId: 'rewards.zen_garden'),
   (query: 'Zen garden restart growth mutation', expectedId: 'rewards.zen_rebirth'),
+  (
+    query: 'How do I unlock the cherry blossom tree?',
+    expectedId: 'rewards.cherry_blossom_tree',
+  ),
+  (
+    query: 'Cherry blossom fast grow undo',
+    expectedId: 'rewards.cherry_blossom_tree',
+  ),
   (query: 'What are achievements?', expectedId: 'rewards.achievements'),
   (query: 'How do I claim achievements?', expectedId: 'rewards.claim_achievements'),
   (query: 'How do mini-games work?', expectedId: 'rewards.mini_games'),
