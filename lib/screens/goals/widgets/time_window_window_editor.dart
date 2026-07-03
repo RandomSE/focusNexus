@@ -14,6 +14,7 @@ class TimeWindowWindowEditor extends StatefulWidget {
     required this.onEndChanged,
     required this.onStartChanged,
     required this.onDurationChanged,
+    this.fullDaysOnly = false,
   });
 
   final ThemeBundle bundle;
@@ -23,6 +24,7 @@ class TimeWindowWindowEditor extends StatefulWidget {
   final ValueChanged<DateTime> onEndChanged;
   final ValueChanged<DateTime> onStartChanged;
   final ValueChanged<Duration> onDurationChanged;
+  final bool fullDaysOnly;
 
   @override
   State<TimeWindowWindowEditor> createState() => _TimeWindowWindowEditorState();
@@ -67,8 +69,11 @@ class _TimeWindowWindowEditorState extends State<TimeWindowWindowEditor> {
   }
 
   void _syncDurationFromWidget() {
-    if (widget.duration.inDays > 0 && widget.duration.inHours % 24 == 0) {
-      _durationValue = widget.duration.inDays;
+    if (widget.fullDaysOnly ||
+        (widget.duration.inDays > 0 && widget.duration.inHours % 24 == 0)) {
+      _durationValue = widget.fullDaysOnly
+          ? widget.duration.inDays.clamp(1, 9999)
+          : widget.duration.inDays;
       _durationUnit = 'days';
     } else if (widget.duration.inHours > 0 &&
         widget.duration.inMinutes % 60 == 0) {
@@ -85,6 +90,9 @@ class _TimeWindowWindowEditorState extends State<TimeWindowWindowEditor> {
     'minutes' => Duration(minutes: _durationValue),
     _ => Duration(hours: _durationValue),
   };
+
+  DateTime _dayEnd(DateTime date) =>
+      DateTime(date.year, date.month, date.day, 23, 59);
 
   void _onDurationTextChanged() {
     final parsed = int.tryParse(_durationController.text);
@@ -139,15 +147,16 @@ class _TimeWindowWindowEditorState extends State<TimeWindowWindowEditor> {
   );
 
   void _applyEnd(DateTime end) {
+    final resolved = widget.fullDaysOnly ? _dayEnd(end) : end;
     final now = DateTime.now();
     final start = clampActionWindowStart(
-      start: end.subtract(widget.duration),
-      end: end,
+      start: resolved.subtract(widget.duration),
+      end: resolved,
       now: now,
     );
-    widget.onEndChanged(end);
+    widget.onEndChanged(resolved);
     widget.onStartChanged(start);
-    widget.onDurationChanged(end.difference(start));
+    widget.onDurationChanged(resolved.difference(start));
   }
 
   Future<void> _pickEndDate() async {
@@ -162,6 +171,7 @@ class _TimeWindowWindowEditorState extends State<TimeWindowWindowEditor> {
   }
 
   Future<void> _pickEndTime() async {
+    if (widget.fullDaysOnly) return;
     final time = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(widget.endAt),
@@ -183,6 +193,7 @@ class _TimeWindowWindowEditorState extends State<TimeWindowWindowEditor> {
   }
 
   Future<void> _pickStartTime() async {
+    if (widget.fullDaysOnly) return;
     final time = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(widget.startAt),
@@ -224,18 +235,24 @@ class _TimeWindowWindowEditorState extends State<TimeWindowWindowEditor> {
           title: 'Slot ends',
           icon: Icons.flag_outlined,
           dateLabel: formatActionWindowDateLabel(widget.endAt),
-          timeLabel: formatActionWindowTimeLabel(widget.endAt),
+          timeLabel: widget.fullDaysOnly
+              ? 'End of day'
+              : formatActionWindowTimeLabel(widget.endAt),
           onPickDate: _pickEndDate,
           onPickTime: _pickEndTime,
+          showTimeRow: !widget.fullDaysOnly,
         ),
         TimeWindowSlotSection(
           bundle: widget.bundle,
           title: 'Slot starts',
           icon: Icons.play_circle_outline,
           dateLabel: formatActionWindowDateLabel(widget.startAt),
-          timeLabel: formatActionWindowTimeLabel(widget.startAt),
+          timeLabel: widget.fullDaysOnly
+              ? 'Start of day'
+              : formatActionWindowTimeLabel(widget.startAt),
           onPickDate: _pickStartDate,
           onPickTime: _pickStartTime,
+          showTimeRow: !widget.fullDaysOnly,
         ),
         if (startBeforeNow)
           Padding(
@@ -248,35 +265,62 @@ class _TimeWindowWindowEditorState extends State<TimeWindowWindowEditor> {
               ),
             ),
           ),
-        outlinedFormRow(
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Adjust start (nudge)',
-                  style: textStyle.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    _nudgeButton('-1d', const Duration(days: -1)),
-                    _nudgeButton('-1h', const Duration(hours: -1)),
-                    _nudgeButton('-5m', const Duration(minutes: -5)),
-                    _nudgeButton('+5m', const Duration(minutes: 5)),
-                    _nudgeButton('+1h', const Duration(hours: 1)),
-                    _nudgeButton('+1d', const Duration(days: 1)),
-                  ],
-                ),
-              ],
+        if (!widget.fullDaysOnly)
+          outlinedFormRow(
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Adjust start (nudge)',
+                    style: textStyle.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    alignment: WrapAlignment.center,
+                    children: [
+                      _nudgeButton('-1d', const Duration(days: -1)),
+                      _nudgeButton('-1h', const Duration(hours: -1)),
+                      _nudgeButton('-5m', const Duration(minutes: -5)),
+                      _nudgeButton('+5m', const Duration(minutes: 5)),
+                      _nudgeButton('+1h', const Duration(hours: 1)),
+                      _nudgeButton('+1d', const Duration(days: 1)),
+                    ],
+                  ),
+                ],
+              ),
             ),
+            textStyle,
+          )
+        else
+          outlinedFormRow(
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Adjust start (nudge)',
+                    style: textStyle.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    alignment: WrapAlignment.center,
+                    children: [
+                      _nudgeButton('-1d', const Duration(days: -1)),
+                      _nudgeButton('+1d', const Duration(days: 1)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            textStyle,
           ),
-          textStyle,
-        ),
         outlinedFormRow(
           Padding(
             padding: const EdgeInsets.all(12),
@@ -296,51 +340,61 @@ class _TimeWindowWindowEditorState extends State<TimeWindowWindowEditor> {
                       keyboardType: TextInputType.number,
                       style: textStyle,
                       decoration: InputDecoration(
-                        labelText: 'Amount',
+                        labelText: widget.fullDaysOnly ? 'Days' : 'Amount',
                         labelStyle: textStyle,
                       ),
                     );
-                    final unitField = DropdownButtonFormField<String>(
-                      key: ValueKey(_durationUnit),
-                      initialValue: _durationUnit,
-                      isExpanded: true,
-                      dropdownColor: widget.bundle.secondaryColor,
-                      style: textStyle,
-                      decoration: InputDecoration(
-                        labelText: 'Unit',
-                        labelStyle: textStyle,
-                      ),
-                      selectedItemBuilder: (context) => [
-                        Text('min', style: textStyle),
-                        Text('hr', style: textStyle),
-                        Text('days', style: textStyle),
-                      ],
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'minutes',
-                          child: Text('minutes'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'hours',
-                          child: Text('hours'),
-                        ),
-                        DropdownMenuItem(value: 'days', child: Text('days')),
-                      ],
-                      onChanged: (v) {
-                        if (v == null) return;
-                        setState(() => _durationUnit = v);
-                        _emitDuration();
-                      },
-                    );
+                    final unitField = widget.fullDaysOnly
+                        ? null
+                        : DropdownButtonFormField<String>(
+                            key: ValueKey(_durationUnit),
+                            initialValue: _durationUnit,
+                            isExpanded: true,
+                            dropdownColor: widget.bundle.secondaryColor,
+                            style: textStyle,
+                            decoration: InputDecoration(
+                              labelText: 'Unit',
+                              labelStyle: textStyle,
+                            ),
+                            selectedItemBuilder: (context) => [
+                              Text('min', style: textStyle),
+                              Text('hr', style: textStyle),
+                              Text('days', style: textStyle),
+                            ],
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'minutes',
+                                child: Text('minutes'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'hours',
+                                child: Text('hours'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'days',
+                                child: Text('days'),
+                              ),
+                            ],
+                            onChanged: (v) {
+                              if (v == null) return;
+                              setState(() => _durationUnit = v);
+                              _emitDuration();
+                            },
+                          );
                     if (narrow) {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           amountField,
-                          const SizedBox(height: 8),
-                          unitField,
+                          if (unitField != null) ...[
+                            const SizedBox(height: 8),
+                            unitField,
+                          ],
                         ],
                       );
+                    }
+                    if (unitField == null) {
+                      return amountField;
                     }
                     return Row(
                       children: [

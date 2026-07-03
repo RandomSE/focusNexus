@@ -107,86 +107,70 @@ class _$GoalSetCopyWithImpl<$Res, $Val extends GoalSet>
   }) {
     return _then(
       _value.copyWith(
-            title:
-                null == title
-                    ? _value.title
-                    : title // ignore: cast_nullable_to_non_nullable
-                        as String,
-            category:
-                null == category
-                    ? _value.category
-                    : category // ignore: cast_nullable_to_non_nullable
-                        as String,
-            complexity:
-                null == complexity
-                    ? _value.complexity
-                    : complexity // ignore: cast_nullable_to_non_nullable
-                        as String,
-            effort:
-                null == effort
-                    ? _value.effort
-                    : effort // ignore: cast_nullable_to_non_nullable
-                        as String,
-            motivation:
-                null == motivation
-                    ? _value.motivation
-                    : motivation // ignore: cast_nullable_to_non_nullable
-                        as String,
-            time:
-                null == time
-                    ? _value.time
-                    : time // ignore: cast_nullable_to_non_nullable
-                        as int,
-            deadline:
-                null == deadline
-                    ? _value.deadline
-                    : deadline // ignore: cast_nullable_to_non_nullable
-                        as String,
-            completedAt:
-                null == completedAt
-                    ? _value.completedAt
-                    : completedAt // ignore: cast_nullable_to_non_nullable
-                        as String,
-            steps:
-                null == steps
-                    ? _value.steps
-                    : steps // ignore: cast_nullable_to_non_nullable
-                        as int,
-            points:
-                null == points
-                    ? _value.points
-                    : points // ignore: cast_nullable_to_non_nullable
-                        as int,
-            stepProgress:
-                null == stepProgress
-                    ? _value.stepProgress
-                    : stepProgress // ignore: cast_nullable_to_non_nullable
-                        as int,
-            goalId:
-                null == goalId
-                    ? _value.goalId
-                    : goalId // ignore: cast_nullable_to_non_nullable
-                        as int,
-            goalKind:
-                null == goalKind
-                    ? _value.goalKind
-                    : goalKind // ignore: cast_nullable_to_non_nullable
-                        as String,
-            actionWindowStart:
-                null == actionWindowStart
-                    ? _value.actionWindowStart
-                    : actionWindowStart // ignore: cast_nullable_to_non_nullable
-                        as String,
-            actionWindowEnd:
-                null == actionWindowEnd
-                    ? _value.actionWindowEnd
-                    : actionWindowEnd // ignore: cast_nullable_to_non_nullable
-                        as String,
-            repeatSeriesId:
-                null == repeatSeriesId
-                    ? _value.repeatSeriesId
-                    : repeatSeriesId // ignore: cast_nullable_to_non_nullable
-                        as int,
+            title: null == title
+                ? _value.title
+                : title // ignore: cast_nullable_to_non_nullable
+                      as String,
+            category: null == category
+                ? _value.category
+                : category // ignore: cast_nullable_to_non_nullable
+                      as String,
+            complexity: null == complexity
+                ? _value.complexity
+                : complexity // ignore: cast_nullable_to_non_nullable
+                      as String,
+            effort: null == effort
+                ? _value.effort
+                : effort // ignore: cast_nullable_to_non_nullable
+                      as String,
+            motivation: null == motivation
+                ? _value.motivation
+                : motivation // ignore: cast_nullable_to_non_nullable
+                      as String,
+            time: null == time
+                ? _value.time
+                : time // ignore: cast_nullable_to_non_nullable
+                      as int,
+            deadline: null == deadline
+                ? _value.deadline
+                : deadline // ignore: cast_nullable_to_non_nullable
+                      as String,
+            completedAt: null == completedAt
+                ? _value.completedAt
+                : completedAt // ignore: cast_nullable_to_non_nullable
+                      as String,
+            steps: null == steps
+                ? _value.steps
+                : steps // ignore: cast_nullable_to_non_nullable
+                      as int,
+            points: null == points
+                ? _value.points
+                : points // ignore: cast_nullable_to_non_nullable
+                      as int,
+            stepProgress: null == stepProgress
+                ? _value.stepProgress
+                : stepProgress // ignore: cast_nullable_to_non_nullable
+                      as int,
+            goalId: null == goalId
+                ? _value.goalId
+                : goalId // ignore: cast_nullable_to_non_nullable
+                      as int,
+            goalKind: null == goalKind
+                ? _value.goalKind
+                : goalKind // ignore: cast_nullable_to_non_nullable
+                      as String,
+            actionWindowStart: null == actionWindowStart
+                ? _value.actionWindowStart
+                : actionWindowStart // ignore: cast_nullable_to_non_nullable
+                      as String,
+            actionWindowEnd: null == actionWindowEnd
+                ? _value.actionWindowEnd
+                : actionWindowEnd // ignore: cast_nullable_to_non_nullable
+                      as String,
+            repeatSeriesId: null == repeatSeriesId
+                ? _value.repeatSeriesId
+                : repeatSeriesId // ignore: cast_nullable_to_non_nullable
+                      as int,
           )
           as $Val,
     );
@@ -254,86 +238,70 @@ class __$$GoalSetImplCopyWithImpl<$Res>
   }) {
     return _then(
       _$GoalSetImpl(
-        title:
-            null == title
-                ? _value.title
-                : title // ignore: cast_nullable_to_non_nullable
-                    as String,
-        category:
-            null == category
-                ? _value.category
-                : category // ignore: cast_nullable_to_non_nullable
-                    as String,
-        complexity:
-            null == complexity
-                ? _value.complexity
-                : complexity // ignore: cast_nullable_to_non_nullable
-                    as String,
-        effort:
-            null == effort
-                ? _value.effort
-                : effort // ignore: cast_nullable_to_non_nullable
-                    as String,
-        motivation:
-            null == motivation
-                ? _value.motivation
-                : motivation // ignore: cast_nullable_to_non_nullable
-                    as String,
-        time:
-            null == time
-                ? _value.time
-                : time // ignore: cast_nullable_to_non_nullable
-                    as int,
-        deadline:
-            null == deadline
-                ? _value.deadline
-                : deadline // ignore: cast_nullable_to_non_nullable
-                    as String,
-        completedAt:
-            null == completedAt
-                ? _value.completedAt
-                : completedAt // ignore: cast_nullable_to_non_nullable
-                    as String,
-        steps:
-            null == steps
-                ? _value.steps
-                : steps // ignore: cast_nullable_to_non_nullable
-                    as int,
-        points:
-            null == points
-                ? _value.points
-                : points // ignore: cast_nullable_to_non_nullable
-                    as int,
-        stepProgress:
-            null == stepProgress
-                ? _value.stepProgress
-                : stepProgress // ignore: cast_nullable_to_non_nullable
-                    as int,
-        goalId:
-            null == goalId
-                ? _value.goalId
-                : goalId // ignore: cast_nullable_to_non_nullable
-                    as int,
-        goalKind:
-            null == goalKind
-                ? _value.goalKind
-                : goalKind // ignore: cast_nullable_to_non_nullable
-                    as String,
-        actionWindowStart:
-            null == actionWindowStart
-                ? _value.actionWindowStart
-                : actionWindowStart // ignore: cast_nullable_to_non_nullable
-                    as String,
-        actionWindowEnd:
-            null == actionWindowEnd
-                ? _value.actionWindowEnd
-                : actionWindowEnd // ignore: cast_nullable_to_non_nullable
-                    as String,
-        repeatSeriesId:
-            null == repeatSeriesId
-                ? _value.repeatSeriesId
-                : repeatSeriesId // ignore: cast_nullable_to_non_nullable
-                    as int,
+        title: null == title
+            ? _value.title
+            : title // ignore: cast_nullable_to_non_nullable
+                  as String,
+        category: null == category
+            ? _value.category
+            : category // ignore: cast_nullable_to_non_nullable
+                  as String,
+        complexity: null == complexity
+            ? _value.complexity
+            : complexity // ignore: cast_nullable_to_non_nullable
+                  as String,
+        effort: null == effort
+            ? _value.effort
+            : effort // ignore: cast_nullable_to_non_nullable
+                  as String,
+        motivation: null == motivation
+            ? _value.motivation
+            : motivation // ignore: cast_nullable_to_non_nullable
+                  as String,
+        time: null == time
+            ? _value.time
+            : time // ignore: cast_nullable_to_non_nullable
+                  as int,
+        deadline: null == deadline
+            ? _value.deadline
+            : deadline // ignore: cast_nullable_to_non_nullable
+                  as String,
+        completedAt: null == completedAt
+            ? _value.completedAt
+            : completedAt // ignore: cast_nullable_to_non_nullable
+                  as String,
+        steps: null == steps
+            ? _value.steps
+            : steps // ignore: cast_nullable_to_non_nullable
+                  as int,
+        points: null == points
+            ? _value.points
+            : points // ignore: cast_nullable_to_non_nullable
+                  as int,
+        stepProgress: null == stepProgress
+            ? _value.stepProgress
+            : stepProgress // ignore: cast_nullable_to_non_nullable
+                  as int,
+        goalId: null == goalId
+            ? _value.goalId
+            : goalId // ignore: cast_nullable_to_non_nullable
+                  as int,
+        goalKind: null == goalKind
+            ? _value.goalKind
+            : goalKind // ignore: cast_nullable_to_non_nullable
+                  as String,
+        actionWindowStart: null == actionWindowStart
+            ? _value.actionWindowStart
+            : actionWindowStart // ignore: cast_nullable_to_non_nullable
+                  as String,
+        actionWindowEnd: null == actionWindowEnd
+            ? _value.actionWindowEnd
+            : actionWindowEnd // ignore: cast_nullable_to_non_nullable
+                  as String,
+        repeatSeriesId: null == repeatSeriesId
+            ? _value.repeatSeriesId
+            : repeatSeriesId // ignore: cast_nullable_to_non_nullable
+                  as int,
       ),
     );
   }

@@ -9,11 +9,13 @@ class TimeWindowRepeatEditor extends StatefulWidget {
     required this.bundle,
     required this.rule,
     required this.onChanged,
+    this.daysOnly = true,
   });
 
   final ThemeBundle bundle;
   final RepeatRule rule;
   final ValueChanged<RepeatRule> onChanged;
+  final bool daysOnly;
 
   @override
   State<TimeWindowRepeatEditor> createState() => _TimeWindowRepeatEditorState();
@@ -60,8 +62,11 @@ class _TimeWindowRepeatEditorState extends State<TimeWindowRepeatEditor> {
   }
 
   void _emit(RepeatRule next) {
-    setState(() => _rule = next);
-    widget.onChanged(next);
+    final normalized = widget.daysOnly
+        ? next.copyWith(unit: RepeatUnit.days)
+        : next;
+    setState(() => _rule = normalized);
+    widget.onChanged(normalized);
   }
 
   @override
@@ -76,33 +81,37 @@ class _TimeWindowRepeatEditorState extends State<TimeWindowRepeatEditor> {
           onChanged: (v) => _emit(_rule.copyWith(enabled: v)),
         ),
         if (_rule.enabled) ...[
-          DropdownButtonFormField<RepeatUnit>(
-            key: ValueKey(_rule.unit),
-            initialValue: _rule.unit,
-            dropdownColor: widget.bundle.secondaryColor,
-            style: textStyle,
-            decoration: InputDecoration(
-              labelText: 'Every',
-              labelStyle: textStyle,
-            ),
-            items: RepeatUnit.values
-                .map((u) => DropdownMenuItem(value: u, child: Text(u.name)))
-                .toList(),
-            onChanged: (v) {
-              if (v != null) _emit(_rule.copyWith(unit: v));
-            },
-          ),
+          if (!widget.daysOnly)
+            DropdownButtonFormField<RepeatUnit>(
+              key: ValueKey(_rule.unit),
+              initialValue: _rule.unit,
+              dropdownColor: widget.bundle.secondaryColor,
+              style: textStyle,
+              decoration: InputDecoration(
+                labelText: 'Every',
+                labelStyle: textStyle,
+              ),
+              items: RepeatUnit.values
+                  .map((u) => DropdownMenuItem(value: u, child: Text(u.name)))
+                  .toList(),
+              onChanged: (v) {
+                if (v != null) _emit(_rule.copyWith(unit: v));
+              },
+            )
+          else
+            Text('Every (days)', style: textStyle.copyWith(fontSize: 12)),
           TextFormField(
             controller: _intervalController,
             keyboardType: TextInputType.number,
             style: textStyle,
             decoration: InputDecoration(
-              labelText: 'Interval',
+              labelText: widget.daysOnly ? 'Every N days' : 'Interval',
               labelStyle: textStyle,
             ),
           ),
-          if (_rule.unit == RepeatUnit.weeks ||
-              (_rule.unit == RepeatUnit.days && _rule.weekdays.isNotEmpty))
+          if (!widget.daysOnly &&
+              (_rule.unit == RepeatUnit.weeks ||
+                  (_rule.unit == RepeatUnit.days && _rule.weekdays.isNotEmpty)))
             Wrap(
               spacing: 4,
               children: List.generate(7, (i) {

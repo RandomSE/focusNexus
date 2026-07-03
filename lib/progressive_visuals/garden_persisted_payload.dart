@@ -1,5 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import 'cherry_blossom_tree_state.dart';
 import 'decor_item.dart';
 import 'garden_item.dart';
 import 'json/garden_json_converters.dart';
@@ -20,6 +21,11 @@ class GardenPersistedPayload with _$GardenPersistedPayload {
     @Default(false) bool freeFirstGrowthEverConsumed,
     String? freeFirstGrowthEligibleItemId,
     bool? legacyFreeFirst,
+    @Default(0) int lifetimeZenPointsSpent,
+    @Default(false) bool cherryBlossomTreeUnlocked,
+    @Default(false) bool suppressRestartGrowthPrompt,
+    @Default(false) bool cherryBlossomUnlockToastShown,
+    @Default(CherryBlossomTreeState()) CherryBlossomTreeState cherryBlossomTree,
   }) = _GardenPersistedPayload;
 
   factory GardenPersistedPayload.fromJson(Map<String, dynamic> json) =>

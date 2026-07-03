@@ -6,7 +6,7 @@ part of 'goals_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$goalsViewHash() => r'6e7faea06dd6af0706560d9d5622bbf4addd7e9c';
+String _$goalsViewHash() => r'e6e554c625dd017c79e0cd45b4ee1951722d78ce';
 
 /// Goals UI state and optimistic mutations (persisted via [GoalsUseCase]).
 ///
@@ -15,8 +15,9 @@ String _$goalsViewHash() => r'6e7faea06dd6af0706560d9d5622bbf4addd7e9c';
 final goalsViewProvider = NotifierProvider<GoalsView, GoalsViewState>.internal(
   GoalsView.new,
   name: r'goalsViewProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product') ? null : _$goalsViewHash,
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$goalsViewHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );

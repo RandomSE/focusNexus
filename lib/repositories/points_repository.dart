@@ -57,6 +57,18 @@ class PointsRepository {
     _notifyBalanceChanged();
   }
 
+  /// Sets in-memory balance and notifies listeners without writing storage.
+  void setCachedBalance(int balance) {
+    if (_cachedBalance == balance) return;
+    _cachedBalance = balance;
+    _notifyBalanceChanged();
+  }
+
+  /// Sets in-memory balance without notifying listeners.
+  void primeCachedBalance(int balance) {
+    _cachedBalance = balance;
+  }
+
   /// Ensures a persisted balance exists; returns the effective balance.
   Future<int> ensureInitialized() async {
     final raw = await _storage.read(key: StorageKeys.points);

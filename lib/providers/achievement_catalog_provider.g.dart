@@ -16,10 +16,9 @@ String _$achievementCatalogHash() =>
 final achievementCatalogProvider = Provider<AchievementCatalog>.internal(
   achievementCatalog,
   name: r'achievementCatalogProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$achievementCatalogHash,
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$achievementCatalogHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );

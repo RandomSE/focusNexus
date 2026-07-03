@@ -19,6 +19,10 @@ abstract final class StorageKeys {
   // Garden
   static const zenGardenSave = 'zen_garden_save_v1';
 
+  // Zen garden achievements (112–113)
+  static const cherryBlossomTreeUnlockedFlag = 'cherryBlossomTreeUnlockedFlag';
+  static const cherryBlossomTreeMaxedFlag = 'cherryBlossomTreeMaxedFlag';
+
   // User preferences
   static const theme = 'theme';
   static const themeData = 'themeData';

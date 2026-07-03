@@ -4,10 +4,13 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:focusNexus/app/app_navigation.dart';
+import 'package:focusNexus/app/app_route.dart';
 import 'package:focusNexus/providers/points_balance_provider.dart';
 import 'package:focusNexus/providers/zen_garden_session_provider.dart';
 import 'package:focusNexus/providers/zen_garden_session_state.dart';
 import 'package:focusNexus/utils/common_utils.dart';
+import 'package:focusNexus/progressive_visuals/cherry_blossom_unlock.dart';
 import 'package:focusNexus/progressive_visuals/decor_catalog.dart';
 import 'package:focusNexus/progressive_visuals/decor_item.dart';
 import 'package:focusNexus/progressive_visuals/garden_engine.dart';
@@ -35,6 +38,8 @@ import 'zen_garden_stage_labels.dart';
 import 'zen_garden_static_scenery.dart';
 import 'zen_garden_waterfall.dart';
 import 'zen_placeable_layout.dart';
+
+enum _RestartGrowthChoice { cancel, restart, suppressPrompt }
 
 /// Calm, playable Zen garden: plants, growth, decorations, selection, drag preview.
 class ZenGardenScreen extends ConsumerStatefulWidget {
@@ -119,6 +124,22 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen>
         ref.read(zenGardenSessionProvider.notifier).applyWalletBalance(balance);
       });
     }, fireImmediately: true);
+    ref.listenManual(
+      zenGardenSessionProvider.select((s) => s.pendingCherryBlossomUnlockToast),
+      (previous, pending) {
+        if (pending != true || !mounted) return;
+        CommonUtils.showSnackBar(
+          context,
+          'Cherry Blossom Tree unlocked! Visit it from the garden toolbar.',
+          widget.textStyle,
+          4000,
+          5,
+          backgroundColor: widget.secondaryColor,
+          labelColor: widget.primaryColor,
+        );
+        _session.clearPendingCherryBlossomUnlockToast();
+      },
+    );
   }
 
   int get _walletBalance {
@@ -730,44 +751,71 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen>
   Future<void> _confirmDecorRestart() async {
     final id = _selection.focusDecorId;
     if (id == null) return;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Restart this decoration?'),
-        content: const Text('It returns to the first stage.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Restart')),
-        ],
-      ),
+    final choice = await _showRestartGrowthDialog(
+      title: 'Restart this decoration?',
+      body: 'It returns to the first stage.',
     );
-    if (ok == true && mounted) {
+    if (!mounted) return;
+    if (choice == _RestartGrowthChoice.restart) {
       _apply(_engine.restartDecorGrowthCycle(state: _garden, decorId: id, pointCost: 0));
+    } else if (choice == _RestartGrowthChoice.suppressPrompt) {
+      _persistSuppressRestartPrompt();
     }
   }
 
   Future<void> _confirmRestart() async {
     final id = _selection.focusPrimaryId;
     if (id == null) return;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Restart growth?'),
-        content: const Text(
+    final choice = await _showRestartGrowthDialog(
+      title: 'Restart growth?',
+      body:
           'The plant returns to the seed stage. This helps unlock a new rare variant later.',
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Restart')),
-        ],
-      ),
     );
-    if (ok == true && mounted) {
+    if (!mounted) return;
+    if (choice == _RestartGrowthChoice.restart) {
       _apply(
         _engine.restartGrowthCycle(state: _garden, itemId: id, pointCost: 0),
         announce: 'Growth restarted from seed.',
       );
+    } else if (choice == _RestartGrowthChoice.suppressPrompt) {
+      _persistSuppressRestartPrompt();
     }
+  }
+
+  void _persistSuppressRestartPrompt() {
+    final next = _garden.copyWith(suppressRestartGrowthPrompt: true);
+    _session.setGarden(next);
+    unawaited(_session.persist(snapshot: next));
+  }
+
+  Future<_RestartGrowthChoice?> _showRestartGrowthDialog({
+    required String title,
+    required String body,
+  }) async {
+    if (_garden.suppressRestartGrowthPrompt) {
+      return _RestartGrowthChoice.restart;
+    }
+    return showDialog<_RestartGrowthChoice>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Text(body),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, _RestartGrowthChoice.cancel),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, _RestartGrowthChoice.suppressPrompt),
+            child: const Text("Don't ask again"),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, _RestartGrowthChoice.restart),
+            child: const Text('Restart'),
+          ),
+        ],
+      ),
+    );
   }
 
   int? _growCostFor(GardenItem item) {
@@ -1272,6 +1320,16 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen>
                         label: const Text('Inventory'),
                         style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
                       ),
+                      if (isCherryBlossomTreeUnlocked(_garden))
+                        FilledButton.tonalIcon(
+                          onPressed: () => ref.pushRoute(
+                            context,
+                            AppRoute.cherryBlossomTree,
+                          ),
+                          icon: const Icon(Icons.park_outlined),
+                          label: const Text('Visit Cherry Blossom Tree'),
+                          style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
+                        ),
                       FilledButton.tonalIcon(
                         onPressed: () => _setMultiMode(!_selection.multiMode),
                         icon: Icon(

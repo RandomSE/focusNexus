@@ -39,8 +39,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final goalsInSlotNow = activeGoals
         .where((g) => isActionWindowActive(g, DateTime.now()))
         .length;
-    final goalsButtonLabel = dashboardGoalsButtonLabel(activeGoals.length);
-    final inSlotLine = dashboardInSlotLine(goalsInSlotNow);
+    final goalsButtonLabel = dashboardGoalsButtonLabel(
+      activeGoals.length,
+      goalsInSlotNow: goalsInSlotNow,
+    );
 
     return SettingsThemedBuilder(
       builder: (context, bundle) {
@@ -76,24 +78,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       textAlign: TextAlign.left,
                     ),
                   ),
-                  if (inSlotLine != null) ...[
-                    const SizedBox(height: 8),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: ScreenSemantics.statusText(
-                        inSlotLine,
-                        bundle.textStyle,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
                   if (kDebugMode) ...[
                     const SizedBox(height: 16),
                     CommonUtils.buildCenteredButton(
                       context,
-                      'Test: Set points to 10000',
+                      'Test: Set points to 10000000',
                       () async {
-                        await repos.points.writeBalance(10000);
+                        await repos.points.writeBalance(10000000);
                       },
                       bundle.textStyle,
                       bundle.secondaryColor,

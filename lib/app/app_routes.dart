@@ -23,6 +23,7 @@ abstract final class AppRoutes {
   static const timeWindowBulk = TimeWindowBulkCreateRoute.routeName;
   static const progressiveVisual = ProgressiveVisualRoute.routeName;
   static const progressiveVisualSection = ProgressiveVisualSectionRoute.routeName;
+  static const cherryBlossomTree = CherryBlossomTreeRoute.routeName;
 
   static String initialFor(AppSettings settings) =>
       AppRouteGuard.initialFor(settings).path;

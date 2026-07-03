@@ -16,10 +16,9 @@ String _$appSettingsServiceHash() =>
 final appSettingsServiceProvider = Provider<settings.AppSettings>.internal(
   appSettingsService,
   name: r'appSettingsServiceProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$appSettingsServiceHash,
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$appSettingsServiceHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );
@@ -37,10 +36,9 @@ final appSettingsViewProvider =
     NotifierProvider<AppSettingsView, AppSettingsViewState>.internal(
       AppSettingsView.new,
       name: r'appSettingsViewProvider',
-      debugGetCreateSourceHash:
-          const bool.fromEnvironment('dart.vm.product')
-              ? null
-              : _$appSettingsViewHash,
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$appSettingsViewHash,
       dependencies: null,
       allTransitiveDependencies: null,
     );

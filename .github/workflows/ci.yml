@@ -1,7 +1,7 @@
 # Runs on PRs to master and on every branch push (feature branches included).
 # Concurrency groups by branch name so a new push cancels an in-flight run instead of duplicating.
 # After this workflow has run once on master, enable branch protection:
-# Settings → Branches → require status check "Flutter analyze and test".
+# Settings → Branches → require status check "Flutter quality gate".
 name: CI
 
 on:
@@ -10,6 +10,7 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
   push:
   merge_group:
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}
@@ -19,8 +20,119 @@ permissions:
   contents: read
 
 jobs:
-  analyze-and-test:
-    name: Flutter analyze and test
+  changes:
+    name: Determine impacted test lanes
+    runs-on: ubuntu-latest
+    outputs:
+      run_all_tests: ${{ steps.detect.outputs.run_all_tests }}
+      run_core_heavy: ${{ steps.detect.outputs.run_core_heavy }}
+      run_ui_smoke: ${{ steps.detect.outputs.run_ui_smoke }}
+      run_data_and_infra: ${{ steps.detect.outputs.run_data_and_infra }}
+      should_run_tests: ${{ steps.detect.outputs.should_run_tests }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed files and lanes
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          EVENT_NAME="${{ github.event_name }}"
+          BASE_SHA=""
+          HEAD_SHA="${{ github.sha }}"
+
+          if [[ "${EVENT_NAME}" == "pull_request" ]]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          elif [[ "${EVENT_NAME}" == "push" ]]; then
+            BASE_SHA="${{ github.event.before }}"
+          elif [[ "${EVENT_NAME}" == "merge_group" ]]; then
+            echo "run_all_tests=true" >> "$GITHUB_OUTPUT"
+            echo "run_core_heavy=true" >> "$GITHUB_OUTPUT"
+            echo "run_ui_smoke=true" >> "$GITHUB_OUTPUT"
+            echo "run_data_and_infra=true" >> "$GITHUB_OUTPUT"
+            echo "should_run_tests=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          elif [[ "${EVENT_NAME}" == "schedule" || "${EVENT_NAME}" == "workflow_dispatch" ]]; then
+            echo "run_all_tests=true" >> "$GITHUB_OUTPUT"
+            echo "run_core_heavy=true" >> "$GITHUB_OUTPUT"
+            echo "run_ui_smoke=true" >> "$GITHUB_OUTPUT"
+            echo "run_data_and_infra=true" >> "$GITHUB_OUTPUT"
+            echo "should_run_tests=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [[ -z "${BASE_SHA}" || "${BASE_SHA}" =~ ^0+$ ]]; then
+            echo "No usable base SHA; defaulting to full test run."
+            echo "run_all_tests=true" >> "$GITHUB_OUTPUT"
+            echo "run_core_heavy=true" >> "$GITHUB_OUTPUT"
+            echo "run_ui_smoke=true" >> "$GITHUB_OUTPUT"
+            echo "run_data_and_infra=true" >> "$GITHUB_OUTPUT"
+            echo "should_run_tests=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          CHANGED_FILES="$(git diff --name-only "${BASE_SHA}" "${HEAD_SHA}")"
+          echo "Changed files:"
+          echo "${CHANGED_FILES}"
+
+          if [[ -z "${CHANGED_FILES}" ]]; then
+            echo "run_all_tests=false" >> "$GITHUB_OUTPUT"
+            echo "run_core_heavy=false" >> "$GITHUB_OUTPUT"
+            echo "run_ui_smoke=false" >> "$GITHUB_OUTPUT"
+            echo "run_data_and_infra=false" >> "$GITHUB_OUTPUT"
+            echo "should_run_tests=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          RUN_ALL_TESTS=false
+          RUN_CORE_HEAVY=false
+          RUN_UI_SMOKE=false
+          RUN_DATA_AND_INFRA=false
+
+          # Root files: exact match. lib/ and assets/: prefix match (trailing $ applies to whole line).
+          FULL_SUITE_RE='^(lib/.+|assets/.+|pubspec\.yaml|pubspec\.lock|analysis_options\.yaml|\.github/workflows/ci\.yml)$'
+          # Lane regexes must match matrix paths below. widget_test.dart lives only in data-and-infra.
+          CORE_HEAVY_RE='^test/(goals|screens|widget|widgets|services)/.+'
+          UI_SMOKE_RE='^test/(assistant|smoke|progressive_visuals|views|settings)/.+'
+          DATA_INFRA_RE='^(test/(providers|utils|models|repositories|app|bootstrap|deps|helpers)/.+|test/widget_test\.dart)$'
+
+          if echo "${CHANGED_FILES}" | grep -Eq "${FULL_SUITE_RE}"; then
+            RUN_ALL_TESTS=true
+          fi
+
+          if [[ "${RUN_ALL_TESTS}" == "true" ]]; then
+            RUN_CORE_HEAVY=true
+            RUN_UI_SMOKE=true
+            RUN_DATA_AND_INFRA=true
+          else
+            if echo "${CHANGED_FILES}" | grep -Eq "${CORE_HEAVY_RE}"; then
+              RUN_CORE_HEAVY=true
+            fi
+            if echo "${CHANGED_FILES}" | grep -Eq "${UI_SMOKE_RE}"; then
+              RUN_UI_SMOKE=true
+            fi
+            if echo "${CHANGED_FILES}" | grep -Eq "${DATA_INFRA_RE}"; then
+              RUN_DATA_AND_INFRA=true
+            fi
+          fi
+
+          SHOULD_RUN_TESTS=false
+          if [[ "${RUN_CORE_HEAVY}" == "true" || "${RUN_UI_SMOKE}" == "true" || "${RUN_DATA_AND_INFRA}" == "true" ]]; then
+            SHOULD_RUN_TESTS=true
+          fi
+
+          echo "run_all_tests=${RUN_ALL_TESTS}" >> "$GITHUB_OUTPUT"
+          echo "run_core_heavy=${RUN_CORE_HEAVY}" >> "$GITHUB_OUTPUT"
+          echo "run_ui_smoke=${RUN_UI_SMOKE}" >> "$GITHUB_OUTPUT"
+          echo "run_data_and_infra=${RUN_DATA_AND_INFRA}" >> "$GITHUB_OUTPUT"
+          echo "should_run_tests=${SHOULD_RUN_TESTS}" >> "$GITHUB_OUTPUT"
+
+  analyze:
+    name: Flutter analyze
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -39,5 +151,169 @@ jobs:
       - name: Analyze
         run: flutter analyze --fatal-infos
 
+  test:
+    name: Flutter test (${{ matrix.lane.name }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [changes, analyze]
+    if: needs.changes.outputs.should_run_tests == 'true' && needs.changes.outputs[matrix.lane.output_key] == 'true'
+    strategy:
+      fail-fast: true
+      matrix:
+        lane:
+          - name: core-heavy
+            output_key: run_core_heavy
+            paths: >-
+              test/goals
+              test/screens
+              test/widget
+              test/widgets
+              test/services
+          - name: ui-smoke
+            output_key: run_ui_smoke
+            paths: >-
+              test/assistant
+              test/smoke
+              test/progressive_visuals
+              test/views
+              test/settings
+          - name: data-and-infra
+            output_key: run_data_and_infra
+            paths: >-
+              test/providers
+              test/utils
+              test/models
+              test/repositories
+              test/app
+              test/bootstrap
+              test/deps
+              test/helpers
+              test/widget_test.dart
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: .flutter-version
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
       - name: Test
-        run: flutter test --reporter compact
+        run: |
+          START_TS=$(date +%s)
+          JOBS=$(nproc)
+          echo "Running lane '${{ matrix.lane.name }}' with concurrency: ${JOBS}"
+          flutter test --reporter compact -j "${JOBS}" ${{ matrix.lane.paths }}
+          END_TS=$(date +%s)
+          ELAPSED=$((END_TS - START_TS))
+          {
+            echo "## Lane timing"
+            echo "- Lane: \`${{ matrix.lane.name }}\`"
+            echo "- Duration (s): \`${ELAPSED}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  test-merge-gate:
+    name: Flutter quality gate
+    runs-on: ubuntu-latest
+    needs: [analyze, changes, test]
+    if: always()
+    steps:
+      - name: Merge gate
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          CHANGES_RESULT="${{ needs.changes.result }}"
+          ANALYZE_RESULT="${{ needs.analyze.result }}"
+          SHOULD_RUN_TESTS="${{ needs.changes.outputs.should_run_tests }}"
+          TEST_RESULT="${{ needs.test.result }}"
+
+          if [[ "${CHANGES_RESULT}" != "success" ]]; then
+            echo "Change detection failed (result: ${CHANGES_RESULT})."
+            exit 1
+          fi
+
+          if [[ "${ANALYZE_RESULT}" != "success" ]]; then
+            echo "Analyze gate failed (result: ${ANALYZE_RESULT})."
+            exit 1
+          fi
+
+          if [[ "${SHOULD_RUN_TESTS}" != "true" ]]; then
+            case "${TEST_RESULT}" in
+              success|skipped|cancelled)
+                echo "No relevant test-impacting files changed; test job result: ${TEST_RESULT}."
+                exit 0
+                ;;
+              failure)
+                echo "Test job failed even though no lanes were required (result: ${TEST_RESULT})."
+                exit 1
+                ;;
+              *)
+                echo "Unexpected test job result when tests not required: ${TEST_RESULT}"
+                exit 1
+                ;;
+            esac
+          fi
+
+          case "${TEST_RESULT}" in
+            success)
+              echo "Analyze and required test lanes passed."
+              exit 0
+              ;;
+            skipped)
+              echo "Tests were required but the test job was skipped (no matrix lanes ran)."
+              exit 1
+              ;;
+            *)
+              echo "Tests were required but test job result was: ${TEST_RESULT}"
+              exit 1
+              ;;
+          esac
+
+  nightly-parity:
+    name: Nightly full-suite parity benchmark
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: .flutter-version
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run parity benchmark
+        shell: bash
+        run: |
+          set -euo pipefail
+          JOBS=$(nproc)
+
+          FULL_START=$(date +%s)
+          flutter test --reporter compact
+          FULL_END=$(date +%s)
+          FULL_ELAPSED=$((FULL_END - FULL_START))
+
+          PAR_START=$(date +%s)
+          flutter test --reporter compact -j "${JOBS}" \
+            test/goals test/screens test/widget test/widgets test/services \
+            test/assistant test/smoke test/progressive_visuals test/views test/settings \
+            test/providers test/utils test/models test/repositories test/app test/bootstrap test/deps test/helpers test/widget_test.dart
+          PAR_END=$(date +%s)
+          PAR_ELAPSED=$((PAR_END - PAR_START))
+
+          {
+            echo "## Nightly parity benchmark"
+            echo "- Full suite default concurrency (s): \`${FULL_ELAPSED}\`"
+            echo "- Full suite sharded lane command (s): \`${PAR_ELAPSED}\`"
+            echo "- CPU workers: \`${JOBS}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

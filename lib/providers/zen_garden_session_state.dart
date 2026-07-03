@@ -79,6 +79,7 @@ class ZenGardenSessionState {
     this.viewportMoved = false,
     this.drag,
     this.bulkDrag,
+    this.pendingCherryBlossomUnlockToast = false,
   });
 
   factory ZenGardenSessionState.initial() {
@@ -106,6 +107,7 @@ class ZenGardenSessionState {
   final bool viewportMoved;
   final ZenDragSession? drag;
   final ZenBulkDragSession? bulkDrag;
+  final bool pendingCherryBlossomUnlockToast;
 
   ZenGardenSessionState copyWith({
     GardenState? garden,
@@ -126,6 +128,7 @@ class ZenGardenSessionState {
     bool? viewportMoved,
     ZenDragSession? drag,
     ZenBulkDragSession? bulkDrag,
+    bool? pendingCherryBlossomUnlockToast,
     bool clearPlacingDecorInventoryId = false,
     bool clearPlacingPlantInventoryId = false,
     bool clearPointerDownGlobal = false,
@@ -171,6 +174,8 @@ class ZenGardenSessionState {
       viewportMoved: viewportMoved ?? this.viewportMoved,
       drag: clearDrag ? null : (drag ?? this.drag),
       bulkDrag: clearBulkDrag ? null : (bulkDrag ?? this.bulkDrag),
+      pendingCherryBlossomUnlockToast:
+          pendingCherryBlossomUnlockToast ?? this.pendingCherryBlossomUnlockToast,
     );
   }
 

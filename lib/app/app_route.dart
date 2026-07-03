@@ -16,7 +16,9 @@ import 'package:focusNexus/screens/mini_games_screen.dart';
 import 'package:focusNexus/screens/onboarding_screen.dart';
 import 'package:focusNexus/screens/progressive_visual_section.dart';
 import 'package:focusNexus/screens/settings_screen.dart';
+import 'package:focusNexus/screens/zen_garden/cherry_blossom_tree_screen.dart';
 import 'package:focusNexus/settings/app_settings.dart';
+import 'package:focusNexus/utils/screen_theme.dart';
 
 /// Persisted reward-type strings mapped to concrete reward destinations.
 enum RewardKind {
@@ -54,6 +56,7 @@ sealed class AppRoute {
   static const goals = GoalsRoute();
   static const timeWindowHub = TimeWindowHubRoute();
   static const progressiveVisual = ProgressiveVisualRoute();
+  static const cherryBlossomTree = CherryBlossomTreeRoute();
 
   static AppRoute fromRouteSettings(RouteSettings settings) {
     return switch (settings.name) {
@@ -73,6 +76,7 @@ sealed class AppRoute {
       ProgressiveVisualSectionRoute.routeName => ProgressiveVisualSectionRoute(
         ProgressiveVisualSectionRoute.themeIdFrom(settings.arguments),
       ),
+      CherryBlossomTreeRoute.routeName => cherryBlossomTree,
       _ => UnknownRoute(settings.name),
     };
   }
@@ -207,6 +211,13 @@ final class ProgressiveVisualSectionRoute extends AppRoute {
   Object? get navigationArguments => themeId;
 }
 
+final class CherryBlossomTreeRoute extends AppRoute {
+  const CherryBlossomTreeRoute();
+  static const routeName = 'cherry_blossom_tree';
+  @override
+  String get path => routeName;
+}
+
 final class UnknownRoute extends AppRoute {
   const UnknownRoute(this.requestedPath);
 
@@ -285,6 +296,8 @@ abstract final class AppRouteRegistry {
         );
         return _GuardedRouteScreen(route: requested);
       },
+      CherryBlossomTreeRoute.routeName: (_) =>
+          const _GuardedRouteScreen(route: CherryBlossomTreeRoute()),
     };
   }
 
@@ -308,6 +321,13 @@ abstract final class AppRouteRegistry {
       ),
       ProgressiveVisualSectionRoute(:final themeId) =>
         ProgressiveVisualSectionScreen(themeId: themeId),
+      CherryBlossomTreeRoute() => SettingsThemedBuilder(
+        builder: (context, bundle) => CherryBlossomTreeScreen(
+          primaryColor: bundle.primaryColor,
+          secondaryColor: bundle.secondaryColor,
+          textStyle: bundle.textStyle,
+        ),
+      ),
       UnknownRoute(:final requestedPath) => UnknownRouteScreen(
         routeName: requestedPath,
       ),

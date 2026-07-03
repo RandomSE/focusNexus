@@ -442,7 +442,9 @@ const List<AssistantFaqSection> assistantFaqSections = [
             'When a plant or decoration is fully grown, you can spend points to restart '
             'growth from the first stage for another chance at a rare color variant. Each '
             'restart adds to the variant chance (about 5% base, +5% per restart). Variants '
-            'can be removed if you prefer the default look.',
+            'can be removed if you prefer the default look. In Settings (when Progressive '
+            'visuals is your reward type), you can turn restart confirmations back on if '
+            'you chose "Don\'t ask again" earlier.',
         keywords: [
           'restart growth',
           'mutation',
@@ -450,7 +452,36 @@ const List<AssistantFaqSection> assistantFaqSections = [
           'rebirth',
           'rare color',
           'restart growth from seed',
+          'don\'t ask again',
         ],
+      ),
+      AssistantFaqEntry(
+        id: 'rewards.cherry_blossom_tree',
+        question: 'What is the Cherry Blossom Tree?',
+        answer:
+            'Unlock it when you hold 10,000 points at once or have invested 10,000 lifetime '
+            'points in the Zen garden. Then tap Visit Cherry Blossom Tree in the garden. '
+            'Each stage has 25 growth levels with rising costs. Use Grow tree for one level '
+            'or Max tree to grow as far as your wallet allows in the current stage. When you '
+            'reach level 25, Prestige tree (same cost as the final grow) advances to the next stage. After Living '
+            'Canopy, choose Power or Peace for the final form. Each grow adds a mini tree to '
+            'your Bonsai garden — open Bonsai from the tree screen to view past stages.',
+        keywords: [
+          'cherry blossom',
+          'cherry blossom tree',
+          'sakura',
+          'zen tree',
+          'visit cherry blossom',
+          '10000 points zen',
+          'max tree',
+          'prestige tree',
+          'bonsai',
+          'bonsai garden',
+          'power',
+          'peace',
+          'serenity',
+        ],
+        negativeKeywords: ['restart', 'mutation'],
       ),
       AssistantFaqEntry(
         id: 'rewards.achievements',

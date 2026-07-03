@@ -17,10 +17,9 @@ String _$keyValueStorageHash() => r'e110ff1d09d9c447b1590313745b29172c3069c4';
 final keyValueStorageProvider = Provider<KeyValueStorage>.internal(
   keyValueStorage,
   name: r'keyValueStorageProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$keyValueStorageHash,
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$keyValueStorageHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );

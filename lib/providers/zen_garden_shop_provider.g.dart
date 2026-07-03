@@ -93,10 +93,9 @@ class ZenGardenShopCartProvider
         () => ZenGardenShopCart()..initial = initial,
         from: zenGardenShopCartProvider,
         name: r'zenGardenShopCartProvider',
-        debugGetCreateSourceHash:
-            const bool.fromEnvironment('dart.vm.product')
-                ? null
-                : _$zenGardenShopCartHash,
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$zenGardenShopCartHash,
         dependencies: ZenGardenShopCartFamily._dependencies,
         allTransitiveDependencies:
             ZenGardenShopCartFamily._allTransitiveDependencies,

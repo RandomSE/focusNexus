@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focusNexus/utils/common_utils.dart';
 import 'package:focusNexus/widgets/settings_themed_builder.dart';
+import 'package:focusNexus/utils/theme_styles.dart';
 
 class MiniGamesScreen extends ConsumerWidget {
   const MiniGamesScreen({super.key});
@@ -23,7 +24,7 @@ class MiniGamesScreen extends ConsumerWidget {
                 ),
               ),
               backgroundColor: bundle.secondaryColor,
-              iconTheme: IconThemeData(color: bundle.primaryColor),
+              iconTheme: ThemeStyles.iconThemeFor( bundle.primaryColor),
             ),
             body: Container(
               color: bundle.secondaryColor,

@@ -17,6 +17,7 @@ import 'package:focusNexus/providers/app_services_provider.dart';
 import 'package:focusNexus/providers/screen_ui_providers.dart';
 import 'package:focusNexus/utils/common_utils.dart';
 import 'package:focusNexus/widgets/settings_themed_builder.dart';
+import 'package:focusNexus/utils/theme_styles.dart';
 
 class AiChatScreen extends ConsumerStatefulWidget {
   const AiChatScreen({super.key});
@@ -185,7 +186,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
             appBar: AppBar(
               title: Text('Assistant', style: bundle.textStyle),
               backgroundColor: bundle.secondaryColor,
-              iconTheme: IconThemeData(color: bundle.primaryColor),
+              iconTheme: ThemeStyles.iconThemeFor( bundle.primaryColor),
             ),
             body: accepted
                 ? _buildChatBody(context, bundle)

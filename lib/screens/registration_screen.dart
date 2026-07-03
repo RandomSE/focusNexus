@@ -8,6 +8,7 @@ import 'package:focusNexus/providers/registration_form_provider.dart';
 import 'package:focusNexus/utils/common_utils.dart';
 import 'package:focusNexus/widgets/appearance_settings_section.dart';
 import 'package:focusNexus/widgets/settings_themed_builder.dart';
+import 'package:focusNexus/utils/theme_styles.dart';
 
 class RegistrationScreen extends ConsumerStatefulWidget {
   const RegistrationScreen({super.key});
@@ -62,7 +63,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
             appBar: AppBar(
               title: Text('Set up FocusNexus', style: labelStyle),
               backgroundColor: secondaryColor,
-              iconTheme: IconThemeData(color: primaryColor),
+              iconTheme: ThemeStyles.iconThemeFor( primaryColor),
             ),
             body: Form(
               key: _formKey,

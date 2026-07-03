@@ -148,7 +148,7 @@ class GoalsTimeWindowService {
       window: window,
     );
 
-    unawaited(_scheduleActionWindowNotifications(goal, window, now));
+    await _scheduleActionWindowNotifications(goal, window, now);
     return (goal: goal, series: series);
   }
 
@@ -159,22 +159,20 @@ class GoalsTimeWindowService {
   ) async {
     if (!_settings.notificationsEnabled || _settings.pauseGoals) return;
     final style = _settings.notificationStyle;
+    final alreadyInSlot =
+        !now.isBefore(window.start) && now.isBefore(window.end);
 
-    if (window.end.isAfter(now)) {
-      final openAt = window.start.isAfter(now)
-          ? window.start
-          : now.add(const Duration(seconds: 2));
-      if (openAt.isBefore(window.end)) {
-        await _notifications.scheduleActionWindow(
-          goal: goal,
-          reminderAt: openAt,
-          notificationStyle: style,
-          isStartReminder: true,
-        );
-      }
+    if (window.start.isAfter(now)) {
+      await _notifications.scheduleActionWindow(
+        goal: goal,
+        reminderAt: window.start,
+        notificationStyle: style,
+        isStartReminder: true,
+      );
     }
 
-    if (window.end.difference(window.start) > longWindowReminderThreshold) {
+    if (!alreadyInSlot &&
+        window.end.difference(window.start) > longWindowReminderThreshold) {
       final closeReminder =
           window.end.subtract(longWindowReminderThreshold);
       if (closeReminder.isAfter(now)) {
@@ -234,7 +232,7 @@ class GoalsTimeWindowService {
       repeatSeriesId: series.seriesId,
       window: window,
     );
-    unawaited(_scheduleActionWindowNotifications(goal, window, now));
+    await _scheduleActionWindowNotifications(goal, window, now);
     await _repeats.upsert(
       series.copyWith(lastSpawnedWindowEnd: formatGoalDateTime(nextEnd)),
     );

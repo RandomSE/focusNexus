@@ -10,6 +10,17 @@ void main() {
     test('includes active count', () {
       expect(dashboardGoalsButtonLabel(3), 'Goals (3)');
     });
+
+    test('appends in-slot summary on the button', () {
+      expect(
+        dashboardGoalsButtonLabel(3, goalsInSlotNow: 2),
+        'Goals (3) · 2 in slot now',
+      );
+      expect(
+        dashboardGoalsButtonLabel(1, goalsInSlotNow: 1),
+        'Goals (1) · 1 in slot now',
+      );
+    });
   });
 
   group('dashboardInSlotLine', () {

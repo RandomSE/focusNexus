@@ -51,6 +51,7 @@ class TimeWindowBulkDraftCard extends StatelessWidget {
                 endAt: endAt,
                 startAt: endAt.subtract(duration),
                 duration: duration,
+                fullDaysOnly: repeat.enabled,
                 onEndChanged: onEndChanged,
                 onStartChanged: onStartChanged,
                 onDurationChanged: onDurationChanged,

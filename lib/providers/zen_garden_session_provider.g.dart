@@ -6,7 +6,7 @@ part of 'zen_garden_session_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$zenGardenSessionHash() => r'c41368eed3c58ec1ca5d071346cad8feb02db461';
+String _$zenGardenSessionHash() => r'48e9ffd645eacc2f09378d86149476bc4d472645';
 
 /// Zen garden sandbox session; persisted via [GardenRepository].
 ///
@@ -16,10 +16,9 @@ final zenGardenSessionProvider =
     NotifierProvider<ZenGardenSession, ZenGardenSessionState>.internal(
       ZenGardenSession.new,
       name: r'zenGardenSessionProvider',
-      debugGetCreateSourceHash:
-          const bool.fromEnvironment('dart.vm.product')
-              ? null
-              : _$zenGardenSessionHash,
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$zenGardenSessionHash,
       dependencies: null,
       allTransitiveDependencies: null,
     );

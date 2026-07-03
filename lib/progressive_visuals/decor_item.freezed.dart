@@ -97,66 +97,54 @@ class _$DecorItemCopyWithImpl<$Res, $Val extends DecorItem>
   }) {
     return _then(
       _value.copyWith(
-            id:
-                null == id
-                    ? _value.id
-                    : id // ignore: cast_nullable_to_non_nullable
-                        as String,
-            themeId:
-                null == themeId
-                    ? _value.themeId
-                    : themeId // ignore: cast_nullable_to_non_nullable
-                        as VisualThemeId,
-            kind:
-                null == kind
-                    ? _value.kind
-                    : kind // ignore: cast_nullable_to_non_nullable
-                        as String,
-            positionX:
-                null == positionX
-                    ? _value.positionX
-                    : positionX // ignore: cast_nullable_to_non_nullable
-                        as double,
-            positionY:
-                null == positionY
-                    ? _value.positionY
-                    : positionY // ignore: cast_nullable_to_non_nullable
-                        as double,
-            stageIndex:
-                null == stageIndex
-                    ? _value.stageIndex
-                    : stageIndex // ignore: cast_nullable_to_non_nullable
-                        as int,
-            nextAdvanceAllowedAt:
-                freezed == nextAdvanceAllowedAt
-                    ? _value.nextAdvanceAllowedAt
-                    : nextAdvanceAllowedAt // ignore: cast_nullable_to_non_nullable
-                        as DateTime?,
-            pendingSkipWaitCost:
-                freezed == pendingSkipWaitCost
-                    ? _value.pendingSkipWaitCost
-                    : pendingSkipWaitCost // ignore: cast_nullable_to_non_nullable
-                        as int?,
-            mutation:
-                freezed == mutation
-                    ? _value.mutation
-                    : mutation // ignore: cast_nullable_to_non_nullable
-                        as MutationKind?,
-            awaitingRegrowthForRemutation:
-                null == awaitingRegrowthForRemutation
-                    ? _value.awaitingRegrowthForRemutation
-                    : awaitingRegrowthForRemutation // ignore: cast_nullable_to_non_nullable
-                        as bool,
-            mutationRolledThisCycle:
-                null == mutationRolledThisCycle
-                    ? _value.mutationRolledThisCycle
-                    : mutationRolledThisCycle // ignore: cast_nullable_to_non_nullable
-                        as bool,
-            rebirthCount:
-                null == rebirthCount
-                    ? _value.rebirthCount
-                    : rebirthCount // ignore: cast_nullable_to_non_nullable
-                        as int,
+            id: null == id
+                ? _value.id
+                : id // ignore: cast_nullable_to_non_nullable
+                      as String,
+            themeId: null == themeId
+                ? _value.themeId
+                : themeId // ignore: cast_nullable_to_non_nullable
+                      as VisualThemeId,
+            kind: null == kind
+                ? _value.kind
+                : kind // ignore: cast_nullable_to_non_nullable
+                      as String,
+            positionX: null == positionX
+                ? _value.positionX
+                : positionX // ignore: cast_nullable_to_non_nullable
+                      as double,
+            positionY: null == positionY
+                ? _value.positionY
+                : positionY // ignore: cast_nullable_to_non_nullable
+                      as double,
+            stageIndex: null == stageIndex
+                ? _value.stageIndex
+                : stageIndex // ignore: cast_nullable_to_non_nullable
+                      as int,
+            nextAdvanceAllowedAt: freezed == nextAdvanceAllowedAt
+                ? _value.nextAdvanceAllowedAt
+                : nextAdvanceAllowedAt // ignore: cast_nullable_to_non_nullable
+                      as DateTime?,
+            pendingSkipWaitCost: freezed == pendingSkipWaitCost
+                ? _value.pendingSkipWaitCost
+                : pendingSkipWaitCost // ignore: cast_nullable_to_non_nullable
+                      as int?,
+            mutation: freezed == mutation
+                ? _value.mutation
+                : mutation // ignore: cast_nullable_to_non_nullable
+                      as MutationKind?,
+            awaitingRegrowthForRemutation: null == awaitingRegrowthForRemutation
+                ? _value.awaitingRegrowthForRemutation
+                : awaitingRegrowthForRemutation // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            mutationRolledThisCycle: null == mutationRolledThisCycle
+                ? _value.mutationRolledThisCycle
+                : mutationRolledThisCycle // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            rebirthCount: null == rebirthCount
+                ? _value.rebirthCount
+                : rebirthCount // ignore: cast_nullable_to_non_nullable
+                      as int,
           )
           as $Val,
     );
@@ -217,66 +205,54 @@ class __$$DecorItemImplCopyWithImpl<$Res>
   }) {
     return _then(
       _$DecorItemImpl(
-        id:
-            null == id
-                ? _value.id
-                : id // ignore: cast_nullable_to_non_nullable
-                    as String,
-        themeId:
-            null == themeId
-                ? _value.themeId
-                : themeId // ignore: cast_nullable_to_non_nullable
-                    as VisualThemeId,
-        kind:
-            null == kind
-                ? _value.kind
-                : kind // ignore: cast_nullable_to_non_nullable
-                    as String,
-        positionX:
-            null == positionX
-                ? _value.positionX
-                : positionX // ignore: cast_nullable_to_non_nullable
-                    as double,
-        positionY:
-            null == positionY
-                ? _value.positionY
-                : positionY // ignore: cast_nullable_to_non_nullable
-                    as double,
-        stageIndex:
-            null == stageIndex
-                ? _value.stageIndex
-                : stageIndex // ignore: cast_nullable_to_non_nullable
-                    as int,
-        nextAdvanceAllowedAt:
-            freezed == nextAdvanceAllowedAt
-                ? _value.nextAdvanceAllowedAt
-                : nextAdvanceAllowedAt // ignore: cast_nullable_to_non_nullable
-                    as DateTime?,
-        pendingSkipWaitCost:
-            freezed == pendingSkipWaitCost
-                ? _value.pendingSkipWaitCost
-                : pendingSkipWaitCost // ignore: cast_nullable_to_non_nullable
-                    as int?,
-        mutation:
-            freezed == mutation
-                ? _value.mutation
-                : mutation // ignore: cast_nullable_to_non_nullable
-                    as MutationKind?,
-        awaitingRegrowthForRemutation:
-            null == awaitingRegrowthForRemutation
-                ? _value.awaitingRegrowthForRemutation
-                : awaitingRegrowthForRemutation // ignore: cast_nullable_to_non_nullable
-                    as bool,
-        mutationRolledThisCycle:
-            null == mutationRolledThisCycle
-                ? _value.mutationRolledThisCycle
-                : mutationRolledThisCycle // ignore: cast_nullable_to_non_nullable
-                    as bool,
-        rebirthCount:
-            null == rebirthCount
-                ? _value.rebirthCount
-                : rebirthCount // ignore: cast_nullable_to_non_nullable
-                    as int,
+        id: null == id
+            ? _value.id
+            : id // ignore: cast_nullable_to_non_nullable
+                  as String,
+        themeId: null == themeId
+            ? _value.themeId
+            : themeId // ignore: cast_nullable_to_non_nullable
+                  as VisualThemeId,
+        kind: null == kind
+            ? _value.kind
+            : kind // ignore: cast_nullable_to_non_nullable
+                  as String,
+        positionX: null == positionX
+            ? _value.positionX
+            : positionX // ignore: cast_nullable_to_non_nullable
+                  as double,
+        positionY: null == positionY
+            ? _value.positionY
+            : positionY // ignore: cast_nullable_to_non_nullable
+                  as double,
+        stageIndex: null == stageIndex
+            ? _value.stageIndex
+            : stageIndex // ignore: cast_nullable_to_non_nullable
+                  as int,
+        nextAdvanceAllowedAt: freezed == nextAdvanceAllowedAt
+            ? _value.nextAdvanceAllowedAt
+            : nextAdvanceAllowedAt // ignore: cast_nullable_to_non_nullable
+                  as DateTime?,
+        pendingSkipWaitCost: freezed == pendingSkipWaitCost
+            ? _value.pendingSkipWaitCost
+            : pendingSkipWaitCost // ignore: cast_nullable_to_non_nullable
+                  as int?,
+        mutation: freezed == mutation
+            ? _value.mutation
+            : mutation // ignore: cast_nullable_to_non_nullable
+                  as MutationKind?,
+        awaitingRegrowthForRemutation: null == awaitingRegrowthForRemutation
+            ? _value.awaitingRegrowthForRemutation
+            : awaitingRegrowthForRemutation // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        mutationRolledThisCycle: null == mutationRolledThisCycle
+            ? _value.mutationRolledThisCycle
+            : mutationRolledThisCycle // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        rebirthCount: null == rebirthCount
+            ? _value.rebirthCount
+            : rebirthCount // ignore: cast_nullable_to_non_nullable
+                  as int,
       ),
     );
   }

@@ -1,10 +1,16 @@
-/// Dashboard Goals button label including active count when non-zero.
-String dashboardGoalsButtonLabel(int activeGoals) {
+/// Dashboard Goals button label including active count and in-slot summary.
+String dashboardGoalsButtonLabel(
+  int activeGoals, {
+  int goalsInSlotNow = 0,
+}) {
   if (activeGoals <= 0) return 'Goals';
-  return 'Goals ($activeGoals)';
+  final base = 'Goals ($activeGoals)';
+  if (goalsInSlotNow <= 0) return base;
+  if (goalsInSlotNow == 1) return '$base · 1 in slot now';
+  return '$base · $goalsInSlotNow in slot now';
 }
 
-/// Shown under points / on onboarding only when at least one goal is in slot.
+/// Shown on the Goals button when at least one goal is in slot (see [dashboardGoalsButtonLabel]).
 String? dashboardInSlotLine(int goalsInSlotNow) {
   if (goalsInSlotNow <= 0) return null;
   if (goalsInSlotNow == 1) return '1 in slot now';

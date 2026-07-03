@@ -41,5 +41,18 @@ void main() {
 
       expect(container.read(pointsBalanceProvider).value, 99);
     });
+
+    test('adoptBalance updates provider and cache synchronously', () async {
+      final container = await createTestContainer();
+      addTearDown(container.dispose);
+      final points = container.read(appRepositoriesProvider).points;
+      await points.ensureInitialized();
+      await container.read(pointsBalanceProvider.future);
+
+      container.read(pointsBalanceProvider.notifier).adoptBalance(321);
+
+      expect(container.read(pointsBalanceProvider).value, 321);
+      expect(await points.readBalance(), 321);
+    });
   });
 }

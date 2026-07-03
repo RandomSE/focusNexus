@@ -6,6 +6,7 @@ import 'garden_item.dart';
 import 'garden_op_result.dart';
 import 'garden_state.dart';
 import 'garden_valuation.dart';
+import 'garden_zen_spend.dart';
 import 'mutation_kind.dart';
 import 'stage_transition_rule.dart';
 import 'visual_theme_id.dart';
@@ -144,8 +145,7 @@ class ProgressiveGardenEngine {
       );
     });
     return GardenOpResult.success(
-      state.copyWith(
-        pointsBalance: state.pointsBalance - total,
+      applyZenSpend(state, total).copyWith(
         decorInventory: [...state.decorInventory, ...added],
       ),
     );
@@ -413,10 +413,7 @@ class ProgressiveGardenEngine {
     final cleared = item.clearedAdvanceLock();
     final nextItems = [...state.items]..[idx] = cleared;
     return GardenOpResult.success(
-      state.copyWith(
-        items: nextItems,
-        pointsBalance: state.pointsBalance - cost,
-      ),
+      applyZenSpend(state, cost).copyWith(items: nextItems),
     );
   }
 
@@ -443,10 +440,7 @@ class ProgressiveGardenEngine {
     final cleared = d.clearedAdvanceLock();
     final nextDecor = [...state.decor]..[idx] = cleared;
     return GardenOpResult.success(
-      state.copyWith(
-        decor: nextDecor,
-        pointsBalance: state.pointsBalance - cost,
-      ),
+      applyZenSpend(state, cost).copyWith(decor: nextDecor),
     );
   }
 
@@ -487,7 +481,6 @@ class ProgressiveGardenEngine {
     }
 
     final newStage = item.stageIndex + 1;
-    var balance = state.pointsBalance - cost;
     var nextItem = item.copyWith(stageIndex: newStage).clearedAdvanceLock();
 
     final skipOverride = (item.regrowthDiscountActive && rule.skipWaitPointCost != null)
@@ -512,9 +505,9 @@ class ProgressiveGardenEngine {
     );
 
     final nextItems = [...state.items]..[idx] = nextItem;
+    final spent = cost > 0 ? applyZenSpend(state, cost) : state;
     return GardenOpResult.success(
-      state.copyWith(
-        pointsBalance: balance,
+      spent.copyWith(
         items: nextItems,
         freeFirstGrowthEverConsumed: everConsumed,
         freeFirstGrowthEligibleItemId:
@@ -568,7 +561,6 @@ class ProgressiveGardenEngine {
     }
 
     final newStage = d.stageIndex + 1;
-    var balance = state.pointsBalance - cost;
     var nextDecor = d.copyWith(stageIndex: newStage).clearedAdvanceLock();
 
     _applyPostAdvanceWait(rule, newStage, now, (at, skip) {
@@ -582,10 +574,7 @@ class ProgressiveGardenEngine {
 
     final list = [...state.decor]..[idx] = nextDecor;
     return GardenOpResult.success(
-      state.copyWith(
-        pointsBalance: balance,
-        decor: list,
-      ),
+      applyZenSpend(state, cost).copyWith(decor: list),
     );
   }
 
@@ -694,12 +683,8 @@ class ProgressiveGardenEngine {
         )
         .clearedAdvanceLock();
     final nextItems = [...state.items]..[idx] = item;
-    return GardenOpResult.success(
-      state.copyWith(
-        items: nextItems,
-        pointsBalance: state.pointsBalance - pointCost,
-      ),
-    );
+    final spent = pointCost > 0 ? applyZenSpend(state, pointCost) : state;
+    return GardenOpResult.success(spent.copyWith(items: nextItems));
   }
 
   GardenOpResult restartDecorGrowthCycle({
@@ -725,11 +710,7 @@ class ProgressiveGardenEngine {
         )
         .clearedAdvanceLock();
     final next = [...state.decor]..[idx] = d;
-    return GardenOpResult.success(
-      state.copyWith(
-        decor: next,
-        pointsBalance: state.pointsBalance - pointCost,
-      ),
-    );
+    final spent = pointCost > 0 ? applyZenSpend(state, pointCost) : state;
+    return GardenOpResult.success(spent.copyWith(decor: next));
   }
 }

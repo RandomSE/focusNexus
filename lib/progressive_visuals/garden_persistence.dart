@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'cherry_blossom_unlock.dart';
 import 'decor_item.dart';
 import 'garden_persisted_payload.dart';
 import 'garden_state.dart';
@@ -24,7 +25,7 @@ class GardenPersistence {
       final payload = _applyLegacyMigration(
         GardenPersistedPayload.fromJson(normalized),
       );
-      return GardenState(
+      final loaded = GardenState(
         pointsBalance: pointsFromWallet,
         items: payload.items,
         decor: payload.decor,
@@ -33,7 +34,14 @@ class GardenPersistence {
         plantInventory: payload.plantInventory,
         freeFirstGrowthEverConsumed: payload.freeFirstGrowthEverConsumed,
         freeFirstGrowthEligibleItemId: payload.freeFirstGrowthEligibleItemId,
+        lifetimeZenPointsSpent: payload.lifetimeZenPointsSpent,
+        cherryBlossomTreeUnlocked: payload.cherryBlossomTreeUnlocked,
+        suppressRestartGrowthPrompt: payload.suppressRestartGrowthPrompt,
+        cherryBlossomUnlockToastShown: payload.cherryBlossomUnlockToastShown ||
+            payload.cherryBlossomTreeUnlocked,
+        cherryBlossomTree: payload.cherryBlossomTree.normalized(),
       );
+      return evaluateCherryBlossomUnlock(loaded);
     } catch (_) {
       return GardenState(pointsBalance: pointsFromWallet);
     }
@@ -47,6 +55,11 @@ class GardenPersistence {
       plantInventory: state.plantInventory,
       freeFirstGrowthEverConsumed: state.freeFirstGrowthEverConsumed,
       freeFirstGrowthEligibleItemId: state.freeFirstGrowthEligibleItemId,
+      lifetimeZenPointsSpent: state.lifetimeZenPointsSpent,
+      cherryBlossomTreeUnlocked: state.cherryBlossomTreeUnlocked,
+      suppressRestartGrowthPrompt: state.suppressRestartGrowthPrompt,
+      cherryBlossomUnlockToastShown: state.cherryBlossomUnlockToastShown,
+      cherryBlossomTree: state.cherryBlossomTree.normalized(),
     );
     return jsonEncode(payload.toJson());
   }

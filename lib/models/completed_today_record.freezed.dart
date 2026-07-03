@@ -57,16 +57,14 @@ class _$CompletedTodayRecordCopyWithImpl<
   $Res call({Object? dateKey = null, Object? count = null}) {
     return _then(
       _value.copyWith(
-            dateKey:
-                null == dateKey
-                    ? _value.dateKey
-                    : dateKey // ignore: cast_nullable_to_non_nullable
-                        as String,
-            count:
-                null == count
-                    ? _value.count
-                    : count // ignore: cast_nullable_to_non_nullable
-                        as int,
+            dateKey: null == dateKey
+                ? _value.dateKey
+                : dateKey // ignore: cast_nullable_to_non_nullable
+                      as String,
+            count: null == count
+                ? _value.count
+                : count // ignore: cast_nullable_to_non_nullable
+                      as int,
           )
           as $Val,
     );
@@ -101,16 +99,14 @@ class __$$CompletedTodayRecordImplCopyWithImpl<$Res>
   $Res call({Object? dateKey = null, Object? count = null}) {
     return _then(
       _$CompletedTodayRecordImpl(
-        dateKey:
-            null == dateKey
-                ? _value.dateKey
-                : dateKey // ignore: cast_nullable_to_non_nullable
-                    as String,
-        count:
-            null == count
-                ? _value.count
-                : count // ignore: cast_nullable_to_non_nullable
-                    as int,
+        dateKey: null == dateKey
+            ? _value.dateKey
+            : dateKey // ignore: cast_nullable_to_non_nullable
+                  as String,
+        count: null == count
+            ? _value.count
+            : count // ignore: cast_nullable_to_non_nullable
+                  as int,
       ),
     );
   }

@@ -81,31 +81,26 @@ class _$ThemePersistedSnapshotCopyWithImpl<
   }) {
     return _then(
       _value.copyWith(
-            isDark:
-                null == isDark
-                    ? _value.isDark
-                    : isDark // ignore: cast_nullable_to_non_nullable
-                        as bool,
-            primaryColorArgb:
-                null == primaryColorArgb
-                    ? _value.primaryColorArgb
-                    : primaryColorArgb // ignore: cast_nullable_to_non_nullable
-                        as int,
-            secondaryColorArgb:
-                null == secondaryColorArgb
-                    ? _value.secondaryColorArgb
-                    : secondaryColorArgb // ignore: cast_nullable_to_non_nullable
-                        as int,
-            userFontSize:
-                null == userFontSize
-                    ? _value.userFontSize
-                    : userFontSize // ignore: cast_nullable_to_non_nullable
-                        as double,
-            useDyslexiaFont:
-                null == useDyslexiaFont
-                    ? _value.useDyslexiaFont
-                    : useDyslexiaFont // ignore: cast_nullable_to_non_nullable
-                        as bool,
+            isDark: null == isDark
+                ? _value.isDark
+                : isDark // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            primaryColorArgb: null == primaryColorArgb
+                ? _value.primaryColorArgb
+                : primaryColorArgb // ignore: cast_nullable_to_non_nullable
+                      as int,
+            secondaryColorArgb: null == secondaryColorArgb
+                ? _value.secondaryColorArgb
+                : secondaryColorArgb // ignore: cast_nullable_to_non_nullable
+                      as int,
+            userFontSize: null == userFontSize
+                ? _value.userFontSize
+                : userFontSize // ignore: cast_nullable_to_non_nullable
+                      as double,
+            useDyslexiaFont: null == useDyslexiaFont
+                ? _value.useDyslexiaFont
+                : useDyslexiaFont // ignore: cast_nullable_to_non_nullable
+                      as bool,
           )
           as $Val,
     );
@@ -153,31 +148,26 @@ class __$$ThemePersistedSnapshotImplCopyWithImpl<$Res>
   }) {
     return _then(
       _$ThemePersistedSnapshotImpl(
-        isDark:
-            null == isDark
-                ? _value.isDark
-                : isDark // ignore: cast_nullable_to_non_nullable
-                    as bool,
-        primaryColorArgb:
-            null == primaryColorArgb
-                ? _value.primaryColorArgb
-                : primaryColorArgb // ignore: cast_nullable_to_non_nullable
-                    as int,
-        secondaryColorArgb:
-            null == secondaryColorArgb
-                ? _value.secondaryColorArgb
-                : secondaryColorArgb // ignore: cast_nullable_to_non_nullable
-                    as int,
-        userFontSize:
-            null == userFontSize
-                ? _value.userFontSize
-                : userFontSize // ignore: cast_nullable_to_non_nullable
-                    as double,
-        useDyslexiaFont:
-            null == useDyslexiaFont
-                ? _value.useDyslexiaFont
-                : useDyslexiaFont // ignore: cast_nullable_to_non_nullable
-                    as bool,
+        isDark: null == isDark
+            ? _value.isDark
+            : isDark // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        primaryColorArgb: null == primaryColorArgb
+            ? _value.primaryColorArgb
+            : primaryColorArgb // ignore: cast_nullable_to_non_nullable
+                  as int,
+        secondaryColorArgb: null == secondaryColorArgb
+            ? _value.secondaryColorArgb
+            : secondaryColorArgb // ignore: cast_nullable_to_non_nullable
+                  as int,
+        userFontSize: null == userFontSize
+            ? _value.userFontSize
+            : userFontSize // ignore: cast_nullable_to_non_nullable
+                  as double,
+        useDyslexiaFont: null == useDyslexiaFont
+            ? _value.useDyslexiaFont
+            : useDyslexiaFont // ignore: cast_nullable_to_non_nullable
+                  as bool,
       ),
     );
   }

@@ -15,10 +15,9 @@ _$GardenItemImpl _$$GardenItemImplFromJson(Map<String, dynamic> json) =>
       stageIndex: (json['stageIndex'] as num?)?.toInt() ?? 0,
       positionX: (json['positionX'] as num?)?.toDouble() ?? 0.5,
       positionY: (json['positionY'] as num?)?.toDouble() ?? 0.5,
-      nextAdvanceAllowedAt:
-          json['nextAdvanceAllowedAt'] == null
-              ? null
-              : DateTime.parse(json['nextAdvanceAllowedAt'] as String),
+      nextAdvanceAllowedAt: json['nextAdvanceAllowedAt'] == null
+          ? null
+          : DateTime.parse(json['nextAdvanceAllowedAt'] as String),
       pendingSkipWaitCost: (json['pendingSkipWaitCost'] as num?)?.toInt(),
       mutation: _$JsonConverterFromJson<String, MutationKind>(
         json['mutation'],

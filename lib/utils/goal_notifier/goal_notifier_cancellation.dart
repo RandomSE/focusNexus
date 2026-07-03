@@ -85,6 +85,23 @@ Future<void> cancelDailyAffirmationsNotification() async {
   debugLog('Daily affirmations canceled.');
 }
 
+/// Wipes OS-scheduled notifications on account delete (no reschedule).
+Future<void> purgeAllScheduledNotifications() async {
+  final r = GoalNotifierRuntime.I;
+  debugLog('Purging all scheduled notifications…');
+  await r.plugin.cancelAll();
+  for (final entry in r.activeTimers.entries) {
+    for (final timer in entry.value) {
+      timer.cancel();
+    }
+  }
+  r.activeTimers.clear();
+  await goalNotifierStorage().delete(
+    key: StorageKeys.dailyAffirmationsScheduledUntil,
+  );
+  debugLog('All scheduled notifications purged.');
+}
+
 /// Cancel all notifications and timers indiscriminately
 Future<void> cancelAllGoalNotifications() async {
   final r = GoalNotifierRuntime.I;

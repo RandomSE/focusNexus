@@ -160,6 +160,7 @@ class _TimeSlotGoalCreatePanelState extends ConsumerState<TimeSlotGoalCreatePane
             endAt: _endAt,
             startAt: _startAt,
             duration: _duration,
+            fullDaysOnly: _repeat.enabled,
             onEndChanged: (v) => setState(() => _endAt = v),
             onStartChanged: (v) => setState(
               () => _duration = _endAt.difference(v),
@@ -176,7 +177,14 @@ class _TimeSlotGoalCreatePanelState extends ConsumerState<TimeSlotGoalCreatePane
           TimeWindowRepeatEditor(
             bundle: bundle,
             rule: _repeat,
-            onChanged: (r) => setState(() => _repeat = r),
+            onChanged: (r) => setState(() {
+              _repeat = r;
+              if (r.enabled && _duration.inDays < 1) {
+                _duration = const Duration(days: 1);
+              } else if (r.enabled && _duration.inHours % 24 != 0) {
+                _duration = Duration(days: _duration.inDays.clamp(1, 9999));
+              }
+            }),
           ),
           const SizedBox(height: 12),
           CommonUtils.buildElevatedButton(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focusNexus/providers/theme_bundle_provider.dart';
+import 'package:focusNexus/utils/theme_styles.dart';
 
 class TimeWindowCalendarPlaceholderScreen extends ConsumerWidget {
   const TimeWindowCalendarPlaceholderScreen({super.key});
@@ -15,7 +16,7 @@ class TimeWindowCalendarPlaceholderScreen extends ConsumerWidget {
         appBar: AppBar(
           title: Text('Calendar create', style: bundle.textStyle),
           backgroundColor: bundle.secondaryColor,
-          iconTheme: IconThemeData(color: bundle.primaryColor),
+          iconTheme: ThemeStyles.iconThemeFor( bundle.primaryColor),
         ),
         body: Center(
           child: Padding(

@@ -56,16 +56,14 @@ class _$GardenOpResultCopyWithImpl<$Res, $Val extends GardenOpResult>
   $Res call({Object? state = freezed, Object? error = freezed}) {
     return _then(
       _value.copyWith(
-            state:
-                freezed == state
-                    ? _value.state
-                    : state // ignore: cast_nullable_to_non_nullable
-                        as GardenState?,
-            error:
-                freezed == error
-                    ? _value.error
-                    : error // ignore: cast_nullable_to_non_nullable
-                        as String?,
+            state: freezed == state
+                ? _value.state
+                : state // ignore: cast_nullable_to_non_nullable
+                      as GardenState?,
+            error: freezed == error
+                ? _value.error
+                : error // ignore: cast_nullable_to_non_nullable
+                      as String?,
           )
           as $Val,
     );
@@ -117,16 +115,14 @@ class __$$GardenOpResultImplCopyWithImpl<$Res>
   $Res call({Object? state = freezed, Object? error = freezed}) {
     return _then(
       _$GardenOpResultImpl(
-        state:
-            freezed == state
-                ? _value.state
-                : state // ignore: cast_nullable_to_non_nullable
-                    as GardenState?,
-        error:
-            freezed == error
-                ? _value.error
-                : error // ignore: cast_nullable_to_non_nullable
-                    as String?,
+        state: freezed == state
+            ? _value.state
+            : state // ignore: cast_nullable_to_non_nullable
+                  as GardenState?,
+        error: freezed == error
+            ? _value.error
+            : error // ignore: cast_nullable_to_non_nullable
+                  as String?,
       ),
     );
   }

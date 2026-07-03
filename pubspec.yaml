@@ -73,6 +73,7 @@ dev_dependencies:
 flutter:
   assets:
     - assets/images/onboarding_images/
+    - assets/images/cherry_blossom_tree/
     - assets/sounds/
 
   # The following line ensures that the Material Icons font is
@@ -83,13 +84,13 @@ flutter:
   uses-material-design: true
 
   fonts:
-      - family: OpenDyslexic
-        fonts:
-          - asset: assets/fonts/OpenDyslexic-Regular.otf
-          - asset: assets/fonts/OpenDyslexic-Bold.otf
-            weight: 700
-          - asset: assets/fonts/OpenDyslexic-Italic.otf
-            style: italic
+    - family: OpenDyslexic
+      fonts:
+        - asset: assets/fonts/OpenDyslexic-Regular.otf
+        - asset: assets/fonts/OpenDyslexic-Bold.otf
+          weight: 700
+        - asset: assets/fonts/OpenDyslexic-Italic.otf
+          style: italic
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -12,10 +12,9 @@ _$AchievementImpl _$$AchievementImplFromJson(Map<String, dynamic> json) =>
       title: json['title'] as String,
       reward: json['reward'] as String,
       task: json['task'] as String,
-      dateCompleted:
-          json['dateCompleted'] == null
-              ? null
-              : DateTime.parse(json['dateCompleted'] as String),
+      dateCompleted: json['dateCompleted'] == null
+          ? null
+          : DateTime.parse(json['dateCompleted'] as String),
       isCompleted: json['isCompleted'] as bool? ?? false,
       isSecret: json['isSecret'] as bool? ?? true,
       progress: (json['progress'] as num?)?.toDouble() ?? 0.0,

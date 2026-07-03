@@ -6,7 +6,7 @@ part of 'points_balance_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$pointsBalanceHash() => r'98e59f5525e0c0ba5e1199f1719ba6a51c94b86d';
+String _$pointsBalanceHash() => r'812fccca1d61384fcd54d336368d804ba8808da6';
 
 /// Live wallet balance; refreshes when [PointsRepository] balance changes.
 ///
@@ -16,10 +16,9 @@ final pointsBalanceProvider =
     AsyncNotifierProvider<PointsBalance, int>.internal(
       PointsBalance.new,
       name: r'pointsBalanceProvider',
-      debugGetCreateSourceHash:
-          const bool.fromEnvironment('dart.vm.product')
-              ? null
-              : _$pointsBalanceHash,
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$pointsBalanceHash,
       dependencies: null,
       allTransitiveDependencies: null,
     );

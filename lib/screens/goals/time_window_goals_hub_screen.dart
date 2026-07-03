@@ -6,6 +6,7 @@ import 'package:focusNexus/providers/theme_bundle_provider.dart';
 import 'package:focusNexus/screens/goals/widgets/active_repeat_series_section.dart';
 import 'package:focusNexus/screens/goals/widgets/time_slot_goal_create_panel.dart';
 import 'package:focusNexus/utils/common_utils.dart';
+import 'package:focusNexus/utils/theme_styles.dart';
 
 class TimeWindowGoalsHubScreen extends ConsumerStatefulWidget {
   const TimeWindowGoalsHubScreen({super.key});
@@ -41,7 +42,7 @@ class _TimeWindowGoalsHubScreenState
         appBar: AppBar(
           title: Text('Time-slot goals', style: bundle.textStyle),
           backgroundColor: bundle.secondaryColor,
-          iconTheme: IconThemeData(color: bundle.primaryColor),
+          iconTheme: ThemeStyles.iconThemeFor( bundle.primaryColor),
         ),
         body: ListView(
           padding: const EdgeInsets.all(16),
