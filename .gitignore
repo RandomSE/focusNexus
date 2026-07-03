@@ -13,6 +13,9 @@
 migrate_working_dir/
 references/
 
+# Kodaelus local agent state (trash backups, insights, bug dossiers)
+.kodaelus/
+
 # IntelliJ related
 *.iml
 *.ipr
