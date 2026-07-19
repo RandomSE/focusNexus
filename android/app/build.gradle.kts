@@ -1,5 +1,7 @@
 plugins {
     id("com.android.application")
+    // required while android.builtInKotlin=false (Flutter AGP 9 temporary opt-out;
+    // see flutter/flutter#187712). Do not use kotlin { compilerOptions } in that mode.
     id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin")
 }
@@ -7,16 +9,16 @@ plugins {
 android {
     namespace = "com.randomSE.FocusNexus.focusnexus"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = "27.0.12077973" // ✅ Updated NDK version
+    ndkVersion = "28.2.13676358"
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
         isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
+        jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
     defaultConfig {

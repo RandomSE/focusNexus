@@ -167,6 +167,56 @@ void main() {
     });
   });
 
+  group('computeContainingWindowEnd', () {
+    test('resolves daily long slot while mid-window', () {
+      expect(
+        computeContainingWindowEnd(
+          rule: const RepeatRule(
+            enabled: true,
+            unit: RepeatUnit.days,
+            interval: 1,
+          ),
+          anchorEndAt: DateTime(2026, 7, 17, 13, 34),
+          duration: const Duration(hours: 11),
+          now: DateTime(2026, 7, 19, 11, 28),
+        ),
+        DateTime(2026, 7, 19, 13, 34),
+      );
+    });
+
+    test('resolves when anchor end is the same calendar day as now', () {
+      expect(
+        computeContainingWindowEnd(
+          rule: const RepeatRule(
+            enabled: true,
+            unit: RepeatUnit.days,
+            interval: 1,
+          ),
+          anchorEndAt: DateTime(2026, 7, 19, 13, 34),
+          duration: const Duration(hours: 11),
+          now: DateTime(2026, 7, 19, 11, 28),
+        ),
+        DateTime(2026, 7, 19, 13, 34),
+      );
+    });
+
+    test('next end before first anchor still returns the anchor', () {
+      final anchor = DateTime(2026, 7, 19, 13, 34);
+      expect(
+        computeNextWindowEnd(
+          rule: const RepeatRule(
+            enabled: true,
+            unit: RepeatUnit.days,
+            interval: 1,
+          ),
+          anchorEndAt: anchor,
+          after: anchor.subtract(const Duration(hours: 12)),
+        ),
+        anchor,
+      );
+    });
+  });
+
   group('clampActionWindowStart', () {
     test('keeps start before end and not before now', () {
       final now = DateTime(2026, 6, 21, 10);

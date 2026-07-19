@@ -43,6 +43,7 @@ const _goldenCases = <({String query, String expectedId})>[
   (query: 'What do the reward types do?', expectedId: 'settings.reward_types'),
   (query: 'Notification frequency', expectedId: 'settings.notification_frequency'),
   (query: 'Daily affirmations', expectedId: 'settings.daily_affirmations'),
+  (query: 'What are open streak reminders?', expectedId: 'settings.open_streak_reminders'),
   (query: 'What is AI Encouragement?', expectedId: 'settings.ai_encouragement'),
   (query: 'What is AI encouragement?', expectedId: 'settings.ai_encouragement'),
   (
@@ -66,6 +67,7 @@ const _goldenCases = <({String query, String expectedId})>[
   (query: 'How do I claim achievements?', expectedId: 'rewards.claim_achievements'),
   (query: 'How do mini-games work?', expectedId: 'rewards.mini_games'),
   (query: 'How many points do I start with?', expectedId: 'rewards.starting_points'),
+  (query: 'What are daily rewards?', expectedId: 'rewards.daily_open'),
   (query: 'Customization reward colors', expectedId: 'rewards.customization'),
   (query: 'What happens during onboarding?', expectedId: 'general.onboarding'),
   (query: 'Who won the world cup in 1998?', expectedId: 'fallback'),

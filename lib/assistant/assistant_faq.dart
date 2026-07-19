@@ -385,6 +385,20 @@ const List<AssistantFaqSection> assistantFaqSections = [
         keywords: ['daily affirmation', 'affirmations'],
       ),
       AssistantFaqEntry(
+        id: 'settings.open_streak_reminders',
+        question: 'What are open streak reminders?',
+        answer:
+            'Optional local notification that nudges you to open the app again so your '
+            'daily open streak does not reset. Find Open streak reminders under Settings '
+            'when notifications are enabled. Default is off. No data is uploaded.',
+        keywords: [
+          'open streak reminder',
+          'open streak reminders',
+          'streak reminder',
+          'come back streak',
+        ],
+      ),
+      AssistantFaqEntry(
         id: 'settings.ai_encouragement',
         question: 'What is AI Encouragement?',
         answer:
@@ -518,6 +532,24 @@ const List<AssistantFaqSection> assistantFaqSections = [
             'on the Dashboard.',
         keywords: ['starting points', 'start with', 'default points', 'begin with'],
         negativeKeywords: ['how many points do i have', 'current balance', 'my points'],
+      ),
+      AssistantFaqEntry(
+        id: 'rewards.daily_open',
+        question: 'What are daily rewards?',
+        answer:
+            'The first time you open the app each local calendar day, you get a daily open '
+            'bonus: 50 points on day 1 of a streak, then +10 each consecutive day, capped at '
+            '350. Missing a day resets the streak. Open-streak achievements (3 / 7 / 30 / 90 '
+            'days) are separate claim rewards in Achievements. Nothing is uploaded.',
+        keywords: [
+          'daily reward',
+          'daily rewards',
+          'daily open',
+          'open streak',
+          'streak points',
+          'first open',
+          'login bonus',
+        ],
       ),
       AssistantFaqEntry(
         id: 'rewards.customization',

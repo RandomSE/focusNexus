@@ -5,13 +5,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focusNexus/app/app_navigation.dart';
 import 'package:focusNexus/app/app_route.dart';
 import 'package:focusNexus/providers/app_repositories_provider.dart';
+import 'package:focusNexus/providers/app_services_provider.dart';
 import 'package:focusNexus/providers/app_settings_provider.dart';
 import 'package:focusNexus/goals/dashboard_goals_label.dart';
 import 'package:focusNexus/goals/time_window_goal.dart';
+import 'package:focusNexus/motivators/adhd_motivator_pack.dart';
 import 'package:focusNexus/providers/goals_provider.dart';
 import 'package:focusNexus/providers/points_balance_provider.dart';
+import 'package:focusNexus/providers/theme_bundle_provider.dart';
+import 'package:focusNexus/services/daily_open_reward_service.dart';
+import 'package:focusNexus/services/storage/storage_keys.dart';
 import 'package:focusNexus/utils/common_utils.dart';
+import 'package:focusNexus/utils/debug_log.dart';
+import 'package:focusNexus/utils/notifier.dart';
 import 'package:focusNexus/utils/screen_semantics.dart';
+import 'package:focusNexus/widgets/dashboard_motivator_banner.dart';
 import 'package:focusNexus/widgets/settings_themed_builder.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -22,12 +30,58 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  late int _motivatorIndex;
+  bool _motivatorDismissed = false;
+  bool _dailyRewardAttempted = false;
+
   @override
   void initState() {
     super.initState();
+    _motivatorIndex = AdhdMotivatorPack.seedForDate(DateTime.now());
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(goalsProvider.notifier).load();
+      _tryDailyOpenReward();
     });
+  }
+
+  Future<void> _tryDailyOpenReward() async {
+    if (_dailyRewardAttempted || !mounted) return;
+    _dailyRewardAttempted = true;
+    try {
+      final repos = ref.read(appRepositoriesProvider);
+      final service = DailyOpenRewardService(
+        storage: repos.storage,
+        points: repos.points,
+      );
+      final result = await service.tryGrant();
+      if (!mounted) return;
+      if (!result.granted) return;
+
+      await ref.read(achievementServiceProvider).updateProgressForTrackingKeys({
+        StorageKeys.consecutiveDaysAppOpened,
+      });
+      if (!mounted) return;
+
+      final settings = ref.read(appSettingsProvider).snapshot;
+      if (settings.openStreakReminders) {
+        await GoalNotifier.startOpenStreakReminder(
+          settings.openStreakRemindersTime,
+        );
+      }
+      if (!mounted) return;
+
+      final textStyle = ref.read(themeBundleProvider).textStyle;
+      CommonUtils.showSnackBar(
+        context,
+        'Daily open: +${result.amount} points '
+        '(streak day ${result.newStreak})',
+        textStyle,
+        3500,
+        16,
+      );
+    } catch (e, stack) {
+      debugLog('Dashboard daily open reward failed soft: $e\n$stack');
+    }
   }
 
   @override
@@ -49,8 +103,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         final rewardType = settings.rewardType;
         final pointsLabel = pointsAsync.when(
           data: (points) => 'Points: $points',
-          loading: () => 'Points: …',
-          error: (_, _) => 'Points: —',
+          loading: () => 'Points: ...',
+          error: (_, _) => 'Points: -',
         );
 
         return Theme(
@@ -78,6 +132,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       textAlign: TextAlign.left,
                     ),
                   ),
+                  if (!_motivatorDismissed) ...[
+                    const SizedBox(height: 12),
+                    DashboardMotivatorBanner(
+                      text: DashboardMotivatorBanner.textFor(
+                        index: _motivatorIndex,
+                      ),
+                      textStyle: bundle.textStyle,
+                      accentColor: bundle.primaryColor,
+                      onSwap: () {
+                        setState(() => _motivatorIndex++);
+                      },
+                      onDismiss: () {
+                        setState(() => _motivatorDismissed = true);
+                      },
+                    ),
+                  ],
                   if (kDebugMode) ...[
                     const SizedBox(height: 16),
                     CommonUtils.buildCenteredButton(

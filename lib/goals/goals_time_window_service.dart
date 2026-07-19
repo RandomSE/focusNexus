@@ -190,26 +190,80 @@ class GoalsTimeWindowService {
     required GoalRepeatSeries series,
     required DateTime after,
     required DateTime now,
+    bool allowRematerializeCurrent = false,
   }) async {
     if (!series.isActive || !series.repeatRule.enabled) return null;
     final anchor = parseGoalDateTime(series.anchorEndAt);
     if (anchor == null) return null;
     final lastEnd = parseGoalDateTime(series.lastSpawnedWindowEnd) ?? anchor;
-    final nextEnd = computeNextWindowEnd(
-      rule: series.repeatRule,
-      anchorEndAt: anchor,
-      after: lastEnd,
-    );
-    if (nextEnd == null) return null;
 
+    if (allowRematerializeCurrent) {
+      final containing = computeContainingWindowEnd(
+        rule: series.repeatRule,
+        anchorEndAt: anchor,
+        duration: series.windowDuration,
+        now: now,
+      );
+      if (containing != null) {
+        return _materializeSeriesGoal(
+          series: series,
+          windowEnd: containing,
+          now: now,
+          lastSpawnedFloor: lastEnd,
+        );
+      }
+    }
+
+    var cursor = after.isAfter(lastEnd) ? after : lastEnd;
+    for (var i = 0; i < 400; i++) {
+      final nextEnd = computeNextWindowEnd(
+        rule: series.repeatRule,
+        anchorEndAt: anchor,
+        after: cursor,
+      );
+      if (nextEnd == null) return null;
+      if (!now.isBefore(nextEnd)) {
+        cursor = nextEnd;
+        continue;
+      }
+
+      final window = computeActionWindow(
+        endAt: nextEnd,
+        duration: series.windowDuration,
+        now: now,
+      );
+      if (!window.start.isBefore(now.add(repeatSpawnLookahead))) {
+        if (cursor.isAfter(lastEnd)) {
+          await _repeats.upsert(
+            series.copyWith(
+              lastSpawnedWindowEnd: formatGoalDateTime(cursor),
+            ),
+          );
+        }
+        return null;
+      }
+
+      return _materializeSeriesGoal(
+        series: series,
+        windowEnd: nextEnd,
+        now: now,
+        lastSpawnedFloor: lastEnd,
+      );
+    }
+    return null;
+  }
+
+  Future<GoalSet> _materializeSeriesGoal({
+    required GoalRepeatSeries series,
+    required DateTime windowEnd,
+    required DateTime now,
+    required DateTime lastSpawnedFloor,
+  }) async {
     final window = computeActionWindow(
-      endAt: nextEnd,
+      endAt: windowEnd,
       duration: series.windowDuration,
       now: now,
     );
-    if (!now.isBefore(window.end)) return null;
-    if (!window.start.isBefore(now.add(repeatSpawnLookahead))) return null;
-
     final input = CreateTimeWindowGoalInput(
       title: series.title,
       category: series.category,
@@ -218,13 +272,13 @@ class GoalsTimeWindowService {
       motivation: series.motivation,
       time: series.time.toString(),
       steps: series.steps.toString(),
-      windowEndAt: nextEnd,
+      windowEndAt: windowEnd,
       windowDuration: series.windowDuration,
       repeatRule: series.repeatRule,
       templateName: series.templateName,
       seriesId: series.seriesId,
     );
-    final goalId = GoalNotifier.generateGoalId('${series.title}-$nextEnd');
+    final goalId = GoalNotifier.generateGoalId('${series.title}-$windowEnd');
     final goal = buildGoal(
       input: input,
       now: now,
@@ -233,8 +287,11 @@ class GoalsTimeWindowService {
       window: window,
     );
     await _scheduleActionWindowNotifications(goal, window, now);
+    final lastSpawned = windowEnd.isAfter(lastSpawnedFloor)
+        ? windowEnd
+        : lastSpawnedFloor;
     await _repeats.upsert(
-      series.copyWith(lastSpawnedWindowEnd: formatGoalDateTime(nextEnd)),
+      series.copyWith(lastSpawnedWindowEnd: formatGoalDateTime(lastSpawned)),
     );
     return goal;
   }
@@ -319,6 +376,7 @@ class GoalsTimeWindowService {
         series: series,
         after: now.subtract(const Duration(seconds: 1)),
         now: now,
+        allowRematerializeCurrent: true,
       );
       if (goal != null) spawned.add(goal);
     }

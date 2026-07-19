@@ -38,10 +38,14 @@ class GoalNotifierRuntime {
 
   /// Legacy repeating id; kept for cancel compatibility.
   static const dailyAffirmationsScheduleBaseId = 500000;
+
+  /// Single next-day open-streak reminder (above affirmation band).
+  static const openStreakReminderNotificationId = 600000;
   int get dailyAffirmationsHorizonDays =>
       NotificationScheduleUtils.affirmationHorizonDays;
   bool aiEncouragement = false;
   bool dailyAffirmations = false;
+  bool openStreakReminders = false;
   Future<void> Function(String time)? dailyAffirmationsSchedulerForTesting;
   AndroidScheduleMode scheduleMode =
       AndroidScheduleMode.inexactAllowWhileIdle; // Fallback
@@ -51,6 +55,7 @@ class GoalNotifierRuntime {
     initialized = false;
     aiEncouragement = false;
     dailyAffirmations = false;
+    openStreakReminders = false;
     dailyAffirmationsSchedulerForTesting = null;
     activeTimers.clear();
     _now = null;

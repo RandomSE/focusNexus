@@ -86,7 +86,10 @@ DateTime? computeNextWindowEnd({
   if (!rule.enabled || rule.interval < 1) return null;
 
   final offsetAnchor = anchorEndAt.add(rule.startOffset);
-  final searchAfter = after.isBefore(offsetAnchor) ? offsetAnchor : after;
+  // Use [after] as-is. Snapping to [offsetAnchor] and then requiring a strictly
+  // later end would skip the first occurrence when [after] is still before it
+  // (breaks mid-window rematerialize and catch-up).
+  final searchAfter = after;
 
   switch (rule.unit) {
     case RepeatUnit.hours:
@@ -110,6 +113,35 @@ DateTime? computeNextWindowEnd({
         after: searchAfter,
       );
   }
+}
+
+/// Scheduled window end whose ideal span contains [now], if any.
+///
+/// Ideal span is `[end - duration, end)`. Used to rematerialize a missing
+/// mid-window instance without advancing past the current occurrence.
+DateTime? computeContainingWindowEnd({
+  required RepeatRule rule,
+  required DateTime anchorEndAt,
+  required Duration duration,
+  required DateTime now,
+}) {
+  if (!rule.enabled || rule.interval < 1 || duration <= Duration.zero) {
+    return null;
+  }
+  var after = now.subtract(duration);
+  for (var i = 0; i < 64; i++) {
+    final end = computeNextWindowEnd(
+      rule: rule,
+      anchorEndAt: anchorEndAt,
+      after: after,
+    );
+    if (end == null) return null;
+    final start = end.subtract(duration);
+    if (!now.isBefore(start) && now.isBefore(end)) return end;
+    if (!end.isBefore(now.add(duration))) return null;
+    after = end;
+  }
+  return null;
 }
 
 DateTime? _nextHourlyEnd({

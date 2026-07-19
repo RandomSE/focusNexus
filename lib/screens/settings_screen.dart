@@ -88,6 +88,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     await GoalNotifier.startDailyAffirmations(time);
   }
 
+  Future<void> setAndCheckOpenStreakReminders(bool value) async {
+    final settings = ref.read(appSettingsProvider.notifier).service;
+    await settings.setOpenStreakReminders(value);
+    if (value) {
+      await updateOpenStreakReminders(settings.openStreakRemindersTime);
+    } else {
+      await GoalNotifier.cancelOpenStreakReminder();
+    }
+  }
+
+  Future<void> updateOpenStreakReminders(String time) async {
+    await ref
+        .read(appSettingsProvider.notifier)
+        .service
+        .setOpenStreakRemindersTime(time);
+    await GoalNotifier.startOpenStreakReminder(time);
+  }
+
   Future<void> updateNotificationFrequency(
     String oldFrequency,
     String newFrequency,
@@ -311,6 +329,56 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                                         final formatted =
                                             '${selected.hour.toString().padLeft(2, '0')}:${selected.minute.toString().padLeft(2, '0')}';
                                         await updateDailyAffirmations(
+                                          formatted,
+                                        );
+                                      }
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                              ],
+                            ),
+                          ],
+                          CommonUtils.buildSwitchListTile(
+                            'Open streak reminders',
+                            textStyle,
+                            settings.openStreakReminders,
+                            setAndCheckOpenStreakReminders,
+                            primaryColor,
+                          ),
+                          if (settings.openStreakReminders) ...[
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: CommonUtils.buildElevatedButton(
+                                    settings.openStreakRemindersTime.isNotEmpty
+                                        ? 'Selected open streak reminder time: ${settings.openStreakRemindersTime} click me to change'
+                                        : 'Choose Time',
+                                    primaryColor,
+                                    secondaryColor,
+                                    textStyle,
+                                    4,
+                                    0,
+                                    () async {
+                                      final selected = await showTimePicker(
+                                        context: context,
+                                        initialTime: TimeOfDay.now(),
+                                        initialEntryMode:
+                                            TimePickerEntryMode.dial,
+                                        builder:
+                                            (context, child) => Theme(
+                                              data: buildTimePickerTheme(
+                                                primaryColor,
+                                                secondaryColor,
+                                                textStyle,
+                                              ),
+                                              child: child!,
+                                            ),
+                                      );
+                                      if (selected != null) {
+                                        final formatted =
+                                            '${selected.hour.toString().padLeft(2, '0')}:${selected.minute.toString().padLeft(2, '0')}';
+                                        await updateOpenStreakReminders(
                                           formatted,
                                         );
                                       }

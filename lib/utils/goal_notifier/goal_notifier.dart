@@ -9,6 +9,7 @@ import 'goal_notifier_ai_encouragement.dart' as ai;
 import 'goal_notifier_bindings.dart' as bindings;
 import 'goal_notifier_cancellation.dart' as cancellation;
 import 'goal_notifier_daily_affirmations.dart' as daily;
+import 'goal_notifier_open_streak_reminder.dart' as open_streak;
 import 'goal_notifier_frequency.dart' as frequency;
 import 'goal_notifier_goal_reminders.dart' as reminders;
 import 'goal_notifier_ids.dart' as ids;
@@ -36,6 +37,9 @@ class GoalNotifier {
   static bool get isDailyAffirmationsEnabled =>
       bindings.isDailyAffirmationsEnabled;
 
+  static bool get isOpenStreakRemindersEnabled =>
+      bindings.isOpenStreakRemindersEnabled;
+
   static Future<void> initialize() => init.initialize();
 
   static Future<void> refreshDailyAffirmationSchedules({
@@ -50,6 +54,9 @@ class GoalNotifier {
 
   static Future<void> checkDailyAffirmations() =>
       bindings.checkDailyAffirmations();
+
+  static Future<void> checkOpenStreakReminders() =>
+      bindings.checkOpenStreakReminders();
 
   static Future<void> refreshSchedulesForFrequencyChange({
     required String oldFrequency,
@@ -99,6 +106,9 @@ class GoalNotifier {
   static Future<void> startDailyAffirmations(String? timeToTrigger) =>
       daily.startDailyAffirmations(timeToTrigger);
 
+  static Future<void> startOpenStreakReminder(String? timeToTrigger) =>
+      open_streak.startOpenStreakReminder(timeToTrigger);
+
   static Future<void> cancelGoalNotification(GoalSet goalSet) =>
       cancellation.cancelGoalNotification(goalSet);
 
@@ -107,6 +117,9 @@ class GoalNotifier {
 
   static Future<void> cancelDailyAffirmationsNotification() =>
       cancellation.cancelDailyAffirmationsNotification();
+
+  static Future<void> cancelOpenStreakReminder() =>
+      open_streak.cancelOpenStreakReminder();
 
   static Future<void> cancelAllGoalNotifications() =>
       cancellation.cancelAllGoalNotifications();

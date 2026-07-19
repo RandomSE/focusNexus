@@ -63,7 +63,8 @@ Future<void> checkAdditionalNotificationSettings() async {
   final r = GoalNotifierRuntime.I;
   await checkAiEncouragement();
   await checkDailyAffirmations();
+  await checkOpenStreakReminders();
   debugLog(
-    'Notification additional settings confirmed. aiEncouragement: ${r.aiEncouragement}, dailyAffirmations: ${r.dailyAffirmations}',
+    'Notification additional settings confirmed. aiEncouragement: ${r.aiEncouragement}, dailyAffirmations: ${r.dailyAffirmations}, openStreakReminders: ${r.openStreakReminders}',
   );
 }

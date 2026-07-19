@@ -25,7 +25,7 @@ class AchievementService {
         _soundService = soundService ?? SoundService(storage),
         _cachedAchievements = List.of(cachedAchievements ?? []);
 
-  static const _numOfAchievements = 107;
+  static const _numOfAchievements = 111;
 
   final KeyValueStorage _storage;
   final AchievementRepository _repository;
@@ -61,6 +61,7 @@ class AchievementService {
   List<int> dailyStreakRepetitions = [2, 3, 7, 14, 30];
   List<int> weeklyStreakRepetitions = [2, 4, 8, 12, 16, 20];
   List<int> categoryTripletsRepetitions = [3, 3, 3, 3, 3];
+  List<int> openStreakRepetitions = [3, 7, 30, 90];
 
   /// Initialize cache from storage (idempotent — safe to call once at startup).
   Future<void> initialize() async {
@@ -78,6 +79,7 @@ class AchievementService {
       await _pruneOrphanedAssistantAchievements();
       await _ensureCategoryAchievements();
       await _ensureZenGardenAchievements();
+      await _ensureOpenStreakAchievements();
     }
     await _sanitizeStoredProgress();
     _initialized = true;
@@ -86,8 +88,9 @@ class AchievementService {
   /// Recomputes all achievement progress from tracking variables (migration/tests only).
   Future<void> recomputeAllProgress() async {
     await _syncTrackingVariablesFromStorage();
-    for (var i = 1; i <= _numOfAchievements; i++) {
-      await updateProgress(i.toString());
+    // Use cached catalog IDs (covers gaps such as 112-117); do not dense-loop 1..N.
+    for (final achievement in List<Achievement>.from(_cachedAchievements)) {
+      await updateProgress(achievement.id);
     }
   }
 
@@ -242,6 +245,7 @@ class AchievementService {
       kGoalCategoryCount,
       1,
       1,
+      ...openStreakRepetitions,
     ];
 
     achievementVariableMap = {
@@ -269,6 +273,7 @@ class AchievementService {
       [105]: StorageKeys.categoriesWithAllTypesCompleted,
       [112]: StorageKeys.cherryBlossomTreeUnlockedFlag,
       [113]: StorageKeys.cherryBlossomTreeMaxedFlag,
+      [114, 115, 116, 117]: StorageKeys.consecutiveDaysAppOpened,
     };
   }
 
@@ -501,6 +506,7 @@ class AchievementService {
     );
     await _addCategoryAchievements();
     await _addZenGardenAchievements();
+    await _addOpenStreakAchievements();
   }
 
   Future<void> _addZenGardenAchievements() async {
@@ -532,6 +538,55 @@ class AchievementService {
       StorageKeys.cherryBlossomTreeMaxedFlag,
     ]);
     await _addZenGardenAchievements();
+    _buildAchievementIdsByVariable();
+  }
+
+  Future<void> _addOpenStreakAchievements() async {
+    await addAchievement(
+      Achievement(
+        id: '114',
+        title: 'Open Streak Novice',
+        reward: '100 points',
+        task: 'Open the app on 3 consecutive days',
+        isSecret: false,
+      ),
+    );
+    await addAchievement(
+      Achievement(
+        id: '115',
+        title: 'Open Streak Regular',
+        reward: '250 points',
+        task: 'Open the app on 7 consecutive days',
+        isSecret: false,
+      ),
+    );
+    await addAchievement(
+      Achievement(
+        id: '116',
+        title: 'Open Streak Dedicated',
+        reward: '1000 points',
+        task: 'Open the app on 30 consecutive days',
+        isSecret: false,
+      ),
+    );
+    await addAchievement(
+      Achievement(
+        id: '117',
+        title: 'Ninety Sunrises',
+        reward: '5000 points',
+        task: 'Open the app on 90 consecutive days',
+        isSecret: true,
+      ),
+    );
+  }
+
+  Future<void> _ensureOpenStreakAchievements() async {
+    if (_cachedAchievements.any((a) => a.id == '114')) return;
+
+    await bulkSetAchievementVariablesInStorage([
+      StorageKeys.consecutiveDaysAppOpened,
+    ]);
+    await _addOpenStreakAchievements();
     _buildAchievementIdsByVariable();
   }
 

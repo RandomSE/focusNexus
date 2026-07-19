@@ -19,9 +19,15 @@ abstract final class StorageKeys {
   // Garden
   static const zenGardenSave = 'zen_garden_save_v1';
 
-  // Zen garden achievements (112–113)
+  // Zen garden achievements (112-113)
   static const cherryBlossomTreeUnlockedFlag = 'cherryBlossomTreeUnlockedFlag';
   static const cherryBlossomTreeMaxedFlag = 'cherryBlossomTreeMaxedFlag';
+
+  // Daily first-open rewards / open-streak achievements (114-117)
+  /// Last local calendar day (yyyy-MM-dd) that received a daily open grant.
+  static const lastAppOpenGrantDate = 'lastAppOpenGrantDate';
+  /// Consecutive local calendar days with at least one eligible open grant.
+  static const consecutiveDaysAppOpened = 'consecutiveDaysAppOpened';
 
   // User preferences
   static const theme = 'theme';
@@ -31,6 +37,9 @@ abstract final class StorageKeys {
   static const highContrast = 'highContrast';
   static const dailyAffirmations = 'dailyAffirmations';
   static const aiEncouragement = 'aiEncouragement';
+  /// Optional local nudge to keep consecutive app-open streaks.
+  static const openStreakReminders = 'openStreakReminders';
+  static const openStreakRemindersTime = 'openStreakRemindersTime';
   /// Initial setup form (notification/reward prefs) completed; onboarding may remain.
   static const registrationComplete = 'registrationComplete';
   /// Legacy key; still read on load for upgrades from login-based builds.

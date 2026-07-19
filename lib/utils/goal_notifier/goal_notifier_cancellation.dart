@@ -5,6 +5,7 @@ import 'package:focusNexus/services/storage/storage_keys.dart';
 import 'package:focusNexus/goals/time_window_goal.dart';
 import 'goal_notifier_bindings.dart';
 import 'goal_notifier_daily_affirmations.dart';
+import 'goal_notifier_open_streak_reminder.dart';
 import 'goal_notifier_permissions.dart';
 import 'goal_notifier_runtime.dart';
 
@@ -128,6 +129,13 @@ Future<void> cancelAllGoalNotifications() async {
             ? timeToTrigger
             : fallbackTime;
     await startDailyAffirmations(effectiveTime);
+  }
+
+  if (r.openStreakReminders && await areNotificationsEnabledByFrequency()) {
+    final timeToTrigger = await goalNotifierStorage().read(
+      key: StorageKeys.openStreakRemindersTime,
+    );
+    await startOpenStreakReminder(timeToTrigger ?? '20:00');
   }
 
   debugLog('All goal notifications and timers cancelled.');
