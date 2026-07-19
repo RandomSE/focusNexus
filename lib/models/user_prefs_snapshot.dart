@@ -22,6 +22,7 @@ class UserPrefsSnapshot with _$UserPrefsSnapshot {
     @Default(false) bool highContrastMode,
     @Default(false) bool dailyAffirmations,
     @Default(false) bool aiEncouragement,
+    @Default(false) bool openStreakReminders,
     @Default('Low') String notificationFrequency,
     @Default('Minimal') String notificationStyle,
     @Default(false) bool customizationEnabled,
@@ -38,6 +39,7 @@ class UserPrefsSnapshot with _$UserPrefsSnapshot {
     @Default(false) bool soundEnabled,
     @Default(0.0) double soundVolume,
     @Default('06:00') String dailyAffirmationsTime,
+    @Default('20:00') String openStreakRemindersTime,
   }) = _UserPrefsSnapshot;
 
   /// Validates invariants (debug builds only). Call after constructing with

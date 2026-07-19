@@ -21,6 +21,7 @@ const List<String> assistantFaqRequiredUiStrings = [
   'Pause Goals',
   'AI Encouragement',
   'Daily affirmations',
+  'Open streak reminders',
   'Color Shop',
   'Customized colours',
   'OpenDyslexic',

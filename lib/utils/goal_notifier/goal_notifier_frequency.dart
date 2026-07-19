@@ -4,6 +4,7 @@ import 'package:focusNexus/utils/debug_log.dart';
 import '../theme_styles.dart';
 import 'goal_notifier_bindings.dart';
 import 'goal_notifier_daily_affirmations.dart';
+import 'goal_notifier_open_streak_reminder.dart';
 import 'goal_notifier_runtime.dart';
 
 /// Re-applies schedules affected by a frequency transition.
@@ -28,19 +29,27 @@ Future<void> refreshSchedulesForFrequencyChange({
   }
 
   await checkDailyAffirmations();
-  if (!r.dailyAffirmations) {
+  if (r.dailyAffirmations) {
+    final storedTime = await goalNotifierStorage().read(
+      key: StorageKeys.dailyAffirmationsTime,
+    );
+    final normalizedTime = (storedTime ?? '').trim();
+    final effectiveTime = normalizedTime.isEmpty ? '06:00' : normalizedTime;
+    await _scheduleDailyAffirmationsAfterFrequencyEnable(effectiveTime);
+  } else {
     debugLog(
       'Skipped daily affirmations refresh after frequency re-enable: setting disabled.',
     );
-    return;
   }
 
-  final storedTime = await goalNotifierStorage().read(
-    key: StorageKeys.dailyAffirmationsTime,
-  );
-  final normalizedTime = (storedTime ?? '').trim();
-  final effectiveTime = normalizedTime.isEmpty ? '06:00' : normalizedTime;
-  await _scheduleDailyAffirmationsAfterFrequencyEnable(effectiveTime);
+  await checkOpenStreakReminders();
+  if (r.openStreakReminders) {
+    final storedTime = await goalNotifierStorage().read(
+      key: StorageKeys.openStreakRemindersTime,
+    );
+    final time = (storedTime ?? '').trim().isEmpty ? '20:00' : storedTime!.trim();
+    await startOpenStreakReminder(time);
+  }
 }
 
 Future<void> _scheduleDailyAffirmationsAfterFrequencyEnable(

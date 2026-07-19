@@ -24,6 +24,9 @@ bool get isAiEncouragementEnabled => GoalNotifierRuntime.I.aiEncouragement;
 
 bool get isDailyAffirmationsEnabled => GoalNotifierRuntime.I.dailyAffirmations;
 
+bool get isOpenStreakRemindersEnabled =>
+    GoalNotifierRuntime.I.openStreakReminders;
+
 Future<void> checkAiEncouragement() async {
   final r = GoalNotifierRuntime.I;
   String? aiEncouragementString = await goalNotifierStorage().read(
@@ -38,4 +41,12 @@ Future<void> checkDailyAffirmations() async {
     key: StorageKeys.dailyAffirmations,
   );
   r.dailyAffirmations = dailyAffirmationsString == 'true';
+}
+
+Future<void> checkOpenStreakReminders() async {
+  final r = GoalNotifierRuntime.I;
+  final raw = await goalNotifierStorage().read(
+    key: StorageKeys.openStreakReminders,
+  );
+  r.openStreakReminders = raw == 'true';
 }

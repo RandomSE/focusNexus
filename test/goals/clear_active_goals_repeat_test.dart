@@ -3,6 +3,7 @@ import 'package:focusNexus/goals/goal_kind.dart';
 import 'package:focusNexus/goals/goals_time_window_service.dart';
 import 'package:focusNexus/goals/goals_use_case.dart';
 import 'package:focusNexus/goals/repeat_rule.dart';
+import 'package:focusNexus/goals/time_window_goal.dart';
 import 'package:focusNexus/repositories/achievement_counters_repository.dart';
 import 'package:focusNexus/repositories/goals_repository.dart';
 import 'package:focusNexus/repositories/points_repository.dart';
@@ -80,7 +81,14 @@ void main() {
       final series = await useCase.readActiveRepeatSeries();
       expect(series, isNotEmpty);
       expect(series.single.isActive, isTrue);
-      expect((await useCase.load(now: now)).active, isEmpty);
+      // Mid-window clear must rematerialize the current occurrence on load.
+      final rematerialized = await useCase.load(now: now);
+      expect(rematerialized.active, isNotEmpty);
+      expect(rematerialized.active.single.repeatSeriesId, 9101);
+      expect(
+        parseGoalDateTime(rematerialized.active.single.actionWindowEnd),
+        end,
+      );
     });
 
     test('clear with cancelRepeatSeries deactivates series', () async {

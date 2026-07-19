@@ -44,6 +44,7 @@ class UserPrefsRepository {
       highContrastMode: await readBool(StorageKeys.highContrast),
       dailyAffirmations: await readBool(StorageKeys.dailyAffirmations),
       aiEncouragement: await readBool(StorageKeys.aiEncouragement),
+      openStreakReminders: await readBool(StorageKeys.openStreakReminders),
       notificationFrequency:
           await _storage.read(key: StorageKeys.notificationFrequency) ?? 'Low',
       notificationStyle:
@@ -74,6 +75,9 @@ class UserPrefsRepository {
       dailyAffirmationsTime:
           await _storage.read(key: StorageKeys.dailyAffirmationsTime) ??
               '06:00',
+      openStreakRemindersTime:
+          await _storage.read(key: StorageKeys.openStreakRemindersTime) ??
+              '20:00',
     );
   }
 

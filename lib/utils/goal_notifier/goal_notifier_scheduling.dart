@@ -235,3 +235,33 @@ Future<void> scheduleDailyAffirmations(
         UILocalNotificationDateInterpretation.absoluteTime,
   );
 }
+
+Future<void> scheduleOpenStreakReminder(
+  tz.TZDateTime triggerTime,
+  AndroidScheduleMode mode,
+  String title,
+  String body,
+) async {
+  final r = GoalNotifierRuntime.I;
+  final preview = GoalNotificationAndroid.collapsedPreview(body);
+  final platformDetails = GoalNotificationAndroid.platformDetails(
+    channelId: 'open_streak_reminder_channel',
+    channelName: 'Open streak reminders',
+    channelDescription:
+        'Optional nudge to keep your daily app-open streak going.',
+    title: title,
+    fullBody: body,
+    groupKey: 'open_streak_reminders',
+  );
+
+  await r.plugin.zonedSchedule(
+    GoalNotifierRuntime.openStreakReminderNotificationId,
+    title,
+    preview,
+    triggerTime,
+    platformDetails,
+    androidScheduleMode: mode,
+    uiLocalNotificationDateInterpretation:
+        UILocalNotificationDateInterpretation.absoluteTime,
+  );
+}

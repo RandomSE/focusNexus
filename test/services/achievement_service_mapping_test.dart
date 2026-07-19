@@ -33,6 +33,14 @@ void main() {
         service.getVariableForAchievement('105'),
         StorageKeys.categoriesWithAllTypesCompleted,
       );
+      expect(
+        service.getVariableForAchievement('114'),
+        StorageKeys.consecutiveDaysAppOpened,
+      );
+      expect(
+        service.getVariableForAchievement('117'),
+        StorageKeys.consecutiveDaysAppOpened,
+      );
     });
 
     test('returns null for unknown id', () {

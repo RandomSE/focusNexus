@@ -23,6 +23,7 @@ mixin _$UserPrefsSnapshot {
   bool get highContrastMode => throw _privateConstructorUsedError;
   bool get dailyAffirmations => throw _privateConstructorUsedError;
   bool get aiEncouragement => throw _privateConstructorUsedError;
+  bool get openStreakReminders => throw _privateConstructorUsedError;
   String get notificationFrequency => throw _privateConstructorUsedError;
   String get notificationStyle => throw _privateConstructorUsedError;
   bool get customizationEnabled => throw _privateConstructorUsedError;
@@ -39,6 +40,7 @@ mixin _$UserPrefsSnapshot {
   bool get soundEnabled => throw _privateConstructorUsedError;
   double get soundVolume => throw _privateConstructorUsedError;
   String get dailyAffirmationsTime => throw _privateConstructorUsedError;
+  String get openStreakRemindersTime => throw _privateConstructorUsedError;
 
   /// Create a copy of UserPrefsSnapshot
   /// with the given fields replaced by the non-null parameter values.
@@ -61,6 +63,7 @@ abstract class $UserPrefsSnapshotCopyWith<$Res> {
     bool highContrastMode,
     bool dailyAffirmations,
     bool aiEncouragement,
+    bool openStreakReminders,
     String notificationFrequency,
     String notificationStyle,
     bool customizationEnabled,
@@ -77,6 +80,7 @@ abstract class $UserPrefsSnapshotCopyWith<$Res> {
     bool soundEnabled,
     double soundVolume,
     String dailyAffirmationsTime,
+    String openStreakRemindersTime,
   });
 }
 
@@ -101,6 +105,7 @@ class _$UserPrefsSnapshotCopyWithImpl<$Res, $Val extends UserPrefsSnapshot>
     Object? highContrastMode = null,
     Object? dailyAffirmations = null,
     Object? aiEncouragement = null,
+    Object? openStreakReminders = null,
     Object? notificationFrequency = null,
     Object? notificationStyle = null,
     Object? customizationEnabled = null,
@@ -117,6 +122,7 @@ class _$UserPrefsSnapshotCopyWithImpl<$Res, $Val extends UserPrefsSnapshot>
     Object? soundEnabled = null,
     Object? soundVolume = null,
     Object? dailyAffirmationsTime = null,
+    Object? openStreakRemindersTime = null,
   }) {
     return _then(
       _value.copyWith(
@@ -143,6 +149,10 @@ class _$UserPrefsSnapshotCopyWithImpl<$Res, $Val extends UserPrefsSnapshot>
             aiEncouragement: null == aiEncouragement
                 ? _value.aiEncouragement
                 : aiEncouragement // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            openStreakReminders: null == openStreakReminders
+                ? _value.openStreakReminders
+                : openStreakReminders // ignore: cast_nullable_to_non_nullable
                       as bool,
             notificationFrequency: null == notificationFrequency
                 ? _value.notificationFrequency
@@ -208,6 +218,10 @@ class _$UserPrefsSnapshotCopyWithImpl<$Res, $Val extends UserPrefsSnapshot>
                 ? _value.dailyAffirmationsTime
                 : dailyAffirmationsTime // ignore: cast_nullable_to_non_nullable
                       as String,
+            openStreakRemindersTime: null == openStreakRemindersTime
+                ? _value.openStreakRemindersTime
+                : openStreakRemindersTime // ignore: cast_nullable_to_non_nullable
+                      as String,
           )
           as $Val,
     );
@@ -230,6 +244,7 @@ abstract class _$$UserPrefsSnapshotImplCopyWith<$Res>
     bool highContrastMode,
     bool dailyAffirmations,
     bool aiEncouragement,
+    bool openStreakReminders,
     String notificationFrequency,
     String notificationStyle,
     bool customizationEnabled,
@@ -246,6 +261,7 @@ abstract class _$$UserPrefsSnapshotImplCopyWith<$Res>
     bool soundEnabled,
     double soundVolume,
     String dailyAffirmationsTime,
+    String openStreakRemindersTime,
   });
 }
 
@@ -269,6 +285,7 @@ class __$$UserPrefsSnapshotImplCopyWithImpl<$Res>
     Object? highContrastMode = null,
     Object? dailyAffirmations = null,
     Object? aiEncouragement = null,
+    Object? openStreakReminders = null,
     Object? notificationFrequency = null,
     Object? notificationStyle = null,
     Object? customizationEnabled = null,
@@ -285,6 +302,7 @@ class __$$UserPrefsSnapshotImplCopyWithImpl<$Res>
     Object? soundEnabled = null,
     Object? soundVolume = null,
     Object? dailyAffirmationsTime = null,
+    Object? openStreakRemindersTime = null,
   }) {
     return _then(
       _$UserPrefsSnapshotImpl(
@@ -311,6 +329,10 @@ class __$$UserPrefsSnapshotImplCopyWithImpl<$Res>
         aiEncouragement: null == aiEncouragement
             ? _value.aiEncouragement
             : aiEncouragement // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        openStreakReminders: null == openStreakReminders
+            ? _value.openStreakReminders
+            : openStreakReminders // ignore: cast_nullable_to_non_nullable
                   as bool,
         notificationFrequency: null == notificationFrequency
             ? _value.notificationFrequency
@@ -376,6 +398,10 @@ class __$$UserPrefsSnapshotImplCopyWithImpl<$Res>
             ? _value.dailyAffirmationsTime
             : dailyAffirmationsTime // ignore: cast_nullable_to_non_nullable
                   as String,
+        openStreakRemindersTime: null == openStreakRemindersTime
+            ? _value.openStreakRemindersTime
+            : openStreakRemindersTime // ignore: cast_nullable_to_non_nullable
+                  as String,
       ),
     );
   }
@@ -391,6 +417,7 @@ class _$UserPrefsSnapshotImpl extends _UserPrefsSnapshot {
     this.highContrastMode = false,
     this.dailyAffirmations = false,
     this.aiEncouragement = false,
+    this.openStreakReminders = false,
     this.notificationFrequency = 'Low',
     this.notificationStyle = 'Minimal',
     this.customizationEnabled = false,
@@ -407,6 +434,7 @@ class _$UserPrefsSnapshotImpl extends _UserPrefsSnapshot {
     this.soundEnabled = false,
     this.soundVolume = 0.0,
     this.dailyAffirmationsTime = '06:00',
+    this.openStreakRemindersTime = '20:00',
   }) : _allowedColors = allowedColors,
        super._();
 
@@ -428,6 +456,9 @@ class _$UserPrefsSnapshotImpl extends _UserPrefsSnapshot {
   @override
   @JsonKey()
   final bool aiEncouragement;
+  @override
+  @JsonKey()
+  final bool openStreakReminders;
   @override
   @JsonKey()
   final String notificationFrequency;
@@ -482,10 +513,13 @@ class _$UserPrefsSnapshotImpl extends _UserPrefsSnapshot {
   @override
   @JsonKey()
   final String dailyAffirmationsTime;
+  @override
+  @JsonKey()
+  final String openStreakRemindersTime;
 
   @override
   String toString() {
-    return 'UserPrefsSnapshot(theme: $theme, fontSize: $fontSize, useDyslexiaFont: $useDyslexiaFont, highContrastMode: $highContrastMode, dailyAffirmations: $dailyAffirmations, aiEncouragement: $aiEncouragement, notificationFrequency: $notificationFrequency, notificationStyle: $notificationStyle, customizationEnabled: $customizationEnabled, useCustomColorPalette: $useCustomColorPalette, allowedColors: $allowedColors, customizedFont: $customizedFont, customizedPrimary: $customizedPrimary, customizedSecondary: $customizedSecondary, rewardType: $rewardType, skipToday: $skipToday, pauseGoals: $pauseGoals, registrationComplete: $registrationComplete, onboardingCompleted: $onboardingCompleted, soundEnabled: $soundEnabled, soundVolume: $soundVolume, dailyAffirmationsTime: $dailyAffirmationsTime)';
+    return 'UserPrefsSnapshot(theme: $theme, fontSize: $fontSize, useDyslexiaFont: $useDyslexiaFont, highContrastMode: $highContrastMode, dailyAffirmations: $dailyAffirmations, aiEncouragement: $aiEncouragement, openStreakReminders: $openStreakReminders, notificationFrequency: $notificationFrequency, notificationStyle: $notificationStyle, customizationEnabled: $customizationEnabled, useCustomColorPalette: $useCustomColorPalette, allowedColors: $allowedColors, customizedFont: $customizedFont, customizedPrimary: $customizedPrimary, customizedSecondary: $customizedSecondary, rewardType: $rewardType, skipToday: $skipToday, pauseGoals: $pauseGoals, registrationComplete: $registrationComplete, onboardingCompleted: $onboardingCompleted, soundEnabled: $soundEnabled, soundVolume: $soundVolume, dailyAffirmationsTime: $dailyAffirmationsTime, openStreakRemindersTime: $openStreakRemindersTime)';
   }
 
   @override
@@ -504,6 +538,8 @@ class _$UserPrefsSnapshotImpl extends _UserPrefsSnapshot {
                 other.dailyAffirmations == dailyAffirmations) &&
             (identical(other.aiEncouragement, aiEncouragement) ||
                 other.aiEncouragement == aiEncouragement) &&
+            (identical(other.openStreakReminders, openStreakReminders) ||
+                other.openStreakReminders == openStreakReminders) &&
             (identical(other.notificationFrequency, notificationFrequency) ||
                 other.notificationFrequency == notificationFrequency) &&
             (identical(other.notificationStyle, notificationStyle) ||
@@ -537,7 +573,12 @@ class _$UserPrefsSnapshotImpl extends _UserPrefsSnapshot {
             (identical(other.soundVolume, soundVolume) ||
                 other.soundVolume == soundVolume) &&
             (identical(other.dailyAffirmationsTime, dailyAffirmationsTime) ||
-                other.dailyAffirmationsTime == dailyAffirmationsTime));
+                other.dailyAffirmationsTime == dailyAffirmationsTime) &&
+            (identical(
+                  other.openStreakRemindersTime,
+                  openStreakRemindersTime,
+                ) ||
+                other.openStreakRemindersTime == openStreakRemindersTime));
   }
 
   @override
@@ -549,6 +590,7 @@ class _$UserPrefsSnapshotImpl extends _UserPrefsSnapshot {
     highContrastMode,
     dailyAffirmations,
     aiEncouragement,
+    openStreakReminders,
     notificationFrequency,
     notificationStyle,
     customizationEnabled,
@@ -565,6 +607,7 @@ class _$UserPrefsSnapshotImpl extends _UserPrefsSnapshot {
     soundEnabled,
     soundVolume,
     dailyAffirmationsTime,
+    openStreakRemindersTime,
   ]);
 
   /// Create a copy of UserPrefsSnapshot
@@ -587,6 +630,7 @@ abstract class _UserPrefsSnapshot extends UserPrefsSnapshot {
     final bool highContrastMode,
     final bool dailyAffirmations,
     final bool aiEncouragement,
+    final bool openStreakReminders,
     final String notificationFrequency,
     final String notificationStyle,
     final bool customizationEnabled,
@@ -603,6 +647,7 @@ abstract class _UserPrefsSnapshot extends UserPrefsSnapshot {
     final bool soundEnabled,
     final double soundVolume,
     final String dailyAffirmationsTime,
+    final String openStreakRemindersTime,
   }) = _$UserPrefsSnapshotImpl;
   const _UserPrefsSnapshot._() : super._();
 
@@ -618,6 +663,8 @@ abstract class _UserPrefsSnapshot extends UserPrefsSnapshot {
   bool get dailyAffirmations;
   @override
   bool get aiEncouragement;
+  @override
+  bool get openStreakReminders;
   @override
   String get notificationFrequency;
   @override
@@ -650,6 +697,8 @@ abstract class _UserPrefsSnapshot extends UserPrefsSnapshot {
   double get soundVolume;
   @override
   String get dailyAffirmationsTime;
+  @override
+  String get openStreakRemindersTime;
 
   /// Create a copy of UserPrefsSnapshot
   /// with the given fields replaced by the non-null parameter values.

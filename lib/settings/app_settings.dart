@@ -29,6 +29,7 @@ class AppSettings {
   bool get useDyslexiaFont => _snapshot.useDyslexiaFont;
   bool get dailyAffirmations => _snapshot.dailyAffirmations;
   bool get aiEncouragement => _snapshot.aiEncouragement;
+  bool get openStreakReminders => _snapshot.openStreakReminders;
   bool get skipToday => _snapshot.skipToday;
   bool get pauseGoals => _snapshot.pauseGoals;
   bool get registrationComplete => _snapshot.registrationComplete;
@@ -45,6 +46,7 @@ class AppSettings {
   String get notificationStyle => _snapshot.notificationStyle;
   String get notificationFrequency => _snapshot.notificationFrequency;
   String get dailyAffirmationsTime => _snapshot.dailyAffirmationsTime;
+  String get openStreakRemindersTime => _snapshot.openStreakRemindersTime;
 
   bool get notificationsEnabled =>
       ThemeStyles.notificationsEnabledForFrequency(notificationFrequency);
@@ -213,6 +215,11 @@ class AppSettings {
     _apply(_snapshot.copyWith(dailyAffirmations: value));
   }
 
+  Future<void> setOpenStreakReminders(bool value) async {
+    await _prefs.writeBool(StorageKeys.openStreakReminders, value);
+    _apply(_snapshot.copyWith(openStreakReminders: value));
+  }
+
   Future<void> setSkipToday(bool value) async {
     await _prefs.writeBool(StorageKeys.skipToday, value);
     _apply(_snapshot.copyWith(skipToday: value));
@@ -242,6 +249,11 @@ class AppSettings {
   Future<void> setDailyAffirmationsTime(String value) async {
     await _prefs.writeString(StorageKeys.dailyAffirmationsTime, value);
     _apply(_snapshot.copyWith(dailyAffirmationsTime: value));
+  }
+
+  Future<void> setOpenStreakRemindersTime(String value) async {
+    await _prefs.writeString(StorageKeys.openStreakRemindersTime, value);
+    _apply(_snapshot.copyWith(openStreakRemindersTime: value));
   }
 
   Future<void> setAllowedColors(Color value) async {
@@ -303,6 +315,8 @@ class AppSettings {
     await setUseDyslexiaFont(false);
     await setAiEncouragement(false);
     await setDailyAffirmations(false);
+    await setOpenStreakReminders(false);
+    await setOpenStreakRemindersTime('20:00');
     await setSkipToday(false);
     await setPauseGoals(false);
     await setRegistrationComplete(false);

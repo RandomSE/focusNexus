@@ -31,6 +31,17 @@ void main() {
     expect(GoalNotifier.isDailyAffirmationsEnabled, isTrue);
   });
 
+  test('checkOpenStreakReminders reads flag from injected storage', () async {
+    final memory = InMemoryKeyValueStorage(
+      initial: {StorageKeys.openStreakReminders: 'true'},
+    );
+    GoalNotifier.bindStorage(memory);
+
+    await GoalNotifier.checkOpenStreakReminders();
+
+    expect(GoalNotifier.isOpenStreakRemindersEnabled, isTrue);
+  });
+
   test('settings default to false when storage keys are absent', () async {
     GoalNotifier.bindStorage(InMemoryKeyValueStorage());
 
@@ -38,6 +49,7 @@ void main() {
 
     expect(GoalNotifier.isAiEncouragementEnabled, isFalse);
     expect(GoalNotifier.isDailyAffirmationsEnabled, isFalse);
+    expect(GoalNotifier.isOpenStreakRemindersEnabled, isFalse);
   });
 
   test(
