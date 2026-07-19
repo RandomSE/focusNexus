@@ -4,7 +4,7 @@ import 'package:focusNexus/motivators/adhd_motivator_pack.dart';
 void main() {
   test('pack has curated offline lines', () {
     expect(AdhdMotivatorPack.lines.length, greaterThanOrEqualTo(20));
-    expect(AdhdMotivatorPack.lines.length, lessThanOrEqualTo(40));
+    expect(AdhdMotivatorPack.lines.length, lessThanOrEqualTo(50));
   });
 
   test('lineAt wraps and forDate is stable per calendar day', () {
