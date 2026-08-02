@@ -13,10 +13,6 @@ void main() {
     SoundService.suppressNativePlaybackForTesting = true;
   });
 
-  tearDown(() {
-    SoundService.suppressNativePlaybackForTesting = false;
-  });
-
   testWidgets('play screen renders phase cue and title', (tester) async {
     final storage = onboardedTestStorage();
     await storage.write(key: StorageKeys.points, value: '400');
@@ -102,9 +98,9 @@ void main() {
       find.byKey(const ValueKey('breath_completion_opacity')),
     );
     expect(completionOpacity.opacity, greaterThan(0.9));
-    expect(find.byIcon(Icons.arrow_back), findsOneWidget);
-
-    await tester.tap(find.byIcon(Icons.arrow_back));
+    // End overlay covers the HUD back button; dismiss via Done (same as rain tests).
+    await pumpUntilFound(tester, find.text('Done'));
+    await tester.tap(find.text('Done'));
     await tester.pumpAndSettle();
     expect(find.text('Returned home'), findsOneWidget);
   });

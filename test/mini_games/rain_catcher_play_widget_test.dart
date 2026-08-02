@@ -15,9 +15,6 @@ void main() {
   setUp(() {
     SoundService.suppressNativePlaybackForTesting = true;
   });
-  tearDown(() {
-    SoundService.suppressNativePlaybackForTesting = false;
-  });
 
   testWidgets('play screen shows Water score label and timer', (
     tester,

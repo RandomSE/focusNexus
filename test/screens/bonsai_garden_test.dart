@@ -24,9 +24,6 @@ void main() {
   setUp(() {
     SoundService.suppressNativePlaybackForTesting = true;
   });
-  tearDown(() {
-    SoundService.suppressNativePlaybackForTesting = false;
-  });
 
   Future<ProviderContainer> pumpGarden(
     WidgetTester tester, {

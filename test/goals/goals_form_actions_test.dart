@@ -167,6 +167,10 @@ void main() {
         ),
         isTrue,
       );
+      ScaffoldMessenger.of(
+        tester.element(find.byType(Scaffold)),
+      ).clearSnackBars();
+      await tester.pump();
     });
 
     testWidgets('clearGoals removes active goals without repeat dialog', (

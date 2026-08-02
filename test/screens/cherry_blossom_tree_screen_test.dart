@@ -7,12 +7,23 @@ import 'package:focusNexus/progressive_visuals/garden_persistence.dart';
 import 'package:focusNexus/progressive_visuals/garden_state.dart';
 import 'package:focusNexus/providers/zen_garden_session_provider.dart';
 import 'package:focusNexus/screens/zen_garden/cherry_blossom_tree_screen.dart';
+import 'package:focusNexus/services/sound_service.dart';
 import 'package:focusNexus/services/storage/storage_keys.dart';
 
 import '../helpers/in_memory_key_value_storage.dart';
 import '../helpers/test_provider_scope.dart';
 
+Future<void> _openTreeMenu(WidgetTester tester) async {
+  await pumpUntilFound(tester, find.text('Menu'));
+  await tester.tap(find.text('Menu'));
+  await tester.pump();
+}
+
 void main() {
+  setUp(() {
+    SoundService.suppressNativePlaybackForTesting = true;
+  });
+
   testWidgets('grow tree disables when balance insufficient', (tester) async {
     final storage = InMemoryKeyValueStorage(
       initial: {
@@ -41,16 +52,19 @@ void main() {
         ),
       ),
     );
+    await _openTreeMenu(tester);
     await pumpUntilFound(tester, find.textContaining('Grow tree'));
 
     final grow = find.ancestor(
       of: find.textContaining('Grow tree'),
-      matching: find.byType(FilledButton),
+      matching: find.byType(ElevatedButton),
     );
-    expect(tester.widget<FilledButton>(grow).onPressed, isNull);
+    expect(tester.widget<ElevatedButton>(grow).onPressed, isNull);
   });
 
-  testWidgets('max tree enabled when balance can afford multiple grows', (tester) async {
+  testWidgets('max tree enabled when balance can afford multiple grows', (
+    tester,
+  ) async {
     final storage = InMemoryKeyValueStorage(
       initial: {
         StorageKeys.registrationComplete: 'true',
@@ -75,16 +89,19 @@ void main() {
         ),
       ),
     );
+    await _openTreeMenu(tester);
     await pumpUntilFound(tester, find.textContaining('Max tree'));
 
     final maxTree = find.ancestor(
       of: find.textContaining('Max tree'),
-      matching: find.byType(FilledButton),
+      matching: find.byType(ElevatedButton),
     );
-    expect(tester.widget<FilledButton>(maxTree).onPressed, isNotNull);
+    expect(tester.widget<ElevatedButton>(maxTree).onPressed, isNotNull);
   });
 
-  testWidgets('grow controls sit in bottom panel below tree', (tester) async {
+  testWidgets('grow controls appear in menu overlay when Menu is open', (
+    tester,
+  ) async {
     final storage = InMemoryKeyValueStorage(
       initial: {
         StorageKeys.registrationComplete: 'true',
@@ -109,17 +126,20 @@ void main() {
         ),
       ),
     );
-    await pumpUntilFound(tester, find.textContaining('Grow tree'));
+    await pumpUntilFound(tester, find.text('Menu'));
+    expect(find.textContaining('Grow tree'), findsNothing);
 
-    final growTop = tester.getTopLeft(find.textContaining('Grow tree')).dy;
-    final scaffoldSize = tester.getSize(find.byType(Scaffold).first);
-    expect(growTop, greaterThan(scaffoldSize.height * 0.55));
+    await _openTreeMenu(tester);
+    await pumpUntilFound(tester, find.textContaining('Grow tree'));
+    expect(find.textContaining('Grow tree'), findsOneWidget);
   });
 
   testWidgets('prestige button at max stage level', (tester) async {
-    final tree = CherryBlossomTreeState.initial().copyWith(
-      growthStepsInStage: CherryBlossomStageCatalog.levelsPerStage - 1,
-    ).normalized();
+    final tree = CherryBlossomTreeState.initial()
+        .copyWith(
+          growthStepsInStage: CherryBlossomStageCatalog.levelsPerStage - 1,
+        )
+        .normalized();
     final prestigeCost = CherryBlossomTreeEngine(tree).prestigeCost()!;
     final storage = InMemoryKeyValueStorage(
       initial: {
@@ -148,6 +168,7 @@ void main() {
         ),
       ),
     );
+    await _openTreeMenu(tester);
     await pumpUntilFound(tester, find.textContaining('Prestige tree'));
     expect(find.textContaining('Grow tree'), findsNothing);
   });
@@ -182,6 +203,7 @@ void main() {
         ),
       ),
     );
+    await _openTreeMenu(tester);
     await pumpUntilFound(tester, find.textContaining('Prestige tree'));
     await tester.tap(find.textContaining('Prestige tree'));
     await tester.pump();
@@ -230,6 +252,7 @@ void main() {
           ),
         ),
       );
+      await _openTreeMenu(tester);
       await pumpUntilFound(tester, find.textContaining('Prestige tree'));
       await tester.tap(find.textContaining('Prestige tree'));
       // Advance only a slice of the prestige transition (not full settle).
@@ -239,9 +262,9 @@ void main() {
       expect(find.textContaining('Max tree'), findsOneWidget);
       final maxTree = find.ancestor(
         of: find.textContaining('Max tree'),
-        matching: find.byType(FilledButton),
+        matching: find.byType(ElevatedButton),
       );
-      expect(tester.widget<FilledButton>(maxTree).onPressed, isNotNull);
+      expect(tester.widget<ElevatedButton>(maxTree).onPressed, isNotNull);
     },
   );
 }

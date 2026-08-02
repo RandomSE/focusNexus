@@ -66,6 +66,15 @@ class AchievementService {
   List<int> weeklyStreakRepetitions = [2, 4, 8, 12, 16, 20];
   List<int> categoryTripletsRepetitions = [3, 3, 3, 3, 3];
   List<int> openStreakRepetitions = [3, 7, 30, 90];
+
+  /// IDs created by [_addOpenStreakAchievements] / [_ensureOpenStreakAchievements].
+  static const List<String> openStreakAchievementIds = [
+    '114',
+    '115',
+    '116',
+    '117',
+  ];
+
   List<int> fireflyDurationRepetitions = [100, 150, 200, 250];
   static const int fireflyEndlessRepetition = 500;
   List<int> stoneBalanceHeightRepetitions = [25, 35, 40, 50, 60];
@@ -766,7 +775,7 @@ class AchievementService {
   Future<void> _addOpenStreakAchievements() async {
     await addAchievement(
       Achievement(
-        id: '114',
+        id: openStreakAchievementIds[0],
         title: 'Open Streak Novice',
         reward: '100 points',
         task: 'Open the app on 3 consecutive days',
@@ -775,7 +784,7 @@ class AchievementService {
     );
     await addAchievement(
       Achievement(
-        id: '115',
+        id: openStreakAchievementIds[1],
         title: 'Open Streak Regular',
         reward: '250 points',
         task: 'Open the app on 7 consecutive days',
@@ -784,7 +793,7 @@ class AchievementService {
     );
     await addAchievement(
       Achievement(
-        id: '116',
+        id: openStreakAchievementIds[2],
         title: 'Open Streak Dedicated',
         reward: '1000 points',
         task: 'Open the app on 30 consecutive days',
@@ -793,7 +802,7 @@ class AchievementService {
     );
     await addAchievement(
       Achievement(
-        id: '117',
+        id: openStreakAchievementIds[3],
         title: 'Ninety Sunrises',
         reward: '5000 points',
         task: 'Open the app on 90 consecutive days',
@@ -803,7 +812,11 @@ class AchievementService {
   }
 
   Future<void> _ensureOpenStreakAchievements() async {
-    if (_cachedAchievements.any((a) => a.id == '114')) return;
+    if (_cachedAchievements.any(
+      (a) => a.id == openStreakAchievementIds.first,
+    )) {
+      return;
+    }
 
     await bulkSetAchievementVariablesInStorage([
       StorageKeys.consecutiveDaysAppOpened,

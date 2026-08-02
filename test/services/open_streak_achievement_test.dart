@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:focusNexus/services/achievement_service.dart';
 import 'package:focusNexus/services/storage/storage_keys.dart';
 
+import '../helpers/achievement_catalog_probe.dart';
 import '../helpers/in_memory_key_value_storage.dart';
 
 void main() {
@@ -11,23 +12,36 @@ void main() {
       final service = AchievementService(storage: storage);
       await service.initialize();
 
+      final ids = service.all.map((a) => a.id).toList();
+      expect(ids, containsAll(AchievementService.openStreakAchievementIds));
+      expect(ids.toSet().length, ids.length);
+
       expect(service.getById('114'), isNotNull);
       expect(service.getById('115'), isNotNull);
       expect(service.getById('116'), isNotNull);
       final secret = service.getById('117')!;
       expect(secret.isSecret, isTrue);
       expect(secret.title, 'Ninety Sunrises');
-      expect(service.all.length, 173);
+      // Size derived from seed path, not a hardcoded catalog literal.
+      expect(service.all.length, await freshAchievementCatalogSize());
     });
 
     test('upgrade path ensures 114-117 when missing', () async {
       final storage = InMemoryKeyValueStorage();
       final first = AchievementService(storage: storage);
       await first.initialize();
-      await first.removeAchievement('114');
-      await first.removeAchievement('115');
-      await first.removeAchievement('116');
-      await first.removeAchievement('117');
+      await first.removeAchievement(
+        AchievementService.openStreakAchievementIds[0],
+      );
+      await first.removeAchievement(
+        AchievementService.openStreakAchievementIds[1],
+      );
+      await first.removeAchievement(
+        AchievementService.openStreakAchievementIds[2],
+      );
+      await first.removeAchievement(
+        AchievementService.openStreakAchievementIds[3],
+      );
       first.resetInitializedForTesting();
 
       final upgraded = AchievementService(storage: storage);

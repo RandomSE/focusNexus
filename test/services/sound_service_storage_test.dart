@@ -18,10 +18,6 @@ void main() {
     sound = SoundService(InMemoryKeyValueStorage());
   });
 
-  tearDown(() {
-    SoundService.suppressNativePlaybackForTesting = false;
-  });
-
   test('checkSoundEnabled reads from injected storage', () async {
     sound = SoundService(
       InMemoryKeyValueStorage(initial: {'soundEnabled': 'true'}),
