@@ -5,7 +5,7 @@ import 'package:focusNexus/widgets/mini_game_hud_chrome.dart';
 import 'package:focusNexus/widgets/mini_game_themed_hud.dart';
 
 void main() {
-  ThemeBundle _bundle({String? fontFamily}) {
+  ThemeBundle bundle({String? fontFamily}) {
     return ThemeBundle(
       themeData: ThemeData.dark(),
       textStyle: TextStyle(
@@ -24,7 +24,7 @@ void main() {
   }
 
   testWidgets('topBar shows score label timer and back', (tester) async {
-    final hud = MiniGameThemedHud(_bundle(fontFamily: 'OpenDyslexic'));
+    final hud = MiniGameThemedHud(bundle(fontFamily: 'OpenDyslexic'));
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -64,7 +64,7 @@ void main() {
   });
 
   testWidgets('endScoreBody shows title value and Done', (tester) async {
-    final hud = MiniGameThemedHud(_bundle());
+    final hud = MiniGameThemedHud(bundle());
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(

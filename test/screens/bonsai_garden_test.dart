@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:focusNexus/progressive_visuals/cherry_blossom_bonsai_tile.dart';
 import 'package:focusNexus/progressive_visuals/cherry_blossom_falling_petals.dart';
 import 'package:focusNexus/progressive_visuals/cherry_blossom_multiply_blend.dart';
 import 'package:focusNexus/progressive_visuals/cherry_blossom_peace_petals.dart';

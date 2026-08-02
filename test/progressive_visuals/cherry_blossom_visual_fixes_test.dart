@@ -132,7 +132,10 @@ void main() {
       final sky = CherryBlossomStageCatalog.scaffoldColorFor(2);
       expect(ground, isNot(sky));
       // Midday soil is brown (red+green high-ish, blue lower).
-      expect(ground.blue, lessThan(ground.red));
+      expect(
+        (ground.b * 255.0).round().clamp(0, 255),
+        lessThan((ground.r * 255.0).round().clamp(0, 255)),
+      );
     });
   });
 

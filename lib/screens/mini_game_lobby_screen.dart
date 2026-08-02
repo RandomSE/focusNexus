@@ -117,6 +117,7 @@ class _MiniGameLobbyScreenState extends ConsumerState<MiniGameLobbyScreen> {
       }
       if (!mounted) return;
       await repos.miniGames.markLastPlayed(game.id);
+      if (!mounted) return;
       await ref.pushRoute(
         context,
         MiniGamePlayRoute(gameId: game.id, endless: _endless),
