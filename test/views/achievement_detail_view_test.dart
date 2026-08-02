@@ -12,6 +12,10 @@ import 'package:focusNexus/views/achievement_detail_view.dart';
 import '../helpers/in_memory_key_value_storage.dart';
 
 void main() {
+  setUp(() {
+    SoundService.suppressNativePlaybackForTesting = true;
+  });
+
   Future<AchievementService> readyService({
     List<Achievement>? achievements,
   }) async {
@@ -111,6 +115,10 @@ void main() {
 
     await tester.tap(find.text('Complete Achievement'));
     await tester.pumpAndSettle();
+    ScaffoldMessenger.of(
+      tester.element(find.byType(Scaffold).first),
+    ).clearSnackBars();
+    await tester.pump();
 
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
@@ -157,6 +165,10 @@ void main() {
 
     await tester.tap(find.text('Complete Achievement'));
     await tester.pumpAndSettle();
+    ScaffoldMessenger.of(
+      tester.element(find.byType(Scaffold).first),
+    ).clearSnackBars();
+    await tester.pump();
 
     expect(find.text('Complete Achievement'), findsNothing);
   });

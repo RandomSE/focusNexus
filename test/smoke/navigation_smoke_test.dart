@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:focusNexus/app/app_routes.dart';
+import 'package:focusNexus/mini_games/firefly_jar/firefly_jar_constants.dart';
+import 'package:focusNexus/screens/mini_games_screen.dart';
 import 'package:focusNexus/services/storage/storage_keys.dart';
 
 import '../helpers/test_provider_scope.dart';
@@ -54,6 +56,10 @@ void main() {
     // Navigate Mini-games (not Progressive visuals): Zen garden persist schedules
     // a Riverpod zero-duration refresh timer that can outlive the test.
     await tester.tap(find.text('Mini-games'));
-    await pumpUntilFound(tester, find.text('No mini-games available yet.'));
+    await pumpUntilFound(tester, find.text(FireflyJarConstants.title));
+    expect(
+      find.text(miniGamesLastPlayedButtonLabel(FireflyJarConstants.title)),
+      findsOneWidget,
+    );
   });
 }
