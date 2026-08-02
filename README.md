@@ -20,4 +20,4 @@ flutter analyze --fatal-infos
 flutter test
 ```
 
-Use the same Flutter version locally as CI — e.g. `flutter upgrade` to match `.flutter-version`, or [FVM](https://fvm.app/) with `fvm install` / `fvm use`.
+Use the same Flutter version locally as CI - e.g. `flutter upgrade` to match `.flutter-version`, or [FVM](https://fvm.app/) with `fvm install` / `fvm use`.

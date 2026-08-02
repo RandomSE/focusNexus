@@ -15,6 +15,7 @@ export 'zen_garden_session_provider.dart';
 export 'zen_garden_session_state.dart';
 export 'zen_garden_shop_provider.dart';
 export 'key_value_storage_provider.dart';
+export 'mini_game_catalog_provider.dart';
 export 'registration_form_provider.dart';
 export 'screen_ui_providers.dart';
 export 'theme_bundle_provider.dart';

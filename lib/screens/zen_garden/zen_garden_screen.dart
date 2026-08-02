@@ -9,6 +9,9 @@ import 'package:focusNexus/app/app_route.dart';
 import 'package:focusNexus/providers/points_balance_provider.dart';
 import 'package:focusNexus/providers/zen_garden_session_provider.dart';
 import 'package:focusNexus/providers/zen_garden_session_state.dart';
+import 'package:focusNexus/providers/app_services_provider.dart';
+import 'package:focusNexus/services/sound_channel.dart';
+import 'package:focusNexus/services/sound_service.dart';
 import 'package:focusNexus/utils/common_utils.dart';
 import 'package:focusNexus/progressive_visuals/cherry_blossom_unlock.dart';
 import 'package:focusNexus/progressive_visuals/decor_catalog.dart';
@@ -60,13 +63,11 @@ class ZenGardenScreen extends ConsumerStatefulWidget {
   ConsumerState<ZenGardenScreen> createState() => _ZenGardenScreenState();
 }
 
-class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen>
-    with SingleTickerProviderStateMixin {
+class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen> {
+  SoundService? _sounds;
   final _random = Random();
   final SandboxHitTester _hitTester = const ZenGardenHitTester();
   final TransformationController _viewportTransform = TransformationController();
-  late final AnimationController _viewportResetAnim;
-  bool _centeringViewport = false;
   Future<void>? _gardenLoadFuture;
   late final ZenGardenSession _session;
 
@@ -75,6 +76,7 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen>
   ProgressiveGardenEngine get _engine => _session.engine;
   GardenState get _garden => _ui.garden;
   bool get _chromeVisible => _ui.chromeVisible;
+  bool get _menuOpen => _ui.menuOpen;
   String? get _placingDecorInventoryId => _ui.placingDecorInventoryId;
   bool get _placingPlant => _ui.placingPlant;
   String? get _placingPlantInventoryId => _ui.placingPlantInventoryId;
@@ -115,10 +117,10 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen>
   void initState() {
     super.initState();
     _session = ref.read(zenGardenSessionProvider.notifier);
-    _viewportResetAnim = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 450),
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(_startZenMusic());
+    });
     ref.listenManual(pointsBalanceProvider, (previous, next) {
       next.whenData((balance) {
         ref.read(zenGardenSessionProvider.notifier).applyWalletBalance(balance);
@@ -140,6 +142,24 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen>
         _session.clearPendingCherryBlossomUnlockToast();
       },
     );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _sounds ??= ref.read(soundServiceProvider);
+  }
+
+  Future<void> _startZenMusic() async {
+    await ref.read(soundServiceProvider).startMusic(SoundChannel.zenGardenMusic);
+  }
+
+  Future<void> _openCherryBlossomTree() async {
+    await ref.read(soundServiceProvider).stopMusic();
+    if (!mounted) return;
+    await ref.pushRoute(context, AppRoute.cherryBlossomTree);
+    if (!mounted) return;
+    await _startZenMusic();
   }
 
   int get _walletBalance {
@@ -176,8 +196,11 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen>
 
   @override
   void dispose() {
+    final sounds = _sounds;
+    if (sounds != null) {
+      unawaited(sounds.stopMusic());
+    }
     _viewportTransform.removeListener(_syncViewportMoved);
-    _viewportResetAnim.dispose();
     _viewportTransform.dispose();
     super.dispose();
   }
@@ -187,45 +210,6 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen>
     final moved = !sandboxViewportIsDefault(_viewportTransform.value);
     if (moved != _viewportMoved) {
       _session.setViewportMoved(moved);
-    }
-  }
-
-  Future<void> _centerViewport() async {
-    if (_centeringViewport) return;
-    _centeringViewport = true;
-    try {
-      if (sandboxViewportIsDefault(_viewportTransform.value)) {
-        resetSandboxViewport(_viewportTransform);
-        _syncViewportMoved();
-        return;
-      }
-
-      _viewportResetAnim.stop();
-      _viewportResetAnim.reset();
-      final begin = _viewportTransform.value.clone();
-      final curve = CurvedAnimation(
-        parent: _viewportResetAnim,
-        curve: Curves.easeOutCubic,
-      );
-      void tick() {
-        _viewportTransform.value = lerpSandboxViewportMatrix(
-          begin,
-          Matrix4.identity(),
-          curve.value,
-        );
-      }
-
-      _viewportResetAnim.addListener(tick);
-      try {
-        await _viewportResetAnim.forward();
-      } finally {
-        _viewportResetAnim.removeListener(tick);
-        curve.dispose();
-      }
-      resetSandboxViewport(_viewportTransform);
-      _syncViewportMoved();
-    } finally {
-      _centeringViewport = false;
     }
   }
 
@@ -378,8 +362,27 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen>
     }
   }
 
-  void _toggleChrome() {
-    _patch((s) => s.copyWith(chromeVisible: !s.chromeVisible));
+  void _toggleMenu() {
+    _patch((s) => s.copyWith(menuOpen: !s.menuOpen));
+  }
+
+  void _closeMenu() {
+    if (!_menuOpen) return;
+    _patch((s) => s.copyWith(menuOpen: false));
+  }
+
+  void _hideChrome() {
+    _patch((s) => s.copyWith(chromeVisible: false, menuOpen: false));
+  }
+
+  void _revealChrome() {
+    _patch((s) => s.copyWith(chromeVisible: true));
+  }
+
+  /// Runs a menu action then closes the overlay, mirroring standard menu UX.
+  void _runMenuAction(VoidCallback action) {
+    action();
+    _closeMenu();
   }
 
   void _bulkStashToInventory() {
@@ -1218,6 +1221,13 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen>
       _resetPointer();
       return;
     }
+    if (!_chromeVisible) {
+      // Distraction-free mode: the first simple tap only brings the menu
+      // chip back, it does not also pick/deselect an item underneath it.
+      _revealChrome();
+      _resetPointer();
+      return;
+    }
     if (_pointerPick != null) {
       if (!_selection.multiMode &&
           _selection.hasFocus &&
@@ -1264,7 +1274,6 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen>
     final focusPlant = _focusPlant;
     final focusDecor = _focusDecor;
     final bulkCount = _selection.bulkCount;
-    final topPadding = MediaQuery.paddingOf(context).top;
 
     return Theme(
       data: widget.themeData,
@@ -1277,95 +1286,77 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen>
               if (_chromeVisible) ...[
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Icon(Icons.spa_outlined, color: widget.primaryColor, size: 22),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Points: $_walletBalance',
-                          style: widget.textStyle,
+                      if (_menuOpen) ...[
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.spa_outlined,
+                              color: widget.primaryColor,
+                              size: 22,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  'Points: $_walletBalance',
+                                  style: widget.textStyle,
+                                  maxLines: 1,
+                                  softWrap: false,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              tooltip: 'How points and the garden work',
+                              onPressed: _showZenGardenHelp,
+                              icon: Icon(
+                                Icons.info_outline,
+                                color: widget.primaryColor,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      IconButton(
-                        tooltip: 'How points and the garden work',
-                        onPressed: _showZenGardenHelp,
-                        icon: Icon(Icons.info_outline, color: widget.primaryColor),
-                      ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    alignment: WrapAlignment.start,
-                    children: [
-                      FilledButton.tonalIcon(
-                        onPressed: _startPlantPlacement,
-                        icon: const Icon(Icons.grass_outlined),
-                        label: const Text('Add plant'),
-                        style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
-                      ),
-                      FilledButton.tonalIcon(
-                        onPressed: _openShop,
-                        icon: const Icon(Icons.storefront_outlined),
-                        label: const Text('Shop'),
-                        style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
-                      ),
-                      FilledButton.tonalIcon(
-                        onPressed: _openInventory,
-                        icon: const Icon(Icons.inventory_2_outlined),
-                        label: const Text('Inventory'),
-                        style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
-                      ),
-                      if (isCherryBlossomTreeUnlocked(_garden))
-                        FilledButton.tonalIcon(
-                          onPressed: () => ref.pushRoute(
-                            context,
-                            AppRoute.cherryBlossomTree,
+                        const SizedBox(height: 6),
+                      ],
+                      Row(
+                        children: [
+                          if (!_menuOpen) ...[
+                            Icon(
+                              Icons.spa_outlined,
+                              color: widget.primaryColor,
+                              size: 22,
+                            ),
+                            const Spacer(),
+                          ] else
+                            const Spacer(),
+                          FilledButton.tonalIcon(
+                            onPressed: _toggleMenu,
+                            icon: Icon(_menuOpen ? Icons.close : Icons.menu),
+                            label: Text(_menuOpen ? 'Close' : 'Menu'),
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size(0, 40),
+                            ),
                           ),
-                          icon: const Icon(Icons.park_outlined),
-                          label: const Text('Visit Cherry Blossom Tree'),
-                          style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
-                        ),
-                      FilledButton.tonalIcon(
-                        onPressed: () => _setMultiMode(!_selection.multiMode),
-                        icon: Icon(
-                          _selection.multiMode
-                              ? Icons.check_box
-                              : Icons.check_box_outline_blank,
-                        ),
-                        label: Text(_selection.multiMode ? 'Selection on' : 'Select'),
-                        style: FilledButton.styleFrom(
-                          minimumSize: const Size(0, 48),
-                          backgroundColor: _selection.multiMode
-                              ? widget.primaryColor.withValues(alpha: 0.15)
-                              : null,
-                        ),
+                        ],
                       ),
-                      FilledButton.tonalIcon(
-                        onPressed: _toggleChrome,
-                        icon: const Icon(Icons.fullscreen),
-                        label: const Text('Fullscreen'),
-                        style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
-                      ),
-                      FilledButton.tonalIcon(
-                        onPressed: _centerViewport,
-                        icon: const Icon(Icons.center_focus_strong),
-                        label: const Text('Center'),
-                        style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
-                      ),
-                      if (_selection.multiMode && bulkCount > 0)
-                        FilledButton.icon(
-                          onPressed: _bulkStashToInventory,
-                          icon: const Icon(Icons.inventory_2_outlined),
-                          label: Text('To inventory ($bulkCount)'),
-                          style: FilledButton.styleFrom(
-                            minimumSize: const Size(0, 48),
+                      if (_menuOpen) ...[
+                        const SizedBox(height: 6),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: FilledButton.tonalIcon(
+                            onPressed: _hideChrome,
+                            icon: const Icon(Icons.visibility_off_outlined),
+                            label: const Text('Hide menu'),
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size(0, 40),
+                            ),
                           ),
                         ),
+                      ],
                     ],
                   ),
                 ),
@@ -1399,7 +1390,7 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen>
               ],
               Expanded(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: _chromeVisible ? 12 : 0),
+                  padding: EdgeInsets.zero,
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       final w = constraints.maxWidth;
@@ -1433,7 +1424,7 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen>
                         decorOverrides: decorOverrides.isEmpty ? null : decorOverrides,
                       );
                       return ClipRRect(
-                        borderRadius: BorderRadius.circular(_chromeVisible ? 12 : 0),
+                        borderRadius: BorderRadius.zero,
                         child: Stack(
                           clipBehavior: Clip.hardEdge,
                           children: [
@@ -1544,25 +1535,6 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen>
                                 ],
                               ),
                             ),
-                            if (_viewportMoved)
-                              Positioned(
-                                left: 10,
-                                bottom: 10,
-                                child: Material(
-                                  elevation: 3,
-                                  shadowColor: Colors.black26,
-                                  borderRadius: BorderRadius.circular(24),
-                                  color: widget.secondaryColor.withValues(alpha: 0.94),
-                                  child: IconButton(
-                                    tooltip: 'Center garden',
-                                    onPressed: _centerViewport,
-                                    icon: Icon(
-                                      Icons.center_focus_strong,
-                                      color: widget.primaryColor,
-                                    ),
-                                  ),
-                                ),
-                              ),
                             if (_selection.multiMode)
                               ZenGardenBulkSelectOverlay(
                                 selection: _selection,
@@ -1600,6 +1572,8 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen>
                                 onRemovePlant: _removeFocusPlant,
                                 onRemoveDecor: _removeFocusDecor,
                               ),
+                            if (_menuOpen)
+                              _buildGardenMenuOverlay(context, bulkCount: bulkCount),
                           ],
                         ),
                       );
@@ -1609,31 +1583,85 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen>
               ),
             ],
           ),
-          if (!_chromeVisible)
-            Positioned(
-              top: topPadding + 8,
-              left: 12,
-              right: 12,
-              child: Row(
+        ],
+      ),
+    );
+  }
+
+  /// In-canvas garden actions panel opened via the top "Menu" chip.
+  Widget _buildGardenMenuOverlay(BuildContext context, {required int bulkCount}) {
+    return Align(
+      alignment: Alignment.topCenter,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+        child: Material(
+          elevation: 10,
+          shadowColor: Colors.black38,
+          borderRadius: BorderRadius.circular(16),
+          clipBehavior: Clip.antiAlias,
+          color: widget.secondaryColor.withValues(alpha: 0.97),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.start,
                 children: [
                   FilledButton.tonalIcon(
-                    onPressed: _toggleChrome,
-                    icon: const Icon(Icons.dashboard_customize_outlined),
-                    label: const Text('Show controls'),
-                    style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
+                    onPressed: () => _runMenuAction(_startPlantPlacement),
+                    icon: const Icon(Icons.grass_outlined),
+                    label: const Text('Add plant'),
+                    style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
                   ),
-                  const Spacer(),
+                  FilledButton.tonalIcon(
+                    onPressed: () => _runMenuAction(_openShop),
+                    icon: const Icon(Icons.storefront_outlined),
+                    label: const Text('Shop'),
+                    style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
+                  ),
+                  FilledButton.tonalIcon(
+                    onPressed: () => _runMenuAction(_openInventory),
+                    icon: const Icon(Icons.inventory_2_outlined),
+                    label: const Text('Inventory'),
+                    style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
+                  ),
+                  if (isCherryBlossomTreeUnlocked(_garden))
+                    FilledButton.tonalIcon(
+                      onPressed: () => _runMenuAction(_openCherryBlossomTree),
+                      icon: const Icon(Icons.park_outlined),
+                      label: const Text('Visit Cherry Blossom Tree'),
+                      style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
+                    ),
+                  FilledButton.tonalIcon(
+                    onPressed: () =>
+                        _runMenuAction(() => _setMultiMode(!_selection.multiMode)),
+                    icon: Icon(
+                      _selection.multiMode
+                          ? Icons.check_box
+                          : Icons.check_box_outline_blank,
+                    ),
+                    label: Text(_selection.multiMode ? 'Selection on' : 'Select'),
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(0, 48),
+                      backgroundColor: _selection.multiMode
+                          ? widget.primaryColor.withValues(alpha: 0.15)
+                          : null,
+                    ),
+                  ),
                   if (_selection.multiMode && bulkCount > 0)
                     FilledButton.icon(
-                      onPressed: _bulkStashToInventory,
+                      onPressed: () => _runMenuAction(_bulkStashToInventory),
                       icon: const Icon(Icons.inventory_2_outlined),
                       label: Text('To inventory ($bulkCount)'),
-                      style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
+                      style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
                     ),
                 ],
               ),
             ),
-        ],
+          ),
+        ),
       ),
     );
   }

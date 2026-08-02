@@ -10,6 +10,7 @@ import 'package:focusNexus/progressive_visuals/sandbox_selection.dart';
 import 'package:focusNexus/progressive_visuals/zen_garden_achievement_sync.dart';
 import 'package:focusNexus/progressive_visuals/zen_garden_rules.dart';
 import 'package:focusNexus/providers/achievement_ready_toast_provider.dart';
+import 'package:focusNexus/providers/achievements_list_refresh_provider.dart';
 import 'package:focusNexus/providers/app_repositories_provider.dart';
 import 'package:focusNexus/providers/app_services_provider.dart';
 import 'package:focusNexus/providers/points_balance_provider.dart';
@@ -64,6 +65,21 @@ class ZenGardenSession extends _$ZenGardenSession {
   void touch() {
     if (_notifierDisposed) return;
     state = state.bump();
+  }
+
+  /// Clears in-memory garden without persisting (account delete).
+  ///
+  /// Must run before [AppRepositories.wipeAllUserData]. Sets
+  /// [_hasLoadedFromDisk] false so [ref.onDispose] cannot re-save the old
+  /// garden onto wiped storage.
+  void resetForAccountWipe() {
+    _growthTicker?.cancel();
+    _growthTicker = null;
+    _persistQueue = null;
+    _hasLoadedFromDisk = false;
+    selection.clearAll();
+    if (_notifierDisposed) return;
+    state = ZenGardenSessionState.initial();
   }
 
   Future<void> loadGarden() async {
@@ -157,15 +173,19 @@ class ZenGardenSession extends _$ZenGardenSession {
 
   Future<void> _syncZenGardenAchievements(GardenState garden) async {
     try {
-      final ready = await syncZenGardenAchievements(
+      final result = await syncZenGardenAchievements(
         storage: _repos.storage,
         achievements: ref.read(achievementServiceProvider),
         garden: garden,
       );
-      if (ready.isNotEmpty) {
+      if (result.newlyReady.isNotEmpty) {
         ref
             .read(achievementReadyToastQueueProvider.notifier)
-            .enqueueTitles(ready.map((a) => a.title));
+            .enqueueTitles(result.newlyReady.map((a) => a.title));
+      }
+      if (result.progressed) {
+        // keepAlive catalog must refresh or claimable purple stays stale.
+        ref.read(achievementsListRefreshProvider.notifier).bump();
       }
     } catch (e, st) {
       debugLog('Zen garden achievement sync failed: $e\n$st');

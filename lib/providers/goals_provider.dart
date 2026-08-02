@@ -133,7 +133,7 @@ class GoalsView extends _$GoalsView {
     return plan.newGoals;
   }
 
-  /// Synchronous optimistic complete — UI should call this for tap handlers.
+  /// Synchronous optimistic complete - UI should call this for tap handlers.
   CompleteGoalResult? completeGoalOptimistic(int goalId, {DateTime? now}) {
     final clock = now ?? DateTime.now();
     final plan = _useCase.planCompleteGoal(

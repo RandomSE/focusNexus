@@ -1,7 +1,9 @@
+import 'package:focusNexus/mini_games/breath_pacer/breath_pacer_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focusNexus/progressive_visuals/visual_theme_id.dart';
 import 'package:focusNexus/providers/app_settings_provider.dart';
+import 'package:focusNexus/rewards/reward_type_selection.dart';
 import 'package:focusNexus/screens/achievements_screen.dart';
 import 'package:focusNexus/screens/ai_chat_screen.dart';
 import 'package:focusNexus/screens/auth_start_screen.dart';
@@ -12,10 +14,26 @@ import 'package:focusNexus/screens/goals/time_window_calendar_placeholder_screen
 import 'package:focusNexus/screens/goals/time_window_goals_hub_screen.dart';
 import 'package:focusNexus/screens/goals/time_window_manual_create_screen.dart';
 import 'package:focusNexus/screens/goals_screen.dart';
+import 'package:focusNexus/mini_games/firefly_jar/firefly_jar_constants.dart';
+import 'package:focusNexus/mini_games/meteor_catch/meteor_catch_engine.dart';
+import 'package:focusNexus/mini_games/mini_game_round_config.dart';
+import 'package:focusNexus/mini_games/rain_catcher/rain_catcher_constants.dart';
+import 'package:focusNexus/mini_games/stone_balance/stone_balance_constants.dart';
+import 'package:focusNexus/screens/firefly_jar_play_screen.dart';
+import 'package:focusNexus/screens/breath_pacer_play_screen.dart';
+import 'package:focusNexus/screens/meteor_catch_play_screen.dart';
+import 'package:focusNexus/screens/mini_game_lobby_screen.dart';
+import 'package:focusNexus/screens/mini_game_play_stub_screen.dart';
+import 'package:focusNexus/screens/stone_balance_play_screen.dart';
+import 'package:focusNexus/screens/word_bloom_play_screen.dart';
 import 'package:focusNexus/screens/mini_games_screen.dart';
+import 'package:focusNexus/screens/rain_catcher_play_screen.dart';
+import 'package:focusNexus/mini_games/word_bloom/word_bloom_constants.dart';
 import 'package:focusNexus/screens/onboarding_screen.dart';
 import 'package:focusNexus/screens/progressive_visual_section.dart';
 import 'package:focusNexus/screens/settings_screen.dart';
+import 'package:focusNexus/screens/sound_effects_screen.dart';
+import 'package:focusNexus/screens/music_screen.dart';
 import 'package:focusNexus/screens/zen_garden/cherry_blossom_tree_screen.dart';
 import 'package:focusNexus/settings/app_settings.dart';
 import 'package:focusNexus/utils/screen_theme.dart';
@@ -50,7 +68,11 @@ sealed class AppRoute {
   static const onboard = OnboardRoute();
   static const dashboard = DashboardRoute();
   static const settings = SettingsRoute();
+  static const soundEffects = SoundEffectsRoute();
+  static const music = MusicRoute();
   static const reward = RewardRoute();
+  static const miniGames = MiniGamesRoute();
+  static const customization = CustomizationRoute();
   static const chat = ChatRoute();
   static const achievements = AchievementsRoute();
   static const goals = GoalsRoute();
@@ -64,10 +86,22 @@ sealed class AppRoute {
       OnboardRoute.routeName => onboard,
       DashboardRoute.routeName => dashboard,
       SettingsRoute.routeName => AppRoute.settings,
+      SoundEffectsRoute.routeName => soundEffects,
+      MusicRoute.routeName => music,
       RewardRoute.routeName => reward,
+      MiniGamesRoute.routeName => miniGames,
+      MiniGameLobbyRoute.routeName => MiniGameLobbyRoute(
+        MiniGameLobbyRoute.gameIdFrom(settings.arguments),
+      ),
+      MiniGamePlayRoute.routeName => MiniGamePlayRoute.fromArguments(
+        settings.arguments,
+      ),
+      CustomizationRoute.routeName => customization,
       ChatRoute.routeName => chat,
       AchievementsRoute.routeName => achievements,
-      GoalsRoute.routeName => GoalsRoute(GoalsRoute.goalIdFrom(settings.arguments)),
+      GoalsRoute.routeName => GoalsRoute(
+        GoalsRoute.goalIdFrom(settings.arguments),
+      ),
       TimeWindowHubRoute.routeName => timeWindowHub,
       TimeWindowManualRoute.routeName => const TimeWindowManualRoute(),
       TimeWindowCalendarRoute.routeName => const TimeWindowCalendarRoute(),
@@ -110,9 +144,80 @@ final class SettingsRoute extends AppRoute {
   String get path => routeName;
 }
 
+final class SoundEffectsRoute extends AppRoute {
+  const SoundEffectsRoute();
+  static const routeName = 'sound_effects';
+  @override
+  String get path => routeName;
+}
+
+final class MusicRoute extends AppRoute {
+  const MusicRoute();
+  static const routeName = 'music';
+  @override
+  String get path => routeName;
+}
+
 final class RewardRoute extends AppRoute {
   const RewardRoute();
   static const routeName = 'reward';
+  @override
+  String get path => routeName;
+}
+
+final class MiniGamesRoute extends AppRoute {
+  const MiniGamesRoute();
+  static const routeName = 'mini_games';
+  @override
+  String get path => routeName;
+}
+
+final class MiniGameLobbyRoute extends AppRoute {
+  const MiniGameLobbyRoute(this.gameId);
+
+  final String gameId;
+
+  static const routeName = 'mini_game_lobby';
+
+  static String gameIdFrom(Object? arguments) {
+    if (arguments is String) return arguments;
+    if (arguments is Map) {
+      return arguments['gameId']?.toString() ?? '';
+    }
+    return '';
+  }
+
+  @override
+  String get path => routeName;
+
+  @override
+  Object? get navigationArguments => gameId;
+}
+
+final class MiniGamePlayRoute extends AppRoute {
+  const MiniGamePlayRoute({required this.gameId, required this.endless});
+
+  final String gameId;
+  final bool endless;
+
+  static const routeName = 'mini_game_play';
+
+  factory MiniGamePlayRoute.fromArguments(Object? arguments) {
+    final config = MiniGameRoundConfig.fromArguments(arguments);
+    return MiniGamePlayRoute(gameId: config.gameId, endless: config.endless);
+  }
+
+  @override
+  String get path => routeName;
+
+  @override
+  Object? get navigationArguments =>
+      MiniGameRoundConfig(gameId: gameId, endless: endless);
+}
+
+final class CustomizationRoute extends AppRoute {
+  const CustomizationRoute();
+  static const routeName = 'customization';
   @override
   String get path => routeName;
 }
@@ -265,13 +370,38 @@ abstract final class AppRouteGuard {
 abstract final class AppRouteRegistry {
   static Map<String, WidgetBuilder> materialRouteTable() {
     return {
-      AuthRoute.routeName: (_) => const _GuardedRouteScreen(route: AppRoute.auth),
-      OnboardRoute.routeName: (_) => const _GuardedRouteScreen(route: AppRoute.onboard),
+      AuthRoute.routeName: (_) =>
+          const _GuardedRouteScreen(route: AppRoute.auth),
+      OnboardRoute.routeName: (_) =>
+          const _GuardedRouteScreen(route: AppRoute.onboard),
       DashboardRoute.routeName: (_) =>
           const _GuardedRouteScreen(route: AppRoute.dashboard),
-      SettingsRoute.routeName: (_) => const _GuardedRouteScreen(route: AppRoute.settings),
-      RewardRoute.routeName: (_) => const _GuardedRouteScreen(route: AppRoute.reward),
-      ChatRoute.routeName: (_) => const _GuardedRouteScreen(route: AppRoute.chat),
+      SettingsRoute.routeName: (_) =>
+          const _GuardedRouteScreen(route: AppRoute.settings),
+      SoundEffectsRoute.routeName: (_) =>
+          const _GuardedRouteScreen(route: AppRoute.soundEffects),
+      MusicRoute.routeName: (_) =>
+          const _GuardedRouteScreen(route: AppRoute.music),
+      RewardRoute.routeName: (_) =>
+          const _GuardedRouteScreen(route: AppRoute.reward),
+      MiniGamesRoute.routeName: (_) =>
+          const _GuardedRouteScreen(route: AppRoute.miniGames),
+      MiniGameLobbyRoute.routeName: (context) {
+        final requested = AppRoute.fromRouteSettings(
+          ModalRoute.of(context)!.settings,
+        );
+        return _GuardedRouteScreen(route: requested);
+      },
+      MiniGamePlayRoute.routeName: (context) {
+        final requested = AppRoute.fromRouteSettings(
+          ModalRoute.of(context)!.settings,
+        );
+        return _GuardedRouteScreen(route: requested);
+      },
+      CustomizationRoute.routeName: (_) =>
+          const _GuardedRouteScreen(route: AppRoute.customization),
+      ChatRoute.routeName: (_) =>
+          const _GuardedRouteScreen(route: AppRoute.chat),
       AchievementsRoute.routeName: (_) =>
           const _GuardedRouteScreen(route: AppRoute.achievements),
       GoalsRoute.routeName: (context) {
@@ -307,11 +437,40 @@ abstract final class AppRouteRegistry {
       OnboardRoute() => const OnboardingScreen(),
       DashboardRoute() => const DashboardScreen(),
       SettingsRoute() => const SettingsScreen(),
+      SoundEffectsRoute() => const SoundEffectsScreen(),
+      MusicRoute() => const MusicScreen(),
       RewardRoute() => const RewardRouteScreen(),
+      MiniGamesRoute() => const MiniGamesScreen(),
+      MiniGameLobbyRoute(:final gameId) => MiniGameLobbyScreen(gameId: gameId),
+      MiniGamePlayRoute(:final gameId, :final endless) => switch (gameId) {
+        FireflyJarConstants.gameId => FireflyJarPlayScreen(
+          config: MiniGameRoundConfig(gameId: gameId, endless: endless),
+        ),
+        StoneBalanceConstants.gameId => StoneBalancePlayScreen(
+          config: MiniGameRoundConfig(gameId: gameId, endless: endless),
+        ),
+        BreathPacerConstants.gameId => BreathPacerPlayScreen(
+          config: MiniGameRoundConfig(gameId: gameId, endless: endless),
+        ),
+        MeteorCatchConstants.gameId => MeteorCatchPlayScreen(
+          config: MiniGameRoundConfig(gameId: gameId, endless: endless),
+        ),
+        WordBloomConstants.gameId => WordBloomPlayScreen(
+          config: MiniGameRoundConfig(gameId: gameId, endless: endless),
+        ),
+        RainCatcherConstants.gameId => RainCatcherPlayScreen(
+          config: MiniGameRoundConfig(gameId: gameId, endless: endless),
+        ),
+        _ => MiniGamePlayStubScreen(
+          config: MiniGameRoundConfig(gameId: gameId, endless: endless),
+        ),
+      },
+      CustomizationRoute() => const CustomizationScreen(),
       ChatRoute() => const AiChatScreen(),
       AchievementsRoute() => const AchievementScreen(),
-      GoalsRoute(:final highlightGoalId) =>
-        GoalsScreen(highlightGoalId: highlightGoalId),
+      GoalsRoute(:final highlightGoalId) => GoalsScreen(
+        highlightGoalId: highlightGoalId,
+      ),
       TimeWindowHubRoute() => const TimeWindowGoalsHubScreen(),
       TimeWindowManualRoute() => const TimeWindowManualCreateScreen(),
       TimeWindowCalendarRoute() => const TimeWindowCalendarPlaceholderScreen(),
@@ -355,29 +514,24 @@ class _GuardedRouteScreen extends ConsumerWidget {
   }
 }
 
-/// Resolves reward destination from loaded settings (no [FutureBuilder]).
+/// Thin back-compat entry for deep links to `reward`.
+/// Builds the first enabled reward destination (stable order).
 class RewardRouteScreen extends ConsumerWidget {
   const RewardRouteScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final rewardType = ref.watch(appSettingsProvider).snapshot.rewardType;
-    return switch (RewardKind.parse(rewardType)) {
-      RewardKind.miniGames => const MiniGamesScreen(),
-      RewardKind.progressiveVisuals => const ProgressiveVisualSectionScreen(
-        themeId: VisualThemeId.zenGarden,
-      ),
-      RewardKind.customization => const CustomizationScreen(),
-    };
+    final types = ref.watch(appSettingsProvider).snapshot.rewardTypes;
+    final primary = types.isEmpty
+        ? RewardKind.miniGames.storageValue
+        : types.first;
+    final destination = RewardTypeSelection.routeForStorageValue(primary);
+    return AppRouteRegistry.build(context, destination);
   }
 }
 
 class UnknownRouteScreen extends StatelessWidget {
-  const UnknownRouteScreen({
-    super.key,
-    this.routeName,
-    this.message,
-  });
+  const UnknownRouteScreen({super.key, this.routeName, this.message});
 
   final String? routeName;
   final String? message;
@@ -387,9 +541,7 @@ class UnknownRouteScreen extends StatelessWidget {
     final title = routeName ?? 'unknown';
     return Scaffold(
       appBar: AppBar(title: Text(title)),
-      body: Center(
-        child: Text(message ?? 'Unknown route: $title'),
-      ),
+      body: Center(child: Text(message ?? 'Unknown route: $title')),
     );
   }
 }

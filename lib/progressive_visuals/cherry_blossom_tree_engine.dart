@@ -123,7 +123,7 @@ class CherryBlossomTreeEngine {
   CherryBlossomOpResult growOne(GardenState garden) {
     if (!canGrow()) {
       return CherryBlossomOpResult.failure(
-        'Stage is complete — prestige to continue',
+        'Stage is complete - prestige to continue',
       );
     }
     final cost = nextGrowCost()!;

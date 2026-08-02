@@ -6,7 +6,7 @@ abstract final class AffirmationSelector {
 
   static const _pool = <String>[
     'You are capable of amazing things.',
-    'Today is a fresh start — make it count.',
+    'Today is a fresh start - make it count.',
     'Your effort matters, even in small steps.',
     'You bring value just by being you.',
     'Progress is progress, no matter the pace.',
@@ -16,23 +16,23 @@ abstract final class AffirmationSelector {
     'One step forward is still forward.',
     'You are allowed to take breaks and still succeed.',
     'You are growing, even when it is hard to see.',
-    'You deserve encouragement — here it is.',
+    'You deserve encouragement - here it is.',
     'You are doing better than you think.',
     'You are not alone in this journey.',
     'You have strength that shows up quietly.',
     'You are enough, exactly as you are.',
     'You are building something meaningful.',
-    'You have got this — one moment at a time.',
+    'You have got this - one moment at a time.',
     'You are resilient and resourceful.',
     'You are allowed to ask for help.',
     'You are making progress, even when it is slow.',
-    'Showing up matters — and you are showing up.',
+    'Showing up matters - and you are showing up.',
     'You are more than your productivity.',
     'You are allowed to feel proud of yourself.',
     'You are learning and evolving every day.',
     'You have courage tucked inside you.',
     'You are worthy of rest and renewal.',
-    'Trying itself is brave — keep going.',
+    'Trying itself is brave - keep going.',
     'You are making space for growth.',
     'You are a work in progress, and that is beautiful.',
   ];
@@ -40,7 +40,7 @@ abstract final class AffirmationSelector {
   static const _weekdayPrefixes = <int, List<String>>{
     DateTime.monday: [
       'New week, new momentum.',
-      'Start steady — you have got this.',
+      'Start steady - you have got this.',
     ],
     DateTime.tuesday: [
       'Keep your rhythm going.',
@@ -48,7 +48,7 @@ abstract final class AffirmationSelector {
     ],
     DateTime.wednesday: [
       'Midweek check-in: you are doing fine.',
-      'Halfway through — stay present.',
+      'Halfway through - stay present.',
     ],
     DateTime.thursday: [
       'You are closer than you think.',
@@ -71,7 +71,7 @@ abstract final class AffirmationSelector {
   static const _styleOpeners = <String, List<String>>{
     'Minimal': ['', ''],
     'Vibrant': ['✨ ', '🌟 ', '💪 '],
-    'Animated': ['Hey — ', 'Quick note: ', 'Just a nudge: '],
+    'Animated': ['Hey - ', 'Quick note: ', 'Just a nudge: '],
   };
 
   /// Stable message for [date] (time-of-day ignored). Varies by day and context.

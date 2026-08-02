@@ -17,7 +17,7 @@ void main() {
       final secret = service.getById('117')!;
       expect(secret.isSecret, isTrue);
       expect(secret.title, 'Ninety Sunrises');
-      expect(service.all.length, 111);
+      expect(service.all.length, 173);
     });
 
     test('upgrade path ensures 114-117 when missing', () async {

@@ -108,7 +108,7 @@ InMemoryKeyValueStorage onboardedTestStorage() {
       StorageKeys.registrationComplete: 'true',
       StorageKeys.onboardingCompleted: 'true',
       StorageKeys.theme: 'light',
-      StorageKeys.rewardType: 'Mini-games',
+      StorageKeys.rewardTypes: '["Mini-games"]',
     },
   );
 }

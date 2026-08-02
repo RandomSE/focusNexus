@@ -166,7 +166,7 @@ void zenGardenCollectInNormRect(
   }
 }
 
-/// Paint order key — lower [positionY] draws first (behind).
+/// Paint order key - lower [positionY] draws first (behind).
 double zenEntityPaintOrderKey(double positionY, {required bool isPlant}) {
   return positionY + (isPlant ? 0.0001 : 0);
 }

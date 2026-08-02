@@ -84,6 +84,38 @@ void main() {
     expect(tester.widget<FilledButton>(maxTree).onPressed, isNotNull);
   });
 
+  testWidgets('grow controls sit in bottom panel below tree', (tester) async {
+    final storage = InMemoryKeyValueStorage(
+      initial: {
+        StorageKeys.registrationComplete: 'true',
+        StorageKeys.onboardingCompleted: 'true',
+        StorageKeys.points: '5000',
+      },
+    );
+    final container = await createTestContainer(storage: storage);
+    await lightTestBootstrap(container);
+    await container.read(zenGardenSessionProvider.notifier).loadGarden();
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      testUncontrolledScope(
+        container: container,
+        child: const MaterialApp(
+          home: CherryBlossomTreeScreen(
+            primaryColor: Colors.black,
+            secondaryColor: Colors.white,
+            textStyle: TextStyle(fontSize: 14),
+          ),
+        ),
+      ),
+    );
+    await pumpUntilFound(tester, find.textContaining('Grow tree'));
+
+    final growTop = tester.getTopLeft(find.textContaining('Grow tree')).dy;
+    final scaffoldSize = tester.getSize(find.byType(Scaffold).first);
+    expect(growTop, greaterThan(scaffoldSize.height * 0.55));
+  });
+
   testWidgets('prestige button at max stage level', (tester) async {
     final tree = CherryBlossomTreeState.initial().copyWith(
       growthStepsInStage: CherryBlossomStageCatalog.levelsPerStage - 1,
@@ -157,4 +189,59 @@ void main() {
     expect(find.textContaining('Peace'), findsWidgets);
     expect(find.text('Power'), findsOneWidget);
   });
+
+  testWidgets(
+    'Max tree re-enables as soon as next stage commits after prestige',
+    (tester) async {
+      final tree = CherryBlossomTreeState.initial()
+          .copyWith(
+            growthStepsInStage: CherryBlossomStageCatalog.levelsPerStage - 1,
+          )
+          .normalized();
+      final prestigeCost = CherryBlossomTreeEngine(tree).prestigeCost()!;
+      final storage = InMemoryKeyValueStorage(
+        initial: {
+          StorageKeys.registrationComplete: 'true',
+          StorageKeys.onboardingCompleted: 'true',
+          // Prestige + room to Max on the next stage.
+          StorageKeys.points: '${prestigeCost + 5000}',
+          StorageKeys.zenGardenSave: GardenPersistence.encodeZenGarden(
+            GardenState(
+              pointsBalance: prestigeCost + 5000,
+              cherryBlossomTree: tree,
+            ),
+          ),
+        },
+      );
+      final container = await createTestContainer(storage: storage);
+      await lightTestBootstrap(container);
+      await container.read(zenGardenSessionProvider.notifier).loadGarden();
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        testUncontrolledScope(
+          container: container,
+          child: const MaterialApp(
+            home: CherryBlossomTreeScreen(
+              primaryColor: Colors.black,
+              secondaryColor: Colors.white,
+              textStyle: TextStyle(fontSize: 14),
+            ),
+          ),
+        ),
+      );
+      await pumpUntilFound(tester, find.textContaining('Prestige tree'));
+      await tester.tap(find.textContaining('Prestige tree'));
+      // Advance only a slice of the prestige transition (not full settle).
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(find.textContaining('Max tree'), findsOneWidget);
+      final maxTree = find.ancestor(
+        of: find.textContaining('Max tree'),
+        matching: find.byType(FilledButton),
+      );
+      expect(tester.widget<FilledButton>(maxTree).onPressed, isNotNull);
+    },
+  );
 }

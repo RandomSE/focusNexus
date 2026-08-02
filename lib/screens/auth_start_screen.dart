@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'registration_screen.dart';
 import '../utils/common_utils.dart';
 
-/// Fixed light welcome styling — independent of persisted user theme.
+/// Fixed light welcome styling - independent of persisted user theme.
 class AuthStartScreen extends StatelessWidget {
   const AuthStartScreen({super.key});
 
@@ -76,7 +76,7 @@ class AuthStartScreen extends StatelessWidget {
                   0,
                   0,
                   () {
-                    Navigator.push(
+                    Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
                         builder: (_) => const RegistrationScreen(),

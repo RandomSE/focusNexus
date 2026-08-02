@@ -31,13 +31,14 @@ class UserPrefsSnapshot with _$UserPrefsSnapshot {
     @Default('') String customizedFont,
     @Default(Colors.black87) Color customizedPrimary,
     @Default(Color(0xFFF2EFE6)) Color customizedSecondary,
-    @Default('Mini-games') String rewardType,
+    /// Enabled reward types in stable order (min 1).
+    @Default(<String>['Mini-games']) List<String> rewardTypes,
     @Default(false) bool skipToday,
     @Default(false) bool pauseGoals,
     @Default(false) bool registrationComplete,
     @Default(false) bool onboardingCompleted,
-    @Default(false) bool soundEnabled,
-    @Default(0.0) double soundVolume,
+    @Default(true) bool soundEnabled,
+    @Default(100.0) double soundVolume,
     @Default('06:00') String dailyAffirmationsTime,
     @Default('20:00') String openStreakRemindersTime,
   }) = _UserPrefsSnapshot;

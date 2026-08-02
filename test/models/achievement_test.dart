@@ -8,7 +8,7 @@ void main() {
       title: 'Weekly Warrior I',
       reward: '250 points',
       task: 'Complete goals in one calendar week 5 times',
-      dateCompleted: DateTime.utc(2026, 5, 1, 10, 30),
+      dateCompleted: DateTime(2026, 5, 1, 10, 30),
       isCompleted: true,
       isSecret: false,
       progress: 55.5,
@@ -16,10 +16,24 @@ void main() {
 
     final restored = Achievement.fromJson(original.toJson());
     expect(restored.id, original.id);
-    expect(restored.dateCompleted, original.dateCompleted);
+    expect(restored.dateCompleted, DateTime(2026, 5, 1, 10, 30));
     expect(restored.isCompleted, isTrue);
     expect(restored.isSecret, isFalse);
     expect(restored.progress, 55.5);
+    expect(original.toJson()['dateCompleted'], '01 May 2026 10:30');
+  });
+
+  test('fromJson accepts legacy ISO dateCompleted', () {
+    final achievement = Achievement.fromJson({
+      'id': '1',
+      'title': 'T',
+      'reward': '10 points',
+      'task': 'Do thing',
+      'dateCompleted': '2026-05-01T10:30:45.123456',
+      'isCompleted': true,
+      'isSecret': false,
+    });
+    expect(achievement.dateCompleted, DateTime(2026, 5, 1, 10, 30));
   });
 
   test('fromJson applies defaults', () {

@@ -16,7 +16,7 @@ void main() {
     await pumpUntilFound(tester, find.text('Set up FocusNexus'));
 
     expect(find.text('Notification Frequency'), findsOneWidget);
-    expect(find.text('Reward type'), findsOneWidget);
+    expect(find.text('Reward types'), findsOneWidget);
     expect(find.text('Continue'), findsOneWidget);
   });
 }

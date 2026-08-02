@@ -9,7 +9,7 @@ class AchievementProgress {
     return double.parse(capped.toStringAsFixed(1));
   }
 
-  /// Progress shown in UI — never above 100%; completed achievements read as 100%.
+  /// Progress shown in UI - never above 100%; completed achievements read as 100%.
   static double displayPercent({
     required double progress,
     required bool isCompleted,

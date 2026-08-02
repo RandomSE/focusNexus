@@ -35,6 +35,16 @@ const Map<String, String> assistantQueryAliases = {
   'what does in slot now mean': 'general.in_slot_now',
   'active vs completed goals filter': 'goals.status_filters',
   'explain time windows for goals': 'goals.time_slot',
+  'how do sound settings work': 'settings.sound',
+  'customize sound effects': 'settings.sound_effects_detail',
+  'what can i customize under sound effects': 'settings.sound_effects_detail',
+  'how does firefly jar work': 'rewards.firefly_jar',
+  'how does stone balance work': 'rewards.stone_balance',
+  'how does breath pacer work': 'rewards.breath_pacer',
+  'breath pacer': 'rewards.breath_pacer',
+  'calm score': 'rewards.breath_pacer',
+  'what is the bonsai garden': 'rewards.bonsai_garden',
+  'how do font size and dark mode work': 'settings.appearance',
 };
 
 /// Normalizes user text for keyword matching.
@@ -104,7 +114,10 @@ class _ScoredEntry {
   final int score;
 }
 
-List<AssistantFaqEntry> _relatedEntries(AssistantFaqEntry entry, {int limit = 2}) {
+List<AssistantFaqEntry> _relatedEntries(
+  AssistantFaqEntry entry, {
+  int limit = 2,
+}) {
   for (final section in assistantFaqSections) {
     if (!section.entries.any((e) => e.id == entry.id)) continue;
     return section.entries.where((e) => e.id != entry.id).take(limit).toList();
@@ -118,7 +131,7 @@ String _formatDisambiguation(List<AssistantFaqEntry> entries) {
     final snippet = entry.answer.length > 120
         ? '${entry.answer.substring(0, 117)}...'
         : entry.answer;
-    buffer.writeln('• ${entry.question} — $snippet');
+    buffer.writeln('• ${entry.question} - $snippet');
   }
   return buffer.toString().trimRight();
 }
@@ -149,7 +162,8 @@ String _applyLiveContextToAnswer({
   AssistantLiveContext? liveContext,
 }) {
   if (liveContext == null) return answer;
-  if (entry.id == 'general.points_balance' && liveContext.pointsBalance != null) {
+  if (entry.id == 'general.points_balance' &&
+      liveContext.pointsBalance != null) {
     return 'You currently have ${liveContext.pointsBalance} points. '
         'Your balance is also shown at the top of the Dashboard.';
   }
@@ -265,10 +279,8 @@ AssistantResolution resolveAssistantQuery(
   final secondScore = scored.length > 1 ? scored[1].score : 0;
   final margin = best.score - secondScore;
 
-  final ambiguous = best.score < 4 &&
-      secondScore > 0 &&
-      margin <= 1 &&
-      scored.length > 1;
+  final ambiguous =
+      best.score < 4 && secondScore > 0 && margin <= 1 && scored.length > 1;
   if (ambiguous) {
     final options = scored.take(2).map((s) => s.entry).toList();
     return AssistantResolution(
@@ -300,11 +312,12 @@ AssistantResolution resolveAssistantQuery(
 String resolveAssistantResponse(
   String message, {
   AssistantLiveContext? liveContext,
-}) =>
-    resolveAssistantQuery(message, liveContext: liveContext).text;
+}) => resolveAssistantQuery(message, liveContext: liveContext).text;
 
 /// Maps a structured resolution to a chat reply for the UI layer.
-AssistantChatReply assistantChatReplyFromResolution(AssistantResolution resolution) {
+AssistantChatReply assistantChatReplyFromResolution(
+  AssistantResolution resolution,
+) {
   return AssistantChatReply(
     text: resolution.text,
     relatedQuestions: resolution.relatedQuestions,

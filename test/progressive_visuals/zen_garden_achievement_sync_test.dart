@@ -41,7 +41,8 @@ void main() {
         await storage.read(key: StorageKeys.cherryBlossomTreeUnlockedFlag),
         '1',
       );
-      expect(ready.any((a) => a.id == '112'), isTrue);
+      expect(ready.newlyReady.any((a) => a.id == '112'), isTrue);
+      expect(ready.progressed, isTrue);
       final sakura = achievements.all.firstWhere((a) => a.id == '112');
       expect(sakura.progress, 100);
     });
@@ -65,7 +66,8 @@ void main() {
         await storage.read(key: StorageKeys.cherryBlossomTreeMaxedFlag),
         '1',
       );
-      expect(ready.any((a) => a.id == '113'), isTrue);
+      expect(ready.newlyReady.any((a) => a.id == '113'), isTrue);
+      expect(ready.progressed, isTrue);
     });
   });
 }

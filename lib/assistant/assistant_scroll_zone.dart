@@ -2,17 +2,17 @@ import 'dart:ui';
 
 /// Which floating nav control should appear for the current viewport.
 enum AssistantNavZone {
-  /// No overlay — viewport is outside FAQ / ask content.
+  /// No overlay - viewport is outside FAQ / ask content.
   none,
 
-  /// Viewport is over FAQ answers — show jump to ask.
+  /// Viewport is over FAQ answers - show jump to ask.
   faq,
 
-  /// Viewport is over ask / chat — show jump to FAQ.
+  /// Viewport is over ask / chat - show jump to FAQ.
   ask,
 }
 
-/// Minimum visible overlap (0–1) before showing a zone-specific control.
+/// Minimum visible overlap (0-1) before showing a zone-specific control.
 const double kAssistantNavZoneOverlapThreshold = 0.12;
 
 /// Picks [AssistantNavZone.faq] or [AssistantNavZone.ask] from viewport overlap.

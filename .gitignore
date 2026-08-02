@@ -16,6 +16,12 @@ references/
 # Kodaelus local agent state (trash backups, insights, bug dossiers)
 .kodaelus/
 
+# Cherry blossom scratch / legacy RGB paper (ship true-alpha under assets/images/cherry_blossom_tree/)
+tool/cherry_blossom/
+**/*_rgb.png
+**/__pycache__/
+*.py[cod]
+
 # IntelliJ related
 *.iml
 *.ipr
@@ -48,3 +54,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Reference, analysis, etc.
+ignore/

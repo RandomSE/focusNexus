@@ -3,33 +3,46 @@ import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
 
-/// Programmatic sky/ground backgrounds for cherry blossom stages 0–5.
+/// Programmatic sky/ground backgrounds for cherry blossom stages 0-5.
 class CherryBlossomTreeBackground extends StatelessWidget {
   const CherryBlossomTreeBackground({
     super.key,
     required this.stageIndex,
     required this.size,
+    this.compact = false,
   });
 
   final int stageIndex;
   final Size size;
+
+  /// Bonsai pots: skip star speckles that read as noise at cell scale.
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     if (stageIndex < 0 || stageIndex > 5) {
       return const SizedBox.shrink();
     }
+    assert(size.width > 0 && size.height > 0);
+    // Expand to parent (e.g. Positioned.fill) so sky always covers the viewport.
     return CustomPaint(
-      size: size,
-      painter: _CherryBlossomBackgroundPainter(stageIndex: stageIndex),
+      painter: _CherryBlossomBackgroundPainter(
+        stageIndex: stageIndex,
+        compact: compact,
+      ),
+      child: const SizedBox.expand(),
     );
   }
 }
 
 class _CherryBlossomBackgroundPainter extends CustomPainter {
-  _CherryBlossomBackgroundPainter({required this.stageIndex});
+  _CherryBlossomBackgroundPainter({
+    required this.stageIndex,
+    this.compact = false,
+  });
 
   final int stageIndex;
+  final bool compact;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -106,33 +119,64 @@ class _CherryBlossomBackgroundPainter extends CustomPainter {
   }
 
   void _paintStage3(Canvas canvas, Size size) {
-    _paintVerticalGradient(
+    // Golden Afternoon: warm supporting sky. Tree is opaque via paper knockout,
+    // so chroma can return without washing the canopy.
+    _paintMultiStopSky(
       canvas,
       size,
-      const Color(0xFF87CEEB),
-      const Color(0xFFE8C090),
+      [
+        (0.0, const Color(0xFF7A9BB0)),
+        (0.40, const Color(0xFFA8B8C0)),
+        (0.72, const Color(0xFFC4B8A4)),
+        (1.0, const Color(0xFFC8B090)),
+      ],
+    );
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(size.width * 0.72, size.height * 0.28),
+        width: size.width * 0.40,
+        height: size.height * 0.26,
+      ),
+      Paint()
+        ..color = const Color(0xFFFFE0B0).withValues(alpha: 0.10)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 30),
     );
     _paintGroundStrip(
       canvas,
       size,
       soil: const Color(0xFF6B4A24),
       green: const Color(0xFF6B8E4A),
-      greenHeight: size.height * 0.04,
+      greenHeight: size.height * 0.028,
     );
   }
 
   void _paintStage4(Canvas canvas, Size size) {
+    // Deep Twilight: indigo -> plum -> mauve dusk. Readable night, not black.
     _paintMultiStopSky(
       canvas,
       size,
       [
-        (0.0, const Color(0xFF1A1A2E)),
-        (0.55, const Color(0xFF4A2060)),
-        (1.0, const Color(0xFFC4547A)),
+        (0.0, const Color(0xFF1A1A36)),
+        (0.40, const Color(0xFF2E2248)),
+        (0.70, const Color(0xFF4A2F5C)),
+        (1.0, const Color(0xFF6A4068)),
       ],
     );
-    _paintStars(canvas, size, count: 18, alpha: 0.75);
+    if (!compact) {
+      _paintStars(canvas, size, count: 16, alpha: 0.65);
+    }
     _paintMoon(canvas, size, halo: false);
+    // Cool separation pocket behind trunk (lavender, not hot pink).
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(size.width * 0.5, size.height * 0.58),
+        width: size.width * 0.48,
+        height: size.height * 0.36,
+      ),
+      Paint()
+        ..color = const Color(0xFFB8A0D0).withValues(alpha: 0.10)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 34),
+    );
     _paintGroundStrip(
       canvas,
       size,
@@ -143,32 +187,32 @@ class _CherryBlossomBackgroundPainter extends CustomPainter {
   }
 
   void _paintStage5(Canvas canvas, Size size) {
+    // Aurora Veil: deep violet with soft teal ribbon; PNG owns neon drama.
     _paintMultiStopSky(
       canvas,
       size,
       [
-        (0.0, const Color(0xFF0D0D1F)),
-        (0.45, const Color(0xFF3B1C4A)),
-        (1.0, const Color(0xFFC4547A)),
+        (0.0, const Color(0xFF12122A)),
+        (0.35, const Color(0xFF241E40)),
+        (0.65, const Color(0xFF3A2A55)),
+        (1.0, const Color(0xFF524066)),
       ],
     );
-    _paintAurora(canvas, size);
-    _paintNebula(canvas, size);
-    _paintStars(canvas, size, count: 26, alpha: 0.95, clustered: true);
+    _paintAuroraSoft(canvas, size);
+    if (!compact) {
+      _paintStars(canvas, size, count: 20, alpha: 0.70, clustered: true);
+    }
     _paintMoon(canvas, size, halo: true);
-    final horizonGlow = Offset(size.width * 0.5, size.height * 0.78);
-    final gradient = RadialGradient(
-      colors: [
-        const Color(0xFFFF8C69).withValues(alpha: 0.55),
-        Colors.transparent,
-      ],
-    );
-    canvas.drawRect(
-      Rect.fromCircle(center: horizonGlow, radius: size.width * 0.55),
+    // Quiet horizon lift so ground line is not a black slab.
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(size.width * 0.5, size.height * 0.82),
+        width: size.width * 0.75,
+        height: size.height * 0.16,
+      ),
       Paint()
-        ..shader = gradient.createShader(
-          Rect.fromCircle(center: horizonGlow, radius: size.width * 0.55),
-        ),
+        ..color = const Color(0xFFC87898).withValues(alpha: 0.14)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 28),
     );
     _paintGroundStrip(
       canvas,
@@ -176,16 +220,6 @@ class _CherryBlossomBackgroundPainter extends CustomPainter {
       soil: const Color(0xFF3A2410),
       green: Colors.transparent,
       greenHeight: 0,
-    );
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: Offset(size.width * 0.5, size.height * 0.9),
-        width: size.width * 0.62,
-        height: size.height * 0.1,
-      ),
-      Paint()
-        ..color = const Color(0xFFFFB7C5).withValues(alpha: 0.5)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 22),
     );
   }
 
@@ -246,7 +280,6 @@ class _CherryBlossomBackgroundPainter extends CustomPainter {
     );
   }
 
-
   void _paintStars(
     Canvas canvas,
     Size size, {
@@ -286,7 +319,8 @@ class _CherryBlossomBackgroundPainter extends CustomPainter {
     );
   }
 
-  void _paintAurora(Canvas canvas, Size size) {
+  /// Soft aurora so stage 5 art stays the focal color source.
+  void _paintAuroraSoft(Canvas canvas, Size size) {
     final path = Path()
       ..moveTo(0, size.height * 0.18)
       ..quadraticBezierTo(
@@ -307,7 +341,7 @@ class _CherryBlossomBackgroundPainter extends CustomPainter {
     canvas.drawPath(
       path,
       Paint()
-        ..color = const Color(0xFF3AAFA9).withValues(alpha: 0.22)
+        ..color = const Color(0xFF3AAFA9).withValues(alpha: 0.14)
         ..style = PaintingStyle.fill,
     );
     final path2 = Path()
@@ -328,27 +362,13 @@ class _CherryBlossomBackgroundPainter extends CustomPainter {
       ..close();
     canvas.drawPath(
       path2,
-      Paint()..color = const Color(0xFF7A4EB0).withValues(alpha: 0.18),
+      Paint()..color = const Color(0xFF7A4EB0).withValues(alpha: 0.12),
     );
-  }
-
-  void _paintNebula(Canvas canvas, Size size) {
-    void wisp(Offset c, Color color) {
-      canvas.drawOval(
-        Rect.fromCenter(center: c, width: size.width * 0.35, height: size.height * 0.12),
-        Paint()
-          ..color = color.withValues(alpha: 0.16)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 24),
-      );
-    }
-
-    wisp(Offset(size.width * 0.25, size.height * 0.28), const Color(0xFFB84E8A));
-    wisp(Offset(size.width * 0.68, size.height * 0.22), const Color(0xFF4EC9B0));
   }
 
   @override
   bool shouldRepaint(covariant _CherryBlossomBackgroundPainter oldDelegate) =>
-      oldDelegate.stageIndex != stageIndex;
+      oldDelegate.stageIndex != stageIndex || oldDelegate.compact != compact;
 }
 
 /// Scaffold color behind stages without painted sky (6+).

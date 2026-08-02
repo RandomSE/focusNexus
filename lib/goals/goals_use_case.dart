@@ -509,7 +509,7 @@ class GoalsUseCase {
         deadlineHours <= 0 ||
         _settings.pauseGoals) {
       debugLog(
-        'Notifications not enabled — skipping goal check scheduling',
+        'Notifications not enabled - skipping goal check scheduling',
       );
       return;
     }

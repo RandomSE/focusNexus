@@ -16,16 +16,81 @@ abstract final class StorageKeys {
   // Wallet
   static const points = 'points';
 
+  /// JSON map of mini-game id -> unlock / high-score progress.
+  static const miniGamesProgress = 'miniGamesProgress';
+
   // Garden
   static const zenGardenSave = 'zen_garden_save_v1';
 
-  // Zen garden achievements (112-113)
+  // Zen garden achievements (112-113, 141-149)
   static const cherryBlossomTreeUnlockedFlag = 'cherryBlossomTreeUnlockedFlag';
   static const cherryBlossomTreeMaxedFlag = 'cherryBlossomTreeMaxedFlag';
+  static const cherryBlossomStage0CompleteFlag =
+      'cherryBlossomStage0CompleteFlag';
+  static const cherryBlossomStage1CompleteFlag =
+      'cherryBlossomStage1CompleteFlag';
+  static const cherryBlossomStage2CompleteFlag =
+      'cherryBlossomStage2CompleteFlag';
+  static const cherryBlossomStage3CompleteFlag =
+      'cherryBlossomStage3CompleteFlag';
+  static const cherryBlossomStage4CompleteFlag =
+      'cherryBlossomStage4CompleteFlag';
+  static const cherryBlossomStage5CompleteFlag =
+      'cherryBlossomStage5CompleteFlag';
+  static const cherryBlossomStage6CompleteFlag =
+      'cherryBlossomStage6CompleteFlag';
+  static const cherryBlossomPeacePathFlag = 'cherryBlossomPeacePathFlag';
+  static const cherryBlossomPowerPathFlag = 'cherryBlossomPowerPathFlag';
+
+  static const List<String> cherryBlossomStageCompleteFlags = [
+    cherryBlossomStage0CompleteFlag,
+    cherryBlossomStage1CompleteFlag,
+    cherryBlossomStage2CompleteFlag,
+    cherryBlossomStage3CompleteFlag,
+    cherryBlossomStage4CompleteFlag,
+    cherryBlossomStage5CompleteFlag,
+    cherryBlossomStage6CompleteFlag,
+  ];
+
+  // Firefly Jar achievements (118-122): best single-round catch counts
+  static const fireflyJarBestDuration = 'fireflyJarBestDuration';
+  static const fireflyJarBestEndless = 'fireflyJarBestEndless';
+
+  // Stone Balance achievements (123-129): best height / timeout height
+  static const stoneBalanceBestHeight = 'stoneBalanceBestHeight';
+  static const stoneBalanceBestEndless = 'stoneBalanceBestEndless';
+  static const stoneBalanceBestTimeoutHeight = 'stoneBalanceBestTimeoutHeight';
+
+  // Patient One secret (130): full listen of breath_background via Sound effects Preview
+  static const breathBackgroundFullListenFlag =
+      'breathBackgroundFullListenFlag';
+
+  // Breath Pacer achievements (131-135): best Duration / Endless scores
+  static const breathPacerBestDuration = 'breathPacerBestDuration';
+  static const breathPacerBestEndless = 'breathPacerBestEndless';
+
+  // Meteor Catch achievements (136-140): best Duration / Endless scores
+  static const meteorCatchBestDuration = 'meteorCatchBestDuration';
+  static const meteorCatchBestEndless = 'meteorCatchBestEndless';
+  static const meteorCatchBestStreak = 'meteorCatchBestStreak';
+  static const meteorCatchBestEndlessStreak = 'meteorCatchBestEndlessStreak';
+
+  // Word Bloom achievements (156-161 best score; 162-167 order streaks)
+  static const wordBloomBestDuration = 'wordBloomBestDuration';
+  static const wordBloomBestEndless = 'wordBloomBestEndless';
+  static const wordBloomBestStreak = 'wordBloomBestStreak';
+  static const wordBloomBestEndlessStreak = 'wordBloomBestEndlessStreak';
+
+  // Rain Catcher achievements (168-173 best score; 174-179 catch streaks)
+  static const rainCatcherBestDuration = 'rainCatcherBestDuration';
+  static const rainCatcherBestEndless = 'rainCatcherBestEndless';
+  static const rainCatcherBestStreak = 'rainCatcherBestStreak';
+  static const rainCatcherBestEndlessStreak = 'rainCatcherBestEndlessStreak';
 
   // Daily first-open rewards / open-streak achievements (114-117)
   /// Last local calendar day (yyyy-MM-dd) that received a daily open grant.
   static const lastAppOpenGrantDate = 'lastAppOpenGrantDate';
+
   /// Consecutive local calendar days with at least one eligible open grant.
   static const consecutiveDaysAppOpened = 'consecutiveDaysAppOpened';
 
@@ -37,18 +102,23 @@ abstract final class StorageKeys {
   static const highContrast = 'highContrast';
   static const dailyAffirmations = 'dailyAffirmations';
   static const aiEncouragement = 'aiEncouragement';
+
   /// Optional local nudge to keep consecutive app-open streaks.
   static const openStreakReminders = 'openStreakReminders';
   static const openStreakRemindersTime = 'openStreakRemindersTime';
+
   /// Initial setup form (notification/reward prefs) completed; onboarding may remain.
   static const registrationComplete = 'registrationComplete';
+
   /// Legacy key; still read on load for upgrades from login-based builds.
   static const loggedIn = 'loggedIn';
   static const onboardingCompleted = 'onboardingCompleted';
   static const skipToday = 'skipToday';
   static const notificationStyle = 'notificationStyle';
   static const notificationFrequency = 'notificationFrequency';
-  static const rewardType = 'rewardType';
+
+  /// JSON list of enabled reward type storage strings (multi-select).
+  static const rewardTypes = 'rewardTypes';
   static const customizationEnabled = 'customizationEnabled';
   static const useCustomColorPalette = 'useCustomColorPalette';
   static const allowedColors = 'allowedColors';
@@ -57,9 +127,17 @@ abstract final class StorageKeys {
   static const customizedFont = 'customizedFont';
   static const soundEnabled = 'soundEnabled';
   static const soundVolume = 'soundVolume';
+
+  /// Master music volume percent (0-100); multiplies with [soundVolume] for BGM.
+  static const musicVolume = 'musicVolume';
+
+  /// JSON map of per-SFX channel enabled + volume percent.
+  static const soundChannels = 'soundChannels';
   static const dailyAffirmationsTime = 'dailyAffirmationsTime';
+
   /// Last calendar day (yyyy-MM-dd) with a scheduled daily affirmation.
-  static const dailyAffirmationsScheduledUntil = 'dailyAffirmationsScheduledUntil';
+  static const dailyAffirmationsScheduledUntil =
+      'dailyAffirmationsScheduledUntil';
 
   // Achievement counters (scalar keys read by AchievementService)
   static const totalGoalsCreated = 'totalGoalsCreated';
@@ -69,9 +147,11 @@ abstract final class StorageKeys {
   static const goalsCompletedThisWeek = 'goalsCompletedThisWeek';
   static const goalsCompletedThisMonth = 'goalsCompletedThisMonth';
   static const goalsCompletedWithHighPoints = 'goalsCompletedWithHighPoints';
-  static const goalsCompletedWithHighComplexity = 'goalsCompletedWithHighComplexity';
+  static const goalsCompletedWithHighComplexity =
+      'goalsCompletedWithHighComplexity';
   static const goalsCompletedWithHighEffort = 'goalsCompletedWithHighEffort';
-  static const goalsCompletedWithHighMotivation = 'goalsCompletedWithHighMotivation';
+  static const goalsCompletedWithHighMotivation =
+      'goalsCompletedWithHighMotivation';
   static const goalsCompletedWithAllHigh = 'goalsCompletedWithAllHigh';
   static const goalsCompletedWithHighTimeRequirement =
       'goalsCompletedWithHighTimeRequirement';
@@ -85,7 +165,7 @@ abstract final class StorageKeys {
   static const consecutiveWeeksWithGoalsCompleted =
       'consecutiveWeeksWithGoalsCompleted';
 
-  // Category completion stats (achievements 100–105)
+  // Category completion stats (achievements 100-105)
   static const goalsCompletedByCategory = 'goalsCompletedByCategory';
   static const categoriesWithAtLeast1Goal = 'categoriesWithAtLeast1Goal';
   static const categoriesWithAtLeast3Goals = 'categoriesWithAtLeast3Goals';

@@ -16,13 +16,13 @@ double zenKoiPondNominalWidth(int stageIndex) {
   };
 }
 
-/// Paint canvas width for koi ponds — grows with stage so later sizes are not clamped flat.
+/// Paint canvas width for koi ponds - grows with stage so later sizes are not clamped flat.
 double zenKoiPondCanvasWidth(int stageIndex) {
   final st = stageIndex.clamp(0, 4);
   return 94.0 + st * 4.0;
 }
 
-/// Paint canvas height for koi ponds — keeps pond height plus rim detail visible.
+/// Paint canvas height for koi ponds - keeps pond height plus rim detail visible.
 double zenKoiPondCanvasHeight(int stageIndex, double pondWidth) {
   return math.max(78.0, pondWidth * 0.58 + 14.0);
 }
@@ -159,7 +159,7 @@ double zenDecorTopClipRadius(String kind) {
   return kind == 'zen.bamboo_fence' ? zenBambooFenceTopClipRadius : 0.0;
 }
 
-/// Normalized ellipse radii for decor–decor / decor–plant separation (garden coords).
+/// Normalized ellipse radii for decor-decor / decor-plant separation (garden coords).
 (double, double) zenDecorSeparationRadii(DecorItem item) {
   final st = item.stageIndex.clamp(0, 4);
   return switch (item.kind) {

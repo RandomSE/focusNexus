@@ -494,7 +494,8 @@ class _RewardsSlide extends StatelessWidget {
         icon: Icons.emoji_events_outlined,
         title: 'Earn, then enjoy',
         subtitle:
-            'Complete goals for points. Spend them in the zen garden, mini-games, or customization.',
+            'Complete goals for points. Enable Mini-games, Progressive visuals, and '
+            'Customization in Settings - each gets its own Dashboard button.',
       ),
       children: [
         _MockCard(

@@ -4,37 +4,54 @@ part 'registration_form_provider.g.dart';
 
 class RegistrationFormState {
   const RegistrationFormState({
-    this.frequency,
-    this.notificationStyle,
-    this.rewardType,
+    this.frequency = 'Medium',
+    this.notificationStyle = 'Vibrant',
+    this.rewardTypes = const [],
   });
 
   final String? frequency;
   final String? notificationStyle;
-  final String? rewardType;
+  final List<String> rewardTypes;
 
   bool get requiresNotificationStyle =>
       frequency != null && frequency != 'No notifications';
 
+  /// Frequency + at least one reward type. Style is optional (defaults Vibrant).
   bool get canContinue {
     final hasFrequency = frequency != null;
-    final hasReward = rewardType != null;
-    final hasStyle = !requiresNotificationStyle || notificationStyle != null;
-    return hasFrequency && hasReward && hasStyle;
+    final hasReward = rewardTypes.isNotEmpty;
+    return hasFrequency && hasReward;
+  }
+
+  /// Dynamic blocker copy for missing required fields only.
+  String get missingRequirementsMessage {
+    final missing = <String>[];
+    if (frequency == null) {
+      missing.add('a notification frequency');
+    }
+    if (rewardTypes.isEmpty) {
+      missing.add('at least one reward type');
+    }
+    if (missing.isEmpty) return '';
+    if (missing.length == 1) {
+      return '* Choose ${missing.single} to continue.';
+    }
+    return '* Choose ${missing[0]} and ${missing[1]} to continue.';
   }
 
   RegistrationFormState copyWith({
     String? frequency,
     String? notificationStyle,
-    String? rewardType,
+    List<String>? rewardTypes,
     bool clearNotificationStyle = false,
+    bool clearFrequency = false,
   }) {
     return RegistrationFormState(
-      frequency: frequency ?? this.frequency,
+      frequency: clearFrequency ? null : (frequency ?? this.frequency),
       notificationStyle: clearNotificationStyle
           ? null
           : (notificationStyle ?? this.notificationStyle),
-      rewardType: rewardType ?? this.rewardType,
+      rewardTypes: rewardTypes ?? this.rewardTypes,
     );
   }
 }
@@ -45,24 +62,19 @@ class RegistrationForm extends _$RegistrationForm {
   RegistrationFormState build() => const RegistrationFormState();
 
   void setFrequency(String? value) {
-    if (value == 'No notifications') {
-      state = state.copyWith(
-        frequency: value,
-        notificationStyle: 'Minimal',
-      );
-    } else {
-      state = state.copyWith(
-        frequency: value,
-        clearNotificationStyle: true,
-      );
-    }
+    final clearStyle = value == 'No notifications';
+    state = state.copyWith(
+      frequency: value,
+      clearFrequency: value == null,
+      clearNotificationStyle: clearStyle,
+    );
   }
 
   void setNotificationStyle(String? value) {
     state = state.copyWith(notificationStyle: value);
   }
 
-  void setRewardType(String? value) {
-    state = state.copyWith(rewardType: value);
+  void setRewardTypes(List<String> values) {
+    state = state.copyWith(rewardTypes: values);
   }
 }

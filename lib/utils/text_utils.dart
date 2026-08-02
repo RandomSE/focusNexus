@@ -284,9 +284,9 @@ class TextUtils {
             : '';
 
     final phaseLead = switch (phase) {
-      0 => 'Early check-in — ',
-      1 => 'Halfway there — ',
-      2 => 'Approaching deadline — ',
+      0 => 'Early check-in - ',
+      1 => 'Halfway there - ',
+      2 => 'Approaching deadline - ',
       _ => '',
     };
 

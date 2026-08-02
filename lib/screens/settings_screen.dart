@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focusNexus/app/app_navigation.dart';
 import 'package:focusNexus/app/app_route.dart';
+import 'package:focusNexus/providers/achievements_list_refresh_provider.dart';
 import 'package:focusNexus/providers/app_repositories_provider.dart';
+import 'package:focusNexus/providers/app_services_provider.dart';
 import 'package:focusNexus/providers/app_settings_provider.dart';
+import 'package:focusNexus/models/classes/achievement_tracking_variables.dart';
+import 'package:focusNexus/providers/points_balance_provider.dart';
 import 'package:focusNexus/providers/screen_ui_providers.dart';
 import 'package:focusNexus/providers/zen_garden_session_provider.dart';
 import 'package:focusNexus/utils/appearance_transition.dart';
@@ -13,6 +17,7 @@ import 'package:focusNexus/utils/screen_semantics.dart';
 import 'package:focusNexus/utils/screen_theme.dart';
 import 'package:focusNexus/widgets/appearance_settings_section.dart';
 import 'package:focusNexus/widgets/deferred_screen.dart';
+import 'package:focusNexus/widgets/reward_types_multi_select.dart';
 import 'package:focusNexus/widgets/settings_themed_builder.dart';
 import 'package:focusNexus/widgets/skeleton_loaders.dart';
 import 'package:focusNexus/widgets/sound_volume_control.dart';
@@ -34,11 +39,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     'No notifications',
   ];
   static const _notificationStyles = ['Minimal', 'Vibrant', 'Animated'];
-  static const _rewardTypes = [
-    'Mini-games',
-    'Progressive visuals',
-    'Customization',
-  ];
 
   Future<void>? _loadFuture;
 
@@ -226,18 +226,34 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                     children: [
                         const SizedBox(height: 8),
                         ScreenSemantics.sectionHeader('Appearance', textStyle),
-                        AppearanceSettingsSection(bundle: bundle),
+                        AppearanceSettingsSection(
+                          bundle: bundle,
+                          showDarkMode: false,
+                        ),
                         ScreenSemantics.sectionHeader(
                           'Rewards & notifications',
                           textStyle,
                         ),
-                        CommonUtils.buildDropdownButtonFormField(
-                          'Reward Type',
-                          settings.rewardType,
-                          _rewardTypes,
-                          textStyle,
-                          secondaryColor,
-                          (val) => settings.setRewardType(val ?? 'Mini-games'),
+                        RewardTypesMultiSelect(
+                          selected: settings.rewardTypes,
+                          textStyle: textStyle,
+                          activeColor: primaryColor,
+                          title: 'Reward types',
+                          subtitle:
+                              'Enable one or more. At least one must stay on.',
+                          onChanged: (next) async {
+                            final ok = await settings.setRewardTypes(next);
+                            if (!context.mounted) return;
+                            if (!ok) {
+                              CommonUtils.showSnackBar(
+                                context,
+                                'Keep at least one reward type enabled.',
+                                textStyle,
+                                2500,
+                                14,
+                              );
+                            }
+                          },
                         ),
                         CommonUtils.buildDropdownButtonFormField(
                           'Notification Frequency',
@@ -269,6 +285,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                           ),
                         const Divider(),
                         ScreenSemantics.sectionHeader('Accessibility', textStyle),
+                        CommonUtils.buildSwitchListTile(
+                          'Dark mode',
+                          textStyle,
+                          settings.snapshot.isDark,
+                          (val) => _runAppearanceChange(
+                            () => settings.setUserTheme(val ? 'dark' : 'light'),
+                          ),
+                          primaryColor,
+                        ),
                         CommonUtils.buildSwitchListTile(
                           'Dyslexia-friendly Font',
                           textStyle,
@@ -416,7 +441,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                               primaryColor,
                             ),
                         ],
-                        if (settings.rewardType == 'Progressive visuals') ...[
+                        if (settings.hasProgressiveVisualsReward) ...[
+                          const Divider(),
                           ScreenSemantics.sectionHeader('Zen garden', textStyle),
                           CommonUtils.buildSwitchListTile(
                             'Confirm before restart growth',
@@ -450,8 +476,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                           settings.setSoundEnabled,
                           primaryColor,
                         ),
-                        if (settings.soundEnabled)
+                        if (settings.soundEnabled) ...[
                           SoundVolumeControl(bundle: bundle),
+                          CommonUtils.buildElevatedButton(
+                            'Customize sound effects',
+                            primaryColor,
+                            secondaryColor,
+                            textStyle,
+                            0,
+                            0,
+                            () => ref.pushRoute(
+                              context,
+                              AppRoute.soundEffects,
+                            ),
+                          ),
+                        ],
                         const Divider(),
                         ScreenSemantics.sectionHeader('Account', textStyle),
                         CommonUtils.buildElevatedButton(
@@ -590,8 +629,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
 
     ref.read(settingsDeletingAccountProvider.notifier).set(true);
     try {
+      // Clear keepAlive garden first so dispose cannot re-save onto wiped disk
+      // and so cherry flags are not re-flipped from a stale unlocked tree.
+      ref.read(zenGardenSessionProvider.notifier).resetForAccountWipe();
       final repos = ref.read(appRepositoriesProvider);
       await repos.wipeAllUserData();
+      final achievements = ref.read(achievementServiceProvider);
+      await achievements.clearAll();
+      await AchievementTrackingVariables().reset();
+      await achievements.initialize();
+      ref.read(achievementsListRefreshProvider.notifier).bump();
+      ref.invalidate(pointsBalanceProvider);
       await GoalNotifier.purgeAllScheduledNotifications();
       await settings.applyDefaultPreferences();
       if (!context.mounted) return;

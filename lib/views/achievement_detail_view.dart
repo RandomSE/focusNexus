@@ -4,6 +4,7 @@ import 'package:focusNexus/providers/app_services_provider.dart';
 import 'package:focusNexus/providers/screen_ui_providers.dart';
 import 'package:focusNexus/services/achievement_progress.dart';
 import 'package:focusNexus/utils/common_utils.dart';
+import 'package:focusNexus/utils/completion_timestamp.dart';
 import 'package:focusNexus/utils/theme_styles.dart';
 
 class AchievementDetailView extends ConsumerWidget {
@@ -80,7 +81,7 @@ class AchievementDetailView extends ConsumerWidget {
               const SizedBox(height: 8),
               if (achievement.isCompleted && achievement.dateCompleted != null)
                 Text(
-                  'Completed on: ${achievement.dateCompleted}',
+                  'Completed on: ${CompletionTimestamp.formatLabel(achievement.dateCompleted!)}',
                   style: textStyle,
                 ),
               const Spacer(),

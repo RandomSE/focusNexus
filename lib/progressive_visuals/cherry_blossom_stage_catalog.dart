@@ -82,13 +82,18 @@ abstract final class CherryBlossomStageCatalog {
   static bool usesProgrammaticBackground(int stageIndex) =>
       stageIndex >= 0 && stageIndex <= 5;
 
-  /// Stages 0–5 only: knock out PNG white via multiply over painted sky.
+  /// Legacy RGB paper knockout. Off for stages 0-5 (true-alpha PNGs);
+  /// multiply washes authored colors into the sky.
   static bool usesMultiplyBlend(int stageIndex, int growthStepsInStage) =>
+      false;
+
+  /// Stages 0-5 ship as true-alpha RGBA PNGs under assets/images/cherry_blossom_tree/.
+  static bool usesTrueAlphaAsset(int stageIndex) =>
       stageIndex >= 0 && stageIndex <= 5;
 
   static bool usesFullBleedImage(int stageIndex) => stageIndex >= 6;
 
-  /// Stages 6–7: image covers the viewport when fully grown in that stage.
+  /// Stages 6-7: image covers the viewport when fully grown in that stage.
   static bool fillsViewport(int stageIndex, int growthStepsInStage) {
     if (stageIndex == finaleStage) return true;
     if (stageIndex == maxPlayableStage) {
@@ -97,12 +102,14 @@ abstract final class CherryBlossomStageCatalog {
     return false;
   }
 
+  /// Stages 0-5: contain so wide canopies (e.g. Midday Spring) are not
+  /// side-clipped by fitHeight in portrait viewports / View tree.
   static BoxFit imageFitFor({
     required int stageIndex,
     required bool fullBleed,
   }) {
     if (stageIndex >= 6) return BoxFit.cover;
-    return BoxFit.fitHeight;
+    return BoxFit.contain;
   }
 
   /// Vertical draw height; tree is bottom-anchored at y = viewport bottom.
@@ -125,9 +132,123 @@ abstract final class CherryBlossomStageCatalog {
     return _lerp(0.58, 0.92, t);
   }
 
+  /// Max [treeHeightFraction] for the stage (level cap). Used as fixed draw box.
+  static double maxTreeHeightFraction(int stageIndex) {
+    return treeHeightFraction(
+      stageIndex: stageIndex,
+      growthStepsInStage: maxGrowthStepsForStage(stageIndex),
+    );
+  }
+
+  /// Scale relative to [maxTreeHeightFraction] so growth expands from baseline.
+  static double growthScaleRelativeToMax({
+    required int stageIndex,
+    required int growthStepsInStage,
+  }) {
+    final maxH = maxTreeHeightFraction(stageIndex);
+    if (maxH <= 0) return 1.0;
+    final current = treeHeightFraction(
+      stageIndex: stageIndex,
+      growthStepsInStage: growthStepsInStage,
+    );
+    return (current / maxH).clamp(0.0, 1.0);
+  }
+
+  /// Transparent padding below trunk in stage PNGs (fraction of height).
+  /// Measured from current true-alpha assets (opaque alpha > 8).
+  static double contentBottomPaddingFraction(int stageIndex) {
+    const pads = <double>[
+      0.1268, // 0 Bare Beginning
+      0.2467, // 1 Early Spring Morning (tree high in frame)
+      0.1380, // 2 Midday Spring
+      0.1081, // 3 Golden Afternoon
+      0.0716, // 4 Deep Twilight
+      0.0, // 5 Aurora Veil
+      0.0, // 6
+      0.0, // 7
+    ];
+    final i = stageIndex.clamp(0, pads.length - 1);
+    return pads[i];
+  }
+
+  /// Extra downward nudge as a fraction of viewport height (fixes residual float).
+  static double seatingBiasFraction(int stageIndex) {
+    return switch (stageIndex) {
+      // Deep Twilight: alpha fringe below bark reads as ~10% float above ground.
+      4 => 0.10,
+      3 => 0.015,
+      5 => 0.02, // Aurora Veil pad ~0 under-seats in bonsai pots
+      0 => 0.01,
+      _ => 0.0,
+    };
+  }
+
+  /// Alignment.y for [Transform.scale] so the content baseline stays fixed.
+  /// pad=0 -> 1.0 (image bottom); pad=0.15 -> 0.7.
+  static double contentBaselineAlignmentY(double paddingFraction) {
+    return 1.0 - 2.0 * paddingFraction.clamp(0.0, 0.5);
+  }
+
+  /// [Positioned.bottom] so trunk baseline sits on the painted ground top
+  /// (`groundInsetFraction`), not floating above it.
+  static double treeLayerBottomOffset({
+    required int stageIndex,
+    required double viewportHeight,
+    required double drawHeight,
+  }) {
+    if (stageIndex >= 5) return 0.0;
+    return _baselineSeatBottom(
+      stageIndex: stageIndex,
+      viewportHeight: viewportHeight,
+      drawHeight: drawHeight,
+    );
+  }
+
+  /// Bonsai pots: seat stages 0-5 on the painted ground strip (includes Aurora).
+  static double bonsaiTreeBottomOffset({
+    required int stageIndex,
+    required double cellHeight,
+    required double drawHeight,
+  }) {
+    if (stageIndex >= 6) return 0.0;
+    return _baselineSeatBottom(
+      stageIndex: stageIndex,
+      viewportHeight: cellHeight,
+      drawHeight: drawHeight,
+    );
+  }
+
+  static double _baselineSeatBottom({
+    required int stageIndex,
+    required double viewportHeight,
+    required double drawHeight,
+  }) {
+    final pad = contentBottomPaddingFraction(stageIndex);
+    final groundTop = viewportHeight * groundInsetFraction;
+    final baselineFromWidgetBottom = pad * drawHeight;
+    final bias = viewportHeight * seatingBiasFraction(stageIndex);
+    return groundTop - baselineFromWidgetBottom - bias;
+  }
+
+  /// Soil fill color for stage-matched UI accents (matches ground strips).
+  static Color groundFillColorFor(int stageIndex) {
+    return switch (stageIndex) {
+      0 => const Color(0xFF6B4F2A),
+      1 => const Color(0xFF7A5C32),
+      2 => const Color(0xFF8A6A3A),
+      3 => const Color(0xFF6B4A24),
+      4 || 5 => const Color(0xFF3A2410),
+      _ => const Color(0xFF1A1018),
+    };
+  }
+
+  /// Stages 4-5: multiply over dark sky crushes authored tree colors.
+  static bool needsNightContrastBoost(int stageIndex) =>
+      stageIndex == 4 || stageIndex == 5;
+
   static const double groundInsetFraction = 0.14;
 
-  /// Bonsai slot: tree fill height as fraction of cell (stages 0–5).
+  /// Bonsai slot: tree fill height as fraction of cell (stages 0-5).
   static double bonsaiTreeHeightFraction(int stageIndex) {
     if (stageIndex >= 6) return 1.0;
     return 0.96;
@@ -144,16 +265,16 @@ abstract final class CherryBlossomStageCatalog {
         0 => const Color(0xFFC8D8E0),
         1 => const Color(0xFFD4E8F0),
         2 => const Color(0xFFC8E4F4),
-        3 => const Color(0xFF87CEEB),
-        4 => const Color(0xFF1A1A2E),
-        5 => const Color(0xFF0D0D1F),
+        3 => const Color(0xFF8FB0C4),
+        4 => const Color(0xFF2E2248),
+        5 => const Color(0xFF241E40),
         _ => const Color(0xFFC8D8E0),
       };
     }
     return const Color(0xFF050510);
   }
 
-  /// HUD level denominator (25 for stages 0–6, 1 for finale).
+  /// HUD level denominator (25 for stages 0-6, 1 for finale).
   static int levelCapForStage(int stageIndex) =>
       stageIndex == finaleStage ? 1 : levelsPerStage;
 
@@ -230,27 +351,21 @@ abstract final class CherryBlossomStageCatalog {
 
   static List<List<int>> _buildAllStageCosts() {
     return [
-      for (final total in _stageTotals) _distributeIncreasing(total, levelsPerStage),
+      for (final total in _stageTotals) _distributeFlat(total, levelsPerStage),
     ];
   }
 
-  /// Strictly increasing costs within a stage; sums exactly to [total].
-  static List<int> _distributeIncreasing(int total, int steps) {
+  /// Flat per-level cost within a stage; sums exactly to [total].
+  /// Stage totals are chosen to divide evenly by [levelsPerStage] for round numbers.
+  static List<int> _distributeFlat(int total, int steps) {
     if (steps <= 0) return const [];
     if (steps == 1) return [total];
-    final costs = List.generate(steps, (i) => i + 1);
-    var remaining = total - costs.fold<int>(0, (a, b) => a + b);
-    var idx = steps - 1;
-    while (remaining > 0) {
-      costs[idx]++;
-      remaining--;
-      idx = idx <= 0 ? steps - 1 : idx - 1;
-    }
-    assert(costs.fold<int>(0, (a, b) => a + b) == total);
-    for (var i = 1; i < costs.length; i++) {
-      assert(costs[i] > costs[i - 1], 'costs must increase within stage');
-    }
-    return costs;
+    assert(
+      total % steps == 0,
+      'stage total $total must divide evenly by $steps for flat round costs',
+    );
+    final each = total ~/ steps;
+    return List<int>.filled(steps, each);
   }
 
   static double _lerp(double a, double b, double t) => a + (b - a) * t;

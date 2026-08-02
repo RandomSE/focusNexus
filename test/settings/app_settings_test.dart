@@ -12,7 +12,7 @@ void main() {
   group('ThemeStyles', () {
     test('resolvePrimaryColor uses customization when enabled for reward', () {
       const prefs = UserPrefsSnapshot(
-        rewardType: 'Customization',
+        rewardTypes: ['Customization'],
         customizationEnabled: true,
         customizedPrimary: Colors.red,
       );
@@ -28,7 +28,7 @@ void main() {
 
     test('resolvePrimaryColor ignores stored custom colours when toggle off', () {
       const prefs = UserPrefsSnapshot(
-        rewardType: 'Customization',
+        rewardTypes: ['Customization'],
         customizationEnabled: false,
         customizedPrimary: Colors.red,
         theme: 'light',
@@ -66,7 +66,19 @@ void main() {
       await settings.load();
       expect(settings.userTheme, 'light');
       expect(settings.userFontSize, 14.0);
-      expect(settings.rewardType, 'Mini-games');
+      expect(settings.rewardTypes, ['Mini-games']);
+      expect(settings.soundEnabled, isTrue);
+      expect(settings.soundVolume, 100.0);
+    });
+
+    test('setSoundEnabled invokes onSoundPrefsChanged', () async {
+      var calls = 0;
+      settings.onSoundPrefsChanged = () => calls += 1;
+      await settings.load();
+      await settings.setSoundEnabled(false);
+      expect(calls, 1);
+      await settings.setSoundVolume(50);
+      expect(calls, 2);
     });
 
     test('setUserTheme persists and updates snapshot', () async {
@@ -87,12 +99,13 @@ void main() {
       await settings.completeRegistration(
         notificationFrequency: 'High',
         notificationStyle: 'Vibrant',
-        rewardType: 'Mini-games',
+        rewardTypes: ['Mini-games'],
       );
       expect(settings.registrationComplete, isTrue);
       expect(settings.onboardingCompleted, isFalse);
       expect(settings.notificationFrequency, 'High');
       expect(settings.notificationStyle, 'Vibrant');
+      expect(settings.rewardTypes, ['Mini-games']);
     });
 
     test('load maps legacy loggedIn to registrationComplete', () async {
@@ -101,10 +114,38 @@ void main() {
       expect(settings.registrationComplete, isTrue);
     });
 
-    test('setRewardType does not auto-enable customized colours', () async {
+    test('setRewardTypes does not auto-enable customized colours', () async {
       await settings.load();
-      await settings.setRewardType('Customization');
+      await settings.setRewardTypes(['Customization']);
       expect(settings.customizationEnabled, isFalse);
+      expect(settings.rewardTypes, ['Customization']);
+    });
+
+    test('setRewardTypes persists JSON list only', () async {
+      await settings.load();
+      await settings.setRewardTypes(['Mini-games', 'Customization']);
+      expect(
+        await storage.read(key: 'rewardTypes'),
+        '["Mini-games","Customization"]',
+      );
+    });
+
+    test('setRewardTypes refuses empty selection', () async {
+      await settings.load();
+      await settings.setRewardTypes(['Mini-games', 'Customization']);
+      final ok = await settings.setRewardTypes([]);
+      expect(ok, isFalse);
+      expect(settings.rewardTypes, ['Mini-games', 'Customization']);
+    });
+
+    test('removing Customization disables customizationEnabled', () async {
+      await settings.load();
+      await settings.setRewardTypes(['Customization', 'Mini-games']);
+      await settings.setCustomizationEnabled(true);
+      expect(settings.customizationEnabled, isTrue);
+      await settings.setRewardTypes(['Mini-games']);
+      expect(settings.customizationEnabled, isFalse);
+      expect(settings.isCustomizationReward, isFalse);
     });
   });
 }

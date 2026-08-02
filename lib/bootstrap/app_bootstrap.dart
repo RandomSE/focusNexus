@@ -9,7 +9,7 @@ import 'package:focusNexus/services/storage/storage_keys.dart';
 import 'package:focusNexus/utils/notifier.dart';
 
 /// One-time startup: settings, points, achievements cache.
-/// Call from [main] with the root [ProviderContainer] — not from individual screens.
+/// Call from [main] with the root [ProviderContainer] - not from individual screens.
 ///
 /// Notification init is deferred via [scheduleDeferredStartupWork].
 Future<void> ensureAppReady(ProviderContainer container) async {

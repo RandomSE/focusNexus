@@ -13,7 +13,13 @@ abstract final class AppRoutes {
   static const onboard = OnboardRoute.routeName;
   static const dashboard = DashboardRoute.routeName;
   static const settings = SettingsRoute.routeName;
+  static const soundEffects = SoundEffectsRoute.routeName;
+  static const music = MusicRoute.routeName;
   static const reward = RewardRoute.routeName;
+  static const miniGames = MiniGamesRoute.routeName;
+  static const miniGameLobby = MiniGameLobbyRoute.routeName;
+  static const miniGamePlay = MiniGamePlayRoute.routeName;
+  static const customization = CustomizationRoute.routeName;
   static const chat = ChatRoute.routeName;
   static const achievements = AchievementsRoute.routeName;
   static const goals = GoalsRoute.routeName;

@@ -15,6 +15,27 @@ import 'package:focusNexus/utils/theme_styles.dart';
 class AchievementScreen extends ConsumerWidget {
   const AchievementScreen({super.key});
 
+  Future<void> _claimAll(
+    WidgetRef ref,
+    BuildContext context,
+    ThemeBundle bundle,
+    AchievementService service,
+  ) async {
+    final result = await service.completeAllClaimable();
+    ref.read(achievementsListRefreshProvider.notifier).bump();
+    if (!context.mounted) return;
+    CommonUtils.showSnackBar(
+      context,
+      result.claimedCount == 0
+          ? 'Nothing to claim.'
+          : 'Claimed ${result.claimedCount} achievements '
+              '(+${result.pointsGained} points)',
+      bundle.textStyle,
+      3000,
+      16,
+    );
+  }
+
   Future<void> _openAchievement(
     WidgetRef ref,
     BuildContext context,
@@ -47,6 +68,9 @@ class AchievementScreen extends ConsumerWidget {
 
     return SettingsThemedBuilder(
       builder: (context, bundle) {
+        final hasClaimable = service.all.any(
+          (a) => !a.isCompleted && a.progress >= 100,
+        );
         return Theme(
           data: bundle.themeData,
           child: Scaffold(
@@ -69,6 +93,18 @@ class AchievementScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    if (hasClaimable) ...[
+                      CommonUtils.buildElevatedButton(
+                        'Claim all ready',
+                        bundle.primaryColor,
+                        Colors.deepPurple,
+                        bundle.textStyle,
+                        14,
+                        10,
+                        () => _claimAll(ref, context, bundle, service),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                     Text(
                       'In-progress achievements',
                       style: bundle.textStyle.copyWith(
@@ -80,7 +116,8 @@ class AchievementScreen extends ConsumerWidget {
                         progress: achievement.progress,
                         isCompleted: achievement.isCompleted,
                       );
-                      final buttonColor = displayProgress >= 100
+                      final readyToClaim = displayProgress >= 100;
+                      final buttonColor = readyToClaim
                           ? Colors.deepPurple
                           : bundle.secondaryColor;
                       return Padding(
@@ -99,6 +136,9 @@ class AchievementScreen extends ConsumerWidget {
                             bundle,
                             service,
                           ),
+                          borderColor: readyToClaim
+                              ? Colors.deepPurple
+                              : bundle.primaryColor,
                         ),
                       );
                     }),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:focusNexus/rewards/reward_type_selection.dart';
 import 'package:focusNexus/services/storage/key_value_storage.dart';
 import 'package:focusNexus/services/storage/storage_keys.dart';
 import 'package:focusNexus/utils/theme_codec.dart';
@@ -33,6 +34,10 @@ class UserPrefsRepository {
     final secondaryRaw =
         await _storage.read(key: StorageKeys.customizedSecondaryColor);
     final soundVolumeRaw = await _storage.read(key: StorageKeys.soundVolume);
+    final soundEnabledRaw = await _storage.read(key: StorageKeys.soundEnabled);
+    final rewardTypes = RewardTypeSelection.decode(
+      await _storage.read(key: StorageKeys.rewardTypes),
+    );
 
     return UserPrefsSnapshot(
       theme: await _storage.read(key: StorageKeys.theme) ?? 'light',
@@ -60,8 +65,7 @@ class UserPrefsRepository {
       customizedSecondary: secondaryRaw != null
           ? Color(int.parse(secondaryRaw))
           : const Color(0xFFF2EFE6),
-      rewardType:
-          await _storage.read(key: StorageKeys.rewardType) ?? 'Mini-games',
+      rewardTypes: rewardTypes,
       skipToday: await readBool(StorageKeys.skipToday),
       pauseGoals: _parseTriStateBool(
         await _storage.read(key: StorageKeys.pauseGoals),
@@ -70,8 +74,10 @@ class UserPrefsRepository {
           await readBool(StorageKeys.registrationComplete) ||
               await readBool(StorageKeys.loggedIn),
       onboardingCompleted: await readBool(StorageKeys.onboardingCompleted),
-      soundEnabled: await readBool(StorageKeys.soundEnabled),
-      soundVolume: double.tryParse(soundVolumeRaw ?? '0') ?? 0.0,
+      soundEnabled: soundEnabledRaw == null
+          ? true
+          : UserPrefsSnapshot.parseBool(soundEnabledRaw),
+      soundVolume: double.tryParse(soundVolumeRaw ?? '100') ?? 100.0,
       dailyAffirmationsTime:
           await _storage.read(key: StorageKeys.dailyAffirmationsTime) ??
               '06:00',

@@ -3,6 +3,9 @@ import 'package:flutter/widgets.dart';
 
 /// Composites [child] over existing paint using [BlendMode.multiply] so white
 /// pixels in the child reveal the background beneath.
+///
+/// Must NOT force its own compositing layer: an isolated layer has a transparent
+/// destination, so multiply cannot see the painted sky and white PNG stays white.
 class CherryBlossomMultiplyBlend extends SingleChildRenderObjectWidget {
   const CherryBlossomMultiplyBlend({super.key, super.child});
 
@@ -19,7 +22,10 @@ class CherryBlossomMultiplyBlend extends SingleChildRenderObjectWidget {
 
 class RenderCherryBlossomMultiplyBlend extends RenderProxyBox {
   @override
-  bool get alwaysNeedsCompositing => child != null;
+  bool get alwaysNeedsCompositing => false;
+
+  @override
+  bool get isRepaintBoundary => false;
 
   @override
   void paint(PaintingContext context, Offset offset) {

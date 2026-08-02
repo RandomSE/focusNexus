@@ -23,7 +23,7 @@ void main() {
     mutationProbability: 1,
   );
 
-  group('failure paths — plants', () {
+  group('failure paths - plants', () {
     test('addPoints rejects negative delta', () {
       final r = engine.addPoints(const GardenState(pointsBalance: 10, items: []), -1);
       expect(r.isSuccess, isFalse);

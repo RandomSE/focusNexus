@@ -110,7 +110,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     await settings.setOnboardingCompleted(true);
     if (!mounted) return;
-    ref.pushReplacementRoute(context, AppRoute.dashboard);
+    ref.resetToRoute(context, AppRoute.dashboard);
   }
 
   @override

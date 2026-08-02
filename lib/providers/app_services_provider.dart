@@ -69,6 +69,14 @@ void achievementTrackingWiring(Ref ref) {
 /// Ensures injected app services are constructed for this [ProviderScope].
 @Riverpod(keepAlive: true)
 void appServicesWired(Ref ref) {
+  final sound = ref.watch(soundServiceProvider);
+  final settings = ref.watch(appRepositoriesProvider).settings;
+  settings.onSoundPrefsChanged = sound.invalidatePlaybackCache;
+  ref.onDispose(() {
+    if (settings.onSoundPrefsChanged == sound.invalidatePlaybackCache) {
+      settings.onSoundPrefsChanged = null;
+    }
+  });
   ref.watch(achievementServiceProvider);
   ref.watch(soundServiceProvider);
   ref.watch(goalNotifierWiringProvider);

@@ -89,6 +89,18 @@ class ZenGardenBottomActions extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (waiting && skipCost != null) ...[
+            ZenGardenCountdownRow(
+              remaining: remaining,
+              waitTotal: waitTotal,
+              skipCost: skipCost,
+              balance: garden.pointsBalance,
+              textStyle: textStyle,
+              primary: primary,
+              onSkip: onSkipDecor,
+            ),
+            const SizedBox(height: 12),
+          ],
           Semantics(
             container: true,
             label:
@@ -109,18 +121,6 @@ class ZenGardenBottomActions extends StatelessWidget {
               child: const Text('To inventory'),
             ),
           ),
-          if (waiting && skipCost != null) ...[
-            const SizedBox(height: 8),
-            ZenGardenCountdownRow(
-              remaining: remaining,
-              waitTotal: waitTotal,
-              skipCost: skipCost,
-              balance: garden.pointsBalance,
-              textStyle: textStyle,
-              primary: primary,
-              onSkip: onSkipDecor,
-            ),
-          ],
           const SizedBox(height: 12),
           if (!waiting && d.stageIndex < DecorItem.maxStageIndex)
             Semantics(
@@ -196,6 +196,18 @@ class ZenGardenBottomActions extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
+        if (waiting && skipCost != null) ...[
+          ZenGardenCountdownRow(
+            remaining: remaining,
+            waitTotal: waitTotal,
+            skipCost: skipCost,
+            balance: garden.pointsBalance,
+            textStyle: textStyle,
+            primary: primary,
+            onSkip: onSkip,
+          ),
+          const SizedBox(height: 12),
+        ],
         Semantics(
           container: true,
           label:
@@ -216,18 +228,6 @@ class ZenGardenBottomActions extends StatelessWidget {
             child: const Text('To inventory'),
           ),
         ),
-        if (waiting && skipCost != null) ...[
-          const SizedBox(height: 8),
-          ZenGardenCountdownRow(
-            remaining: remaining,
-            waitTotal: waitTotal,
-            skipCost: skipCost,
-            balance: garden.pointsBalance,
-            textStyle: textStyle,
-            primary: primary,
-            onSkip: onSkip,
-          ),
-        ],
         const SizedBox(height: 12),
         if (!waiting && i.stageIndex < GardenItem.maxStageIndex)
           Semantics(
@@ -308,9 +308,22 @@ class ZenGardenCountdownRow extends StatelessWidget {
     final denom = waitTotal.inMilliseconds <= 0 ? 1 : waitTotal.inMilliseconds;
     final progress = 1.0 - (remaining.inMilliseconds / denom).clamp(0.0, 1.0);
 
+    // Skip wait first so large fonts do not push it below the fold of the
+    // focus overlay scroll view after Grow next.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        Semantics(
+          button: true,
+          enabled: canSkip,
+          label: 'Skip wait for $skipCost points',
+          child: FilledButton.tonal(
+            onPressed: canSkip ? onSkip : null,
+            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+            child: Text('Skip wait ($skipCost pts)'),
+          ),
+        ),
+        const SizedBox(height: 8),
         Row(
           children: [
             Expanded(
@@ -328,24 +341,15 @@ class ZenGardenCountdownRow extends StatelessWidget {
             Text(fmt, style: textStyle.copyWith(fontFeatures: const [])),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         Semantics(
           label:
               'Pause before next growth. About $fmt remaining. Or skip for $skipCost points.',
           child: Text(
             'Pause before next growth · $fmt left',
             style: textStyle.copyWith(fontWeight: FontWeight.normal),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Semantics(
-          button: true,
-          enabled: canSkip,
-          label: 'Skip wait for $skipCost points',
-          child: FilledButton.tonal(
-            onPressed: canSkip ? onSkip : null,
-            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-            child: Text('Skip wait ($skipCost pts)'),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],

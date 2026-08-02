@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:focusNexus/app/app_routes.dart';
+import 'package:focusNexus/services/storage/storage_keys.dart';
 
 import '../helpers/test_provider_scope.dart';
 
@@ -27,8 +28,32 @@ void main() {
     await pumpUntilFound(tester, find.text('Settings'));
 
     await tester.tap(find.text('Settings'));
-    await pumpUntilFound(tester, find.text('Reward Type'));
+    await pumpUntilFound(tester, find.text('Reward types'));
 
     expect(find.text('Notification Frequency'), findsOneWidget);
+  });
+
+  testWidgets('smoke: dashboard shows a button per enabled reward type', (
+    tester,
+  ) async {
+    final storage = onboardedTestStorage();
+    await storage.write(
+      key: StorageKeys.rewardTypes,
+      value: '["Mini-games","Progressive visuals"]',
+    );
+
+    await pumpFocusNexusApp(
+      tester,
+      initialRoute: AppRoutes.dashboard,
+      storage: storage,
+    );
+    await pumpUntilFound(tester, find.text('Mini-games'));
+    expect(find.text('Progressive visuals'), findsOneWidget);
+    expect(find.text('Customization'), findsNothing);
+
+    // Navigate Mini-games (not Progressive visuals): Zen garden persist schedules
+    // a Riverpod zero-duration refresh timer that can outlive the test.
+    await tester.tap(find.text('Mini-games'));
+    await pumpUntilFound(tester, find.text('No mini-games available yet.'));
   });
 }
