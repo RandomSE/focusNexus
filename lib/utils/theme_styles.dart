@@ -19,9 +19,10 @@ class ThemeStyles {
   static const Color _darkSurface = Color(0xFF141A22);
   static const Color _darkAccent = Color(0xFF8FA1FF);
 
-  /// Custom palette only on the Customization reward screen when enabled there.
+  /// Custom palette only when Customization is enabled and colours are on.
   static bool usesCustomPalette(UserPrefsSnapshot prefs) {
-    return prefs.rewardType == 'Customization' && prefs.customizationEnabled;
+    return prefs.rewardTypes.contains('Customization') &&
+        prefs.customizationEnabled;
   }
 
   static Color resolvePrimaryColor({
@@ -136,11 +137,17 @@ class ThemeStyles {
     final factor = fontSize / referenceSize;
     final fontFamily = useDyslexiaFont ? 'OpenDyslexic' : null;
 
-    TextStyle? scale(TextStyle? style) {
+    TextStyle? scale(TextStyle? style, {double? maxSize}) {
       if (style == null) return null;
       final baseFontSize = style.fontSize ?? referenceSize;
+      var sized = baseFontSize * factor;
+      // OpenDyslexic glyphs are wide; huge title/display sizes at userFontSize
+      // 24 inflate Impeller atlas packing ("Frame bounds are not present").
+      if (useDyslexiaFont && maxSize != null && sized > maxSize) {
+        sized = maxSize;
+      }
       return style.copyWith(
-        fontSize: baseFontSize * factor,
+        fontSize: sized,
         color: bodyColor,
         fontFamily: fontFamily,
         fontFamilyFallback: useDyslexiaFont
@@ -152,15 +159,19 @@ class ThemeStyles {
       );
     }
 
+    // Cap display/title roles under OpenDyslexic; body/label stay user-scaled.
+    const dyslexiaTitleCap = 28.0;
+    const dyslexiaDisplayCap = 34.0;
+
     return TextTheme(
-      displayLarge: scale(base.displayLarge),
-      displayMedium: scale(base.displayMedium),
-      displaySmall: scale(base.displaySmall),
-      headlineLarge: scale(base.headlineLarge),
-      headlineMedium: scale(base.headlineMedium),
-      headlineSmall: scale(base.headlineSmall),
-      titleLarge: scale(base.titleLarge),
-      titleMedium: scale(base.titleMedium),
+      displayLarge: scale(base.displayLarge, maxSize: dyslexiaDisplayCap),
+      displayMedium: scale(base.displayMedium, maxSize: dyslexiaDisplayCap),
+      displaySmall: scale(base.displaySmall, maxSize: dyslexiaDisplayCap),
+      headlineLarge: scale(base.headlineLarge, maxSize: dyslexiaTitleCap),
+      headlineMedium: scale(base.headlineMedium, maxSize: dyslexiaTitleCap),
+      headlineSmall: scale(base.headlineSmall, maxSize: dyslexiaTitleCap),
+      titleLarge: scale(base.titleLarge, maxSize: dyslexiaTitleCap),
+      titleMedium: scale(base.titleMedium, maxSize: dyslexiaTitleCap),
       titleSmall: scale(base.titleSmall),
       bodyLarge: scale(base.bodyLarge),
       bodyMedium: scale(base.bodyMedium),

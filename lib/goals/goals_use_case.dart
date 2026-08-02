@@ -273,7 +273,7 @@ class GoalsUseCase {
         now: now,
       );
       if (plan == null) return null;
-      await persistCompletePlan(plan);
+      await persistCompletePlan(plan, now: now);
       return StepProgressResult(completed: plan.result);
     }
     return const StepProgressResult();
@@ -321,12 +321,13 @@ class GoalsUseCase {
   Future<Set<String>> persistCompletePlan(
     GoalsCompletePlan plan, {
     bool optimisticCacheCredit = false,
+    DateTime? now,
   }) async {
     final keys = await _persistCompletePlanInBackground(
       plan,
       optimisticCacheCredit: optimisticCacheCredit,
     );
-    await _maybeSpawnRepeatAfterComplete(plan.goal);
+    await _maybeSpawnRepeatAfterComplete(plan.goal, now: now);
     return keys;
   }
 
@@ -370,7 +371,7 @@ class GoalsUseCase {
       now: now,
     );
     if (plan == null) return null;
-    await persistCompletePlan(plan);
+    await persistCompletePlan(plan, now: now);
     return plan.result;
   }
 
@@ -509,7 +510,7 @@ class GoalsUseCase {
         deadlineHours <= 0 ||
         _settings.pauseGoals) {
       debugLog(
-        'Notifications not enabled — skipping goal check scheduling',
+        'Notifications not enabled - skipping goal check scheduling',
       );
       return;
     }
@@ -661,15 +662,18 @@ class GoalsUseCase {
     return result.kept;
   }
 
-  Future<void> _maybeSpawnRepeatAfterComplete(GoalSet completed) async {
+  Future<void> _maybeSpawnRepeatAfterComplete(
+    GoalSet completed, {
+    DateTime? now,
+  }) async {
     if (completed.repeatSeriesId == 0) return;
     final series = await _repeats.readById(completed.repeatSeriesId);
     if (series == null || !series.isActive) return;
-    final now = DateTime.now();
+    final clock = now ?? DateTime.now();
     final next = await _timeWindow.spawnNextFromSeries(
       series: series,
-      after: parseGoalDateTime(completed.actionWindowEnd) ?? now,
-      now: now,
+      after: parseGoalDateTime(completed.actionWindowEnd) ?? clock,
+      now: clock,
     );
     if (next == null) return;
     final active = await _goals.readActiveGoals();

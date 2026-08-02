@@ -7,6 +7,7 @@ import 'package:focusNexus/providers/app_settings_provider.dart';
 import 'package:focusNexus/providers/registration_form_provider.dart';
 import 'package:focusNexus/utils/common_utils.dart';
 import 'package:focusNexus/widgets/appearance_settings_section.dart';
+import 'package:focusNexus/widgets/reward_types_multi_select.dart';
 import 'package:focusNexus/widgets/settings_themed_builder.dart';
 import 'package:focusNexus/utils/theme_styles.dart';
 
@@ -27,22 +28,18 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
     'No notifications',
   ];
   static const notificationStyles = ['Vibrant', 'Minimal', 'Animated'];
-  static const rewardTypes = [
-    'Mini-games',
-    'Progressive visuals',
-    'Customization',
-  ];
 
   Future<void> _saveAndContinue() async {
     final form = ref.read(registrationFormProvider);
+    if (form.rewardTypes.isEmpty) return;
     final settings = ref.read(appSettingsProvider.notifier).service;
     await settings.completeRegistration(
       notificationFrequency: form.frequency!,
-      notificationStyle: form.notificationStyle ?? 'Minimal',
-      rewardType: form.rewardType!,
+      notificationStyle: form.notificationStyle ?? 'Vibrant',
+      rewardTypes: form.rewardTypes,
     );
     if (!mounted) return;
-    ref.pushReplacementRoute(context, AppRoute.onboard);
+    ref.resetToRoute(context, AppRoute.onboard);
   }
 
   @override
@@ -93,23 +90,19 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                       labelStyle,
                       secondaryColor,
                       (value) => formNotifier.setNotificationStyle(value),
-                      validator: (value) =>
-                          value == null ? 'Select notification style' : null,
                     ),
-                  CommonUtils.buildDropdownButtonFormField(
-                    'Reward type',
-                    form.rewardType,
-                    rewardTypes,
-                    labelStyle,
-                    secondaryColor,
-                    (value) => formNotifier.setRewardType(value),
-                    validator: (value) =>
-                        value == null ? 'Select reward type' : null,
+                  RewardTypesMultiSelect(
+                    selected: form.rewardTypes,
+                    onChanged: formNotifier.setRewardTypes,
+                    textStyle: labelStyle,
+                    activeColor: primaryColor,
+                    title: 'Reward types',
+                    subtitle: 'Choose one or more. At least one is required.',
                   ),
                   const SizedBox(height: 24),
                   if (!form.canContinue)
                     Text(
-                      '* Complete required fields to continue.',
+                      form.missingRequirementsMessage,
                       style: labelStyle.copyWith(
                         color: Colors.red,
                         fontWeight: FontWeight.normal,
@@ -133,7 +126,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    'Optional — appearance',
+                    'Optional - appearance',
                     style: labelStyle,
                   ),
                   const SizedBox(height: 4),

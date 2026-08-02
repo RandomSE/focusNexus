@@ -96,6 +96,7 @@ class VisualSettingsPanel extends ConsumerWidget {
     super.key,
     required this.bundle,
     this.overflowSafe = false,
+    this.showDarkMode = true,
     this.showDyslexiaSwitch = false,
     this.showHighContrastSwitch = false,
     required this.onAppearanceChange,
@@ -103,6 +104,8 @@ class VisualSettingsPanel extends ConsumerWidget {
 
   final ThemeBundle bundle;
   final bool overflowSafe;
+  /// When false, Dark mode is omitted (Settings places it under Accessibility).
+  final bool showDarkMode;
   final bool showDyslexiaSwitch;
   final bool showHighContrastSwitch;
   final Future<void> Function(Future<void> Function() apply) onAppearanceChange;
@@ -135,19 +138,20 @@ class VisualSettingsPanel extends ConsumerWidget {
           ),
           textStyle,
         ),
-        CommonUtils.buildSwitchListTile(
-          'Dark mode',
-          textStyle,
-          settings.snapshot.isDark,
-          (val) {
-            onAppearanceChange(
-              () => settings.setUserTheme(val ? 'dark' : 'light'),
-            );
-          },
-          primaryColor,
-          dense: overflowSafe,
-          titleMaxLines: overflowSafe ? 2 : 1,
-        ),
+        if (showDarkMode)
+          CommonUtils.buildSwitchListTile(
+            'Dark mode',
+            textStyle,
+            settings.snapshot.isDark,
+            (val) {
+              onAppearanceChange(
+                () => settings.setUserTheme(val ? 'dark' : 'light'),
+              );
+            },
+            primaryColor,
+            dense: overflowSafe,
+            titleMaxLines: overflowSafe ? 2 : 1,
+          ),
         if (showDyslexiaSwitch)
           CommonUtils.buildSwitchListTile(
             'Dyslexia-friendly Font',
@@ -176,13 +180,14 @@ class VisualSettingsPanel extends ConsumerWidget {
   }
 }
 
-/// Shared appearance block (theme presets only — not custom reward colours).
+/// Shared appearance block (theme presets only - not custom reward colours).
 class AppearanceSettingsSection extends ConsumerWidget {
   const AppearanceSettingsSection({
     super.key,
     required this.bundle,
     this.showBottomDivider = true,
     this.overflowSafe = false,
+    this.showDarkMode = true,
     this.showDyslexiaSwitch = false,
     this.showHighContrastSwitch = false,
   });
@@ -190,6 +195,7 @@ class AppearanceSettingsSection extends ConsumerWidget {
   final ThemeBundle bundle;
   final bool showBottomDivider;
   final bool overflowSafe;
+  final bool showDarkMode;
   final bool showDyslexiaSwitch;
   final bool showHighContrastSwitch;
 
@@ -212,6 +218,7 @@ class AppearanceSettingsSection extends ConsumerWidget {
         VisualSettingsPanel(
           bundle: liveBundle,
           overflowSafe: overflowSafe,
+          showDarkMode: showDarkMode,
           showDyslexiaSwitch: showDyslexiaSwitch,
           showHighContrastSwitch: showHighContrastSwitch,
           onAppearanceChange: (apply) => _onAppearanceChange(ref, apply),

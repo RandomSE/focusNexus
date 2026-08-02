@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Converts local canvas coordinates to normalized sandbox space (0–1).
+/// Converts local canvas coordinates to normalized sandbox space (0-1).
 Offset sandboxNormFromLocal(Offset local, Size size) {
   if (size.width <= 0 || size.height <= 0) return Offset.zero;
   return Offset(

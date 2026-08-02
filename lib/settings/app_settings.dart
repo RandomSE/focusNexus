@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:focusNexus/repositories/theme_repository.dart';
 import 'package:focusNexus/utils/color_argb.dart';
 import 'package:focusNexus/repositories/user_prefs_repository.dart';
+import 'package:focusNexus/rewards/reward_type_selection.dart';
 import 'package:focusNexus/services/storage/storage_keys.dart';
 import 'package:focusNexus/utils/theme_styles.dart';
 import 'package:focusNexus/utils/user_prefs_codec.dart';
@@ -16,6 +17,9 @@ class AppSettings {
 
   /// Called after snapshot mutations; wired by [AppSettingsNotifier].
   VoidCallback? onSnapshotChanged;
+
+  /// Called when sound enabled/volume prefs change; wired to [SoundService].
+  VoidCallback? onSoundPrefsChanged;
 
   UserPrefsSnapshot _snapshot = const UserPrefsSnapshot();
   bool _loaded = false;
@@ -39,10 +43,13 @@ class AppSettings {
   bool get customizationEnabled => _snapshot.customizationEnabled;
   bool get useCustomColorPalette => _snapshot.useCustomColorPalette;
   bool get usesCustomizedColours => ThemeStyles.usesCustomPalette(_snapshot);
-  bool get isCustomizationReward => _snapshot.rewardType == 'Customization';
+  bool get isCustomizationReward =>
+      _snapshot.rewardTypes.contains('Customization');
+  bool get hasProgressiveVisualsReward =>
+      _snapshot.rewardTypes.contains('Progressive visuals');
   List<Color> get allowedColors => _snapshot.allowedColors;
   String get customizedFont => _snapshot.customizedFont;
-  String get rewardType => _snapshot.rewardType;
+  List<String> get rewardTypes => List.unmodifiable(_snapshot.rewardTypes);
   String get notificationStyle => _snapshot.notificationStyle;
   String get notificationFrequency => _snapshot.notificationFrequency;
   String get dailyAffirmationsTime => _snapshot.dailyAffirmationsTime;
@@ -58,6 +65,13 @@ class AppSettings {
     await _prefs.ensureAllowedColorsInitialized();
     _snapshot = await _prefs.loadSnapshot();
     await _theme.ensurePersistedTheme(_snapshot);
+    final multiRaw = await _prefs.readString(StorageKeys.rewardTypes);
+    if (multiRaw == null || multiRaw.trim().isEmpty) {
+      await _prefs.writeString(
+        StorageKeys.rewardTypes,
+        RewardTypeSelection.encode(_snapshot.rewardTypes),
+      );
+    }
     _loaded = true;
     onSnapshotChanged?.call();
   }
@@ -117,14 +131,26 @@ class AppSettings {
     await _persistThemeFromSnapshot(next);
   }
 
-  Future<void> setRewardType(String value) async {
-    if (value != 'Customization' && _snapshot.customizationEnabled) {
+  /// Replaces enabled reward types. Returns false and leaves state unchanged
+  /// when [values] has no known types (min 1 required).
+  Future<bool> setRewardTypes(List<String> values) async {
+    final ordered = RewardTypeSelection.orderKnown(values);
+    if (ordered.isEmpty) return false;
+
+    final hadCustomization = _snapshot.rewardTypes.contains('Customization');
+    final hasCustomization = ordered.contains('Customization');
+    if (hadCustomization && !hasCustomization && _snapshot.customizationEnabled) {
       await setCustomizationEnabled(false);
     }
-    await _prefs.writeString(StorageKeys.rewardType, value);
-    final next = _snapshot.copyWith(rewardType: value);
+
+    await _prefs.writeString(
+      StorageKeys.rewardTypes,
+      RewardTypeSelection.encode(ordered),
+    );
+    final next = _snapshot.copyWith(rewardTypes: ordered);
     _apply(next);
     await _persistThemeFromSnapshot(next);
+    return true;
   }
 
   Future<void> setCustomizationEnabled(bool value) async {
@@ -181,12 +207,12 @@ class AppSettings {
   Future<void> completeRegistration({
     required String notificationFrequency,
     required String notificationStyle,
-    required String rewardType,
+    required List<String> rewardTypes,
   }) async {
     await _prefs.writeString(StorageKeys.theme, 'light');
     await setNotificationFrequency(notificationFrequency);
     await setNotificationStyle(notificationStyle);
-    await setRewardType(rewardType);
+    await setRewardTypes(rewardTypes);
     await setRegistrationComplete(true);
     await setOnboardingCompleted(false);
   }
@@ -238,12 +264,14 @@ class AppSettings {
   Future<void> setSoundEnabled(bool value) async {
     await _prefs.writeBool(StorageKeys.soundEnabled, value);
     _apply(_snapshot.copyWith(soundEnabled: value));
+    onSoundPrefsChanged?.call();
   }
 
   Future<void> setSoundVolume(int value) async {
     final clamped = value.clamp(0, 100);
     await _prefs.writeString(StorageKeys.soundVolume, clamped.toString());
     _apply(_snapshot.copyWith(soundVolume: clamped.toDouble()));
+    onSoundPrefsChanged?.call();
   }
 
   Future<void> setDailyAffirmationsTime(String value) async {
@@ -308,7 +336,7 @@ class AppSettings {
     _snapshot = const UserPrefsSnapshot();
     await setUserFontSize(14.0);
     await setUserTheme('light');
-    await setRewardType('Mini-games');
+    await setRewardTypes(['Mini-games']);
     await setNotificationStyle('Minimal');
     await setNotificationFrequency('Medium');
     await setHighContrastMode(false);
@@ -321,8 +349,8 @@ class AppSettings {
     await setPauseGoals(false);
     await setRegistrationComplete(false);
     await setOnboardingCompleted(false);
-    await setSoundEnabled(false);
-    await setSoundVolume(0);
+    await setSoundEnabled(true);
+    await setSoundVolume(100);
     await setCustomizationEnabled(false);
     await setUseCustomColorPalette(false);
     await _prefs.writeAllowedColors([]);

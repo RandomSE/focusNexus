@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 
 import 'zen_garden_cartoon_style.dart';
 
-/// Animated waterfall — mossy cliff, flowing sheet, pool ripples, soft mist.
+/// Animated waterfall - mossy cliff, flowing sheet, pool ripples, soft mist.
 class ZenGardenWaterfallLayer extends StatefulWidget {
   const ZenGardenWaterfallLayer({
     super.key,

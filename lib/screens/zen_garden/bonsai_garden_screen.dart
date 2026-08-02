@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,10 +6,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focusNexus/progressive_visuals/cherry_blossom_bonsai_ref.dart';
 import 'package:focusNexus/progressive_visuals/cherry_blossom_bonsai_tile.dart';
 import 'package:focusNexus/progressive_visuals/cherry_blossom_tree_engine.dart';
+import 'package:focusNexus/providers/app_services_provider.dart';
 import 'package:focusNexus/providers/points_balance_provider.dart';
 import 'package:focusNexus/providers/zen_garden_session_provider.dart';
+import 'package:focusNexus/services/sound_channel.dart';
+import 'package:focusNexus/services/sound_service.dart';
 
-/// Custom 5×5 bonsai garden — trees fill slots; letterbox gets a calm backdrop.
+/// Custom 5x5 bonsai garden spanning the full body under an AppBar.
 class BonsaiGardenScreen extends ConsumerStatefulWidget {
   const BonsaiGardenScreen({
     super.key,
@@ -23,14 +25,44 @@ class BonsaiGardenScreen extends ConsumerStatefulWidget {
   final Color secondaryColor;
   final TextStyle textStyle;
 
+  /// Uniform gap between pots (logical px).
+  static const double potSpacing = 6.0;
+
   @override
   ConsumerState<BonsaiGardenScreen> createState() => _BonsaiGardenScreenState();
 }
 
 class _BonsaiGardenScreenState extends ConsumerState<BonsaiGardenScreen> {
   bool _viewMode = false;
+  SoundService? _sounds;
 
   ZenGardenSession get _session => ref.read(zenGardenSessionProvider.notifier);
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(
+        ref.read(soundServiceProvider).startMusic(SoundChannel.bonsaiMusic),
+      );
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _sounds ??= ref.read(soundServiceProvider);
+  }
+
+  @override
+  void dispose() {
+    final sounds = _sounds;
+    if (sounds != null) {
+      unawaited(sounds.stopMusic());
+    }
+    super.dispose();
+  }
 
   Future<void> _applySlot(int slotIndex, String? key) async {
     final garden = ref.read(zenGardenSessionProvider).garden;
@@ -70,18 +102,18 @@ class _BonsaiGardenScreenState extends ConsumerState<BonsaiGardenScreen> {
             separatorBuilder: (_, __) => const SizedBox(height: 8),
             itemBuilder: (context, index) {
               final key = keys[index];
-              final ref = CherryBlossomBonsaiRef.parse(key)!;
-              final count = ref.countFor(tree);
+              final bonsai = CherryBlossomBonsaiRef.parse(key)!;
+              final count = bonsai.countFor(tree);
               return ListTile(
                 leading: SizedBox(
                   width: 56,
                   height: 56,
                   child: CherryBlossomBonsaiTile(
                     bonsaiKey: key,
-                    countLabel: '×$count',
+                    animateEffects: false,
                   ),
                 ),
-                title: Text(ref.stageLabel, style: widget.textStyle),
+                title: Text(bonsai.stageLabel, style: widget.textStyle),
                 subtitle: Text('$count collected', style: widget.textStyle),
                 onTap: () => Navigator.pop(context, key),
               );
@@ -102,6 +134,23 @@ class _BonsaiGardenScreenState extends ConsumerState<BonsaiGardenScreen> {
     final slots = tree.gardenSlots;
 
     return Scaffold(
+      appBar: AppBar(
+        leading: BackButton(
+          onPressed: () => Navigator.maybePop(context),
+        ),
+        title: Text('Bonsai garden', style: widget.textStyle),
+        actions: [
+          if (!_viewMode)
+            TextButton.icon(
+              onPressed: () => setState(() => _viewMode = true),
+              icon: Icon(Icons.visibility_outlined, color: widget.primaryColor),
+              label: Text(
+                'View garden',
+                style: TextStyle(color: widget.primaryColor),
+              ),
+            ),
+        ],
+      ),
       body: Stack(
         fit: StackFit.expand,
         children: [
@@ -121,62 +170,42 @@ class _BonsaiGardenScreenState extends ConsumerState<BonsaiGardenScreen> {
             ),
             child: SizedBox.expand(),
           ),
-          if (!_viewMode)
-            SafeArea(
-              child: Align(
-                alignment: Alignment.topRight,
-                child: TextButton.icon(
-                  onPressed: () => setState(() => _viewMode = true),
-                  icon: Icon(Icons.visibility_outlined, color: widget.primaryColor),
-                  label: Text(
-                    'View garden',
-                    style: TextStyle(color: widget.primaryColor),
-                  ),
-                ),
-              ),
-            ),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              const spacing = 4.0;
-              const dim = CherryBlossomBonsaiRef.gridDimension;
-              final w = constraints.maxWidth;
-              final h = constraints.maxHeight;
-              final cellFromWidth = (w - spacing * (dim - 1)) / dim;
-              final cellFromHeight = (h - spacing * (dim - 1)) / dim;
-              final cell = math.min(cellFromWidth, cellFromHeight);
-              final gridW = cell * dim + spacing * (dim - 1);
+          Padding(
+            padding: const EdgeInsets.all(BonsaiGardenScreen.potSpacing),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                const dim = CherryBlossomBonsaiRef.gridDimension;
+                const spacing = BonsaiGardenScreen.potSpacing;
+                final w = constraints.maxWidth;
+                final h = constraints.maxHeight;
+                final cellW = (w - spacing * (dim - 1)) / dim;
+                final cellH = (h - spacing * (dim - 1)) / dim;
+                final aspect = cellW / cellH;
 
-              return Center(
-                child: SizedBox(
-                  width: gridW,
-                  height: gridW,
-                  child: GridView.builder(
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: dim,
-                      mainAxisSpacing: spacing,
-                      crossAxisSpacing: spacing,
-                      childAspectRatio: 1,
-                    ),
-                    itemCount: CherryBlossomBonsaiRef.gardenSlotCount,
-                    itemBuilder: (context, index) {
-                      final key = slots[index];
-                      final ref = CherryBlossomBonsaiRef.parse(key);
-                      return CherryBlossomBonsaiTile(
-                        bonsaiKey: key,
-                        empty: key == null,
-                        countLabel: ref == null ? null : '×${ref.countFor(tree)}',
-                        onTap: _viewMode ? null : () => _pickBonsai(index),
-                      );
-                    },
+                return GridView.builder(
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: dim,
+                    mainAxisSpacing: spacing,
+                    crossAxisSpacing: spacing,
+                    childAspectRatio: aspect,
                   ),
-                ),
-              );
-            },
+                  itemCount: CherryBlossomBonsaiRef.gardenSlotCount,
+                  itemBuilder: (context, index) {
+                    final key = slots[index];
+                    return CherryBlossomBonsaiTile(
+                      bonsaiKey: key,
+                      empty: key == null,
+                      onTap: _viewMode ? null : () => _pickBonsai(index),
+                    );
+                  },
+                );
+              },
+            ),
           ),
           if (_viewMode)
             Positioned(
-              top: MediaQuery.paddingOf(context).top + 8,
+              top: 8,
               right: 12,
               child: FloatingActionButton.small(
                 heroTag: 'bonsai_exit_view',

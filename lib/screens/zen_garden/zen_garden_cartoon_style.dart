@@ -98,7 +98,7 @@ abstract final class ZenCartoonStyle {
     canvas.restore();
   }
 
-  /// Offset contact shadow beneath placeables — consistent top-left light source.
+  /// Offset contact shadow beneath placeables - consistent top-left light source.
   static void drawGroundShadow(
     Canvas canvas,
     Offset center, {

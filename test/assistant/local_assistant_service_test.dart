@@ -26,9 +26,9 @@ void main() {
       expect(reply.toLowerCase(), isNot(contains('chatgpt')));
     });
 
-    test('mini-games caveat is honest about placeholder', () {
+    test('mini-games FAQ mentions Firefly Jar', () {
       final reply = resolveAssistantResponse('How do mini-games work?');
-      expect(reply.toLowerCase(), contains('placeholder'));
+      expect(reply.toLowerCase(), contains('firefly'));
     });
 
     test('live points question deflects to dashboard', () {

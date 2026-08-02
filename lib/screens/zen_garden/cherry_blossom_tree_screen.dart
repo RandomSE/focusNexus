@@ -10,9 +10,13 @@ import 'package:focusNexus/progressive_visuals/cherry_blossom_tree_state.dart';
 import 'package:focusNexus/progressive_visuals/cherry_blossom_tree_viewport.dart';
 import 'package:focusNexus/progressive_visuals/cherry_blossom_prestige_transition.dart';
 import 'package:focusNexus/progressive_visuals/garden_state.dart';
+import 'package:focusNexus/providers/app_services_provider.dart';
 import 'package:focusNexus/providers/points_balance_provider.dart';
 import 'package:focusNexus/providers/zen_garden_session_provider.dart';
 import 'package:focusNexus/screens/zen_garden/bonsai_garden_screen.dart';
+import 'package:focusNexus/services/music_unlock.dart';
+import 'package:focusNexus/services/sound_channel.dart';
+import 'package:focusNexus/services/sound_service.dart';
 import 'package:focusNexus/utils/theme_styles.dart';
 
 /// Cherry blossom tree growth screen (image-based stages).
@@ -36,15 +40,33 @@ class CherryBlossomTreeScreen extends ConsumerStatefulWidget {
 class _CherryBlossomTreeScreenState extends ConsumerState<CherryBlossomTreeScreen>
     with TickerProviderStateMixin {
   bool _prestigeBusy = false;
-  bool _viewTreeMode = false;
+  bool _chromeVisible = true;
+  bool _menuOpen = false;
   CherryBlossomTreeState? _prestigeOutgoing;
   CherryBlossomTreeState? _prestigeIncoming;
+  SoundService? _sounds;
+  SoundChannel? _activeMusic;
 
   late final AnimationController _pulseController;
   late final AnimationController _prestigeController;
   late final Animation<double> _pulseAnimation;
 
   ZenGardenSession get _session => ref.read(zenGardenSessionProvider.notifier);
+
+  void _toggleMenu() {
+    setState(() => _menuOpen = !_menuOpen);
+  }
+
+  void _hideChrome() {
+    setState(() {
+      _chromeVisible = false;
+      _menuOpen = false;
+    });
+  }
+
+  void _showChrome() {
+    setState(() => _chromeVisible = true);
+  }
 
   @override
   void initState() {
@@ -66,14 +88,36 @@ class _CherryBlossomTreeScreenState extends ConsumerState<CherryBlossomTreeScree
         setState(() {
           _prestigeOutgoing = null;
           _prestigeIncoming = null;
-          _prestigeBusy = false;
+          // Controls already re-enabled when the next stage was committed.
         });
       }
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(_syncCherryMusic());
     });
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _sounds ??= ref.read(soundServiceProvider);
+  }
+
+  Future<void> _syncCherryMusic() async {
+    final tree = ref.read(zenGardenSessionProvider).garden.cherryBlossomTree;
+    final channel = cherryBlossomMusicForTree(tree);
+    if (_activeMusic == channel) return;
+    _activeMusic = channel;
+    await ref.read(soundServiceProvider).startMusic(channel);
+  }
+
+  @override
   void dispose() {
+    final sounds = _sounds;
+    if (sounds != null) {
+      unawaited(sounds.stopMusic());
+    }
     _pulseController.dispose();
     _prestigeController.dispose();
     super.dispose();
@@ -116,6 +160,11 @@ class _CherryBlossomTreeScreenState extends ConsumerState<CherryBlossomTreeScree
             result.state!.pointsBalance,
           );
       unawaited(_session.persist(snapshot: result.state));
+      // Re-enable Max tree / grow as soon as the next stage is committed,
+      // not after the prestige transition finishes (~1s+ asset settle feel).
+      if (mounted) {
+        setState(() => _prestigeBusy = false);
+      }
       await _prestigeController.forward(from: 0);
       return;
     }
@@ -128,9 +177,20 @@ class _CherryBlossomTreeScreenState extends ConsumerState<CherryBlossomTreeScree
       _playGrowthPulse();
     }
     unawaited(_session.persist(snapshot: result.state));
+    unawaited(_syncCherryMusic());
   }
 
   Future<CherryBlossomPrestigePath?> _askPrestigePath() async {
+    final actionStyle = ThemeStyles.outlinedActionButtonStyle(
+      primaryColor: widget.primaryColor,
+      secondaryColor: widget.secondaryColor,
+      borderColor: widget.primaryColor,
+      verticalPadding: 10,
+    );
+    final labelStyle = ThemeStyles.buttonLabelStyle(
+      widget.textStyle,
+      widget.primaryColor,
+    );
     return showDialog<CherryBlossomPrestigePath>(
       context: context,
       builder: (context) => AlertDialog(
@@ -141,14 +201,16 @@ class _CherryBlossomTreeScreenState extends ConsumerState<CherryBlossomTreeScree
         ),
         actions: [
           TextButton(
+            style: actionStyle,
             onPressed: () =>
                 Navigator.pop(context, CherryBlossomPrestigePath.peace),
-            child: Text('Peace → Serenity', style: widget.textStyle),
+            child: Text('Peace', style: labelStyle),
           ),
-          FilledButton(
+          TextButton(
+            style: actionStyle,
             onPressed: () =>
                 Navigator.pop(context, CherryBlossomPrestigePath.power),
-            child: const Text('Power'),
+            child: Text('Power', style: labelStyle),
           ),
         ],
       ),
@@ -183,6 +245,9 @@ class _CherryBlossomTreeScreenState extends ConsumerState<CherryBlossomTreeScree
   }
 
   Future<void> _openBonsaiGarden() async {
+    await ref.read(soundServiceProvider).stopMusic();
+    _activeMusic = null;
+    if (!mounted) return;
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (context) => BonsaiGardenScreen(
@@ -192,6 +257,8 @@ class _CherryBlossomTreeScreenState extends ConsumerState<CherryBlossomTreeScree
         ),
       ),
     );
+    if (!mounted) return;
+    await _syncCherryMusic();
   }
 
   Widget _buildTreeArea(
@@ -220,7 +287,145 @@ class _CherryBlossomTreeScreenState extends ConsumerState<CherryBlossomTreeScree
     );
   }
 
-  Widget _buildControlPanel({
+  Widget _buildControlContent({
+    required CherryBlossomTreeState tree,
+    required CherryBlossomTreeEngine engine,
+    required GardenState garden,
+    required int balance,
+    required int? nextCost,
+    required int? prestigeCost,
+    required int maxCost,
+    required bool canGrow,
+    required bool canMax,
+    required bool showPrestige,
+    required bool canAffordPrestige,
+  }) {
+    final actionStyle = ThemeStyles.outlinedActionButtonStyle(
+      primaryColor: widget.primaryColor,
+      secondaryColor: widget.secondaryColor,
+      borderColor: widget.primaryColor,
+    );
+    final labelStyle = ThemeStyles.buttonLabelStyle(
+      widget.textStyle,
+      widget.primaryColor,
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (tree.isFinale) ...[
+          if (tree.unlockedFinalePaths.length < 2) ...[
+            Text(
+              'Change path (${CherryBlossomStageCatalog.pathSwitchCost} pts)',
+              style: widget.textStyle.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 6),
+          ],
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  style: actionStyle,
+                  onPressed: _prestigeBusy ||
+                          tree.prestigePath == CherryBlossomPrestigePath.peace ||
+                          !engine.canAffordPathSwitch(
+                            balance,
+                            CherryBlossomPrestigePath.peace,
+                          )
+                      ? null
+                      : () => _onSwitchPath(
+                            engine,
+                            garden,
+                            CherryBlossomPrestigePath.peace,
+                          ),
+                  child: Text(
+                    tree.isFinalePathUnlocked(CherryBlossomPrestigePath.peace)
+                        ? 'Peace'
+                        : 'Peace (${CherryBlossomStageCatalog.pathSwitchCost})',
+                    style: labelStyle,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton(
+                  style: actionStyle,
+                  onPressed: _prestigeBusy ||
+                          tree.prestigePath == CherryBlossomPrestigePath.power ||
+                          !engine.canAffordPathSwitch(
+                            balance,
+                            CherryBlossomPrestigePath.power,
+                          )
+                      ? null
+                      : () => _onSwitchPath(
+                            engine,
+                            garden,
+                            CherryBlossomPrestigePath.power,
+                          ),
+                  child: Text(
+                    tree.isFinalePathUnlocked(CherryBlossomPrestigePath.power)
+                        ? 'Power'
+                        : 'Power (${CherryBlossomStageCatalog.pathSwitchCost})',
+                    style: labelStyle,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ] else ...[
+          Text(
+            tree.hudLabel,
+            style: widget.textStyle.copyWith(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 10),
+          if (showPrestige)
+            ElevatedButton(
+              style: actionStyle,
+              onPressed: _prestigeBusy || !canAffordPrestige
+                  ? null
+                  : () => _onPrestige(engine, garden),
+              child: Text(
+                prestigeCost == null
+                    ? 'Prestige tree'
+                    : 'Prestige tree ($prestigeCost pts)',
+                style: labelStyle,
+              ),
+            )
+          else ...[
+            ElevatedButton(
+              style: actionStyle,
+              onPressed: canGrow && nextCost != null
+                  ? () => _commitGardenState(engine.growOne(garden))
+                  : null,
+              child: Text(
+                nextCost == null
+                    ? 'Stage complete'
+                    : 'Grow tree ($nextCost pts)',
+                style: labelStyle,
+              ),
+            ),
+            if (canMax) ...[
+              const SizedBox(height: 8),
+              ElevatedButton(
+                style: actionStyle,
+                onPressed: canMax
+                    ? () => _commitGardenState(
+                          engine.growToAffordableMax(garden),
+                        )
+                    : null,
+                child: Text(
+                  'Max tree ($maxCost pts)',
+                  style: labelStyle,
+                ),
+              ),
+            ],
+          ],
+        ],
+      ],
+    );
+  }
+
+  Widget _buildMenuOverlay({
     required CherryBlossomTreeState tree,
     required CherryBlossomTreeEngine engine,
     required GardenState garden,
@@ -234,125 +439,27 @@ class _CherryBlossomTreeScreenState extends ConsumerState<CherryBlossomTreeScree
     required bool canAffordPrestige,
   }) {
     return Material(
-      elevation: 8,
-      color: widget.secondaryColor,
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                tree.hudLabel,
-                style: widget.textStyle.copyWith(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Invested: ${tree.totalTreePointsInvested} pts · Wallet: $balance pts',
-                style: widget.textStyle,
-              ),
-              if (tree.isFinale) ...[
-                const SizedBox(height: 10),
-                Text(
-                  tree.unlockedFinalePaths.length >= 2
-                      ? 'Change path (free)'
-                      : 'Unlock alternate path (${CherryBlossomStageCatalog.pathSwitchCost} pts)',
-                  style: widget.textStyle.copyWith(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: _prestigeBusy ||
-                                tree.prestigePath ==
-                                    CherryBlossomPrestigePath.peace ||
-                                !engine.canAffordPathSwitch(
-                                  balance,
-                                  CherryBlossomPrestigePath.peace,
-                                )
-                            ? null
-                            : () => _onSwitchPath(
-                                  engine,
-                                  garden,
-                                  CherryBlossomPrestigePath.peace,
-                                ),
-                        child: Text(
-                          tree.isFinalePathUnlocked(
-                            CherryBlossomPrestigePath.peace,
-                          )
-                              ? 'Peace'
-                              : 'Peace (${CherryBlossomStageCatalog.pathSwitchCost})',
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: _prestigeBusy ||
-                                tree.prestigePath ==
-                                    CherryBlossomPrestigePath.power ||
-                                !engine.canAffordPathSwitch(
-                                  balance,
-                                  CherryBlossomPrestigePath.power,
-                                )
-                            ? null
-                            : () => _onSwitchPath(
-                                  engine,
-                                  garden,
-                                  CherryBlossomPrestigePath.power,
-                                ),
-                        child: Text(
-                          tree.isFinalePathUnlocked(
-                            CherryBlossomPrestigePath.power,
-                          )
-                              ? 'Power'
-                              : 'Power (${CherryBlossomStageCatalog.pathSwitchCost})',
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ] else ...[
-                const SizedBox(height: 10),
-                if (showPrestige)
-                  FilledButton(
-                    onPressed: _prestigeBusy || !canAffordPrestige
-                        ? null
-                        : () => _onPrestige(engine, garden),
-                    child: Text(
-                      prestigeCost == null
-                          ? 'Prestige tree'
-                          : 'Prestige tree ($prestigeCost pts)',
-                    ),
-                  )
-                else ...[
-                  FilledButton(
-                    onPressed: canGrow && nextCost != null
-                        ? () => _commitGardenState(engine.growOne(garden))
-                        : null,
-                    child: Text(
-                      nextCost == null
-                          ? 'Stage complete'
-                          : 'Grow tree ($nextCost pts)',
-                    ),
-                  ),
-                  if (canMax) ...[
-                    const SizedBox(height: 8),
-                    FilledButton.tonal(
-                      onPressed: canMax
-                          ? () => _commitGardenState(
-                                engine.growToAffordableMax(garden),
-                              )
-                          : null,
-                      child: Text('Max tree ($maxCost pts)'),
-                    ),
-                  ],
-                ],
-              ],
-            ],
+      elevation: 10,
+      shadowColor: Colors.black38,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      color: widget.secondaryColor.withValues(alpha: 0.97),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520, maxHeight: 420),
+              child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+          child: _buildControlContent(
+            tree: tree,
+            engine: engine,
+            garden: garden,
+            balance: balance,
+            nextCost: nextCost,
+            prestigeCost: prestigeCost,
+            maxCost: maxCost,
+            canGrow: canGrow,
+            canMax: canMax,
+            showPrestige: showPrestige,
+            canAffordPrestige: canAffordPrestige,
           ),
         ),
       ),
@@ -378,89 +485,140 @@ class _CherryBlossomTreeScreenState extends ConsumerState<CherryBlossomTreeScree
 
     return Scaffold(
       backgroundColor: sceneColor,
-      appBar: _viewTreeMode
-          ? null
-          : AppBar(
+      appBar: _chromeVisible
+          ? AppBar(
               title: Text(
                 'Cherry Blossom Tree',
-                style: TextStyle(color: widget.primaryColor),
+                style: widget.textStyle.copyWith(color: widget.primaryColor),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
               backgroundColor: widget.secondaryColor,
               iconTheme: ThemeStyles.iconThemeFor(widget.primaryColor),
               actions: [
-                TextButton.icon(
-                  onPressed: _prestigeBusy
-                      ? null
-                      : () => setState(() => _viewTreeMode = true),
-                  icon: Icon(Icons.visibility_outlined, color: widget.primaryColor),
-                  label: Text(
-                    'View tree',
-                    style: TextStyle(color: widget.primaryColor),
+                IconButton(
+                  tooltip: 'View tree',
+                  onPressed: _prestigeBusy ? null : _hideChrome,
+                  icon: Icon(
+                    Icons.visibility_outlined,
+                    color: widget.primaryColor,
                   ),
                 ),
-                TextButton.icon(
+                IconButton(
+                  tooltip: 'Bonsai',
                   onPressed: _prestigeBusy ? null : _openBonsaiGarden,
-                  icon: Icon(Icons.park_outlined, color: widget.primaryColor),
-                  label: Text('Bonsai', style: TextStyle(color: widget.primaryColor)),
+                  icon: Icon(
+                    Icons.park_outlined,
+                    color: widget.primaryColor,
+                  ),
                 ),
               ],
-            ),
+            )
+          : null,
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final treeHeight =
-              _viewTreeMode ? constraints.maxHeight : constraints.maxHeight * 0.78;
-          return Column(
+          return Stack(
+            fit: StackFit.expand,
             children: [
-              SizedBox(
-                height: treeHeight,
-                width: constraints.maxWidth,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    ClipRect(
-                      child: InteractiveViewer(
-                        minScale: 1.0,
-                        maxScale: 2.5,
-                        boundaryMargin: EdgeInsets.zero,
-                        clipBehavior: Clip.hardEdge,
-                        child: LayoutBuilder(
-                          builder: (context, inner) {
-                            final viewport =
-                                Size(inner.maxWidth, inner.maxHeight);
-                            return _buildTreeArea(tree, viewport);
-                          },
-                        ),
-                      ),
+              Positioned.fill(
+                child: ClipRect(
+                  child: InteractiveViewer(
+                    minScale: 1.0,
+                    maxScale: 2.5,
+                    boundaryMargin: EdgeInsets.zero,
+                    clipBehavior: Clip.hardEdge,
+                    child: LayoutBuilder(
+                      builder: (context, inner) {
+                        final viewport =
+                            Size(inner.maxWidth, inner.maxHeight);
+                        return _buildTreeArea(tree, viewport);
+                      },
                     ),
-                    if (_viewTreeMode)
-                      Positioned(
-                        top: MediaQuery.paddingOf(context).top + 8,
-                        right: 12,
-                        child: FloatingActionButton.small(
-                          heroTag: 'tree_exit_view',
-                          onPressed: () => setState(() => _viewTreeMode = false),
-                          child: const Icon(Icons.close),
-                        ),
-                      ),
-                  ],
+                  ),
                 ),
               ),
-              if (!_viewTreeMode)
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: _buildControlPanel(
-                      tree: tree,
-                      engine: engine,
-                      garden: garden,
-                      balance: balance,
-                      nextCost: nextCost,
-                      prestigeCost: prestigeCost,
-                      maxCost: maxCost,
-                      canGrow: canGrow,
-                      canMax: canMax,
-                      showPrestige: showPrestige,
-                      canAffordPrestige: canAffordPrestige,
-                    ),
+              if (_chromeVisible)
+                Positioned(
+                  top: 8,
+                  left: 12,
+                  right: 12,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (_menuOpen) ...[
+                        Row(
+                          children: [
+                            Expanded(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  'Wallet: $balance pts',
+                                  style: widget.textStyle.copyWith(
+                                    color: widget.primaryColor,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  maxLines: 1,
+                                  softWrap: false,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                      ],
+                      Row(
+                        children: [
+                          const Spacer(),
+                          FilledButton.tonalIcon(
+                            onPressed: _prestigeBusy ? null : _toggleMenu,
+                            icon: Icon(_menuOpen ? Icons.close : Icons.menu),
+                            label: Text(_menuOpen ? 'Close' : 'Menu'),
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size(0, 40),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (_menuOpen) ...[
+                        const SizedBox(height: 6),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: FilledButton.tonalIcon(
+                            onPressed: _hideChrome,
+                            icon: const Icon(Icons.visibility_off_outlined),
+                            label: const Text('Hide menu'),
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size(0, 40),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _buildMenuOverlay(
+                          tree: tree,
+                          engine: engine,
+                          garden: garden,
+                          balance: balance,
+                          nextCost: nextCost,
+                          prestigeCost: prestigeCost,
+                          maxCost: maxCost,
+                          canGrow: canGrow,
+                          canMax: canMax,
+                          showPrestige: showPrestige,
+                          canAffordPrestige: canAffordPrestige,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              if (!_chromeVisible)
+                Positioned(
+                  top: MediaQuery.paddingOf(context).top + 8,
+                  right: 12,
+                  child: FloatingActionButton.small(
+                    heroTag: 'tree_exit_view',
+                    onPressed: _showChrome,
+                    child: const Icon(Icons.close),
                   ),
                 ),
             ],

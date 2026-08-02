@@ -316,7 +316,7 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
         final pointsLabel = pointsAsync.when(
           data: (points) => 'Points: $points',
           loading: () => 'Points: …',
-          error: (_, _) => 'Points: —',
+          error: (_, _) => 'Points:  - ',
         );
 
         return PopScope(

@@ -13,7 +13,7 @@ void main() {
     await pumpUntilFound(tester, find.text('Settings'));
 
     await tester.tap(find.text('Settings'));
-    await pumpUntilFound(tester, find.text('Reward Type'));
+    await pumpUntilFound(tester, find.text('Reward types'));
 
     expect(find.text('Settings'), findsWidgets);
     expect(find.text('Notification Frequency'), findsOneWidget);

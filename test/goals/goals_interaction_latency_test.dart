@@ -73,6 +73,10 @@ void main() {
         reason: 'goal title should appear in the list',
       );
       expect(stopwatch.elapsedMilliseconds, lessThan(goalsWidgetUiUpdateBudgetMs));
+      ScaffoldMessenger.of(
+        tester.element(find.byType(Scaffold)),
+      ).clearSnackBars();
+      await tester.pump();
     });
 
     testWidgets('Complete Goal removes row within budget', (tester) async {
@@ -107,6 +111,10 @@ void main() {
 
       expect(find.text('Latency Goal'), findsNothing);
       expect(stopwatch.elapsedMilliseconds, lessThan(goalsWidgetUiUpdateBudgetMs));
+      ScaffoldMessenger.of(
+        tester.element(find.byType(Scaffold)),
+      ).clearSnackBars();
+      await tester.pump();
     });
   });
 }

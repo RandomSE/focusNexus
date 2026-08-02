@@ -32,7 +32,9 @@ mixin _$UserPrefsSnapshot {
   String get customizedFont => throw _privateConstructorUsedError;
   Color get customizedPrimary => throw _privateConstructorUsedError;
   Color get customizedSecondary => throw _privateConstructorUsedError;
-  String get rewardType => throw _privateConstructorUsedError;
+
+  /// Enabled reward types in stable order (min 1).
+  List<String> get rewardTypes => throw _privateConstructorUsedError;
   bool get skipToday => throw _privateConstructorUsedError;
   bool get pauseGoals => throw _privateConstructorUsedError;
   bool get registrationComplete => throw _privateConstructorUsedError;
@@ -72,7 +74,7 @@ abstract class $UserPrefsSnapshotCopyWith<$Res> {
     String customizedFont,
     Color customizedPrimary,
     Color customizedSecondary,
-    String rewardType,
+    List<String> rewardTypes,
     bool skipToday,
     bool pauseGoals,
     bool registrationComplete,
@@ -114,7 +116,7 @@ class _$UserPrefsSnapshotCopyWithImpl<$Res, $Val extends UserPrefsSnapshot>
     Object? customizedFont = null,
     Object? customizedPrimary = null,
     Object? customizedSecondary = null,
-    Object? rewardType = null,
+    Object? rewardTypes = null,
     Object? skipToday = null,
     Object? pauseGoals = null,
     Object? registrationComplete = null,
@@ -186,10 +188,10 @@ class _$UserPrefsSnapshotCopyWithImpl<$Res, $Val extends UserPrefsSnapshot>
                 ? _value.customizedSecondary
                 : customizedSecondary // ignore: cast_nullable_to_non_nullable
                       as Color,
-            rewardType: null == rewardType
-                ? _value.rewardType
-                : rewardType // ignore: cast_nullable_to_non_nullable
-                      as String,
+            rewardTypes: null == rewardTypes
+                ? _value.rewardTypes
+                : rewardTypes // ignore: cast_nullable_to_non_nullable
+                      as List<String>,
             skipToday: null == skipToday
                 ? _value.skipToday
                 : skipToday // ignore: cast_nullable_to_non_nullable
@@ -253,7 +255,7 @@ abstract class _$$UserPrefsSnapshotImplCopyWith<$Res>
     String customizedFont,
     Color customizedPrimary,
     Color customizedSecondary,
-    String rewardType,
+    List<String> rewardTypes,
     bool skipToday,
     bool pauseGoals,
     bool registrationComplete,
@@ -294,7 +296,7 @@ class __$$UserPrefsSnapshotImplCopyWithImpl<$Res>
     Object? customizedFont = null,
     Object? customizedPrimary = null,
     Object? customizedSecondary = null,
-    Object? rewardType = null,
+    Object? rewardTypes = null,
     Object? skipToday = null,
     Object? pauseGoals = null,
     Object? registrationComplete = null,
@@ -366,10 +368,10 @@ class __$$UserPrefsSnapshotImplCopyWithImpl<$Res>
             ? _value.customizedSecondary
             : customizedSecondary // ignore: cast_nullable_to_non_nullable
                   as Color,
-        rewardType: null == rewardType
-            ? _value.rewardType
-            : rewardType // ignore: cast_nullable_to_non_nullable
-                  as String,
+        rewardTypes: null == rewardTypes
+            ? _value._rewardTypes
+            : rewardTypes // ignore: cast_nullable_to_non_nullable
+                  as List<String>,
         skipToday: null == skipToday
             ? _value.skipToday
             : skipToday // ignore: cast_nullable_to_non_nullable
@@ -426,16 +428,17 @@ class _$UserPrefsSnapshotImpl extends _UserPrefsSnapshot {
     this.customizedFont = '',
     this.customizedPrimary = Colors.black87,
     this.customizedSecondary = const Color(0xFFF2EFE6),
-    this.rewardType = 'Mini-games',
+    final List<String> rewardTypes = const <String>['Mini-games'],
     this.skipToday = false,
     this.pauseGoals = false,
     this.registrationComplete = false,
     this.onboardingCompleted = false,
-    this.soundEnabled = false,
-    this.soundVolume = 0.0,
+    this.soundEnabled = true,
+    this.soundVolume = 100.0,
     this.dailyAffirmationsTime = '06:00',
     this.openStreakRemindersTime = '20:00',
   }) : _allowedColors = allowedColors,
+       _rewardTypes = rewardTypes,
        super._();
 
   @override
@@ -489,9 +492,19 @@ class _$UserPrefsSnapshotImpl extends _UserPrefsSnapshot {
   @override
   @JsonKey()
   final Color customizedSecondary;
+
+  /// Enabled reward types in stable order (min 1).
+  final List<String> _rewardTypes;
+
+  /// Enabled reward types in stable order (min 1).
   @override
   @JsonKey()
-  final String rewardType;
+  List<String> get rewardTypes {
+    if (_rewardTypes is EqualUnmodifiableListView) return _rewardTypes;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_rewardTypes);
+  }
+
   @override
   @JsonKey()
   final bool skipToday;
@@ -519,7 +532,7 @@ class _$UserPrefsSnapshotImpl extends _UserPrefsSnapshot {
 
   @override
   String toString() {
-    return 'UserPrefsSnapshot(theme: $theme, fontSize: $fontSize, useDyslexiaFont: $useDyslexiaFont, highContrastMode: $highContrastMode, dailyAffirmations: $dailyAffirmations, aiEncouragement: $aiEncouragement, openStreakReminders: $openStreakReminders, notificationFrequency: $notificationFrequency, notificationStyle: $notificationStyle, customizationEnabled: $customizationEnabled, useCustomColorPalette: $useCustomColorPalette, allowedColors: $allowedColors, customizedFont: $customizedFont, customizedPrimary: $customizedPrimary, customizedSecondary: $customizedSecondary, rewardType: $rewardType, skipToday: $skipToday, pauseGoals: $pauseGoals, registrationComplete: $registrationComplete, onboardingCompleted: $onboardingCompleted, soundEnabled: $soundEnabled, soundVolume: $soundVolume, dailyAffirmationsTime: $dailyAffirmationsTime, openStreakRemindersTime: $openStreakRemindersTime)';
+    return 'UserPrefsSnapshot(theme: $theme, fontSize: $fontSize, useDyslexiaFont: $useDyslexiaFont, highContrastMode: $highContrastMode, dailyAffirmations: $dailyAffirmations, aiEncouragement: $aiEncouragement, openStreakReminders: $openStreakReminders, notificationFrequency: $notificationFrequency, notificationStyle: $notificationStyle, customizationEnabled: $customizationEnabled, useCustomColorPalette: $useCustomColorPalette, allowedColors: $allowedColors, customizedFont: $customizedFont, customizedPrimary: $customizedPrimary, customizedSecondary: $customizedSecondary, rewardTypes: $rewardTypes, skipToday: $skipToday, pauseGoals: $pauseGoals, registrationComplete: $registrationComplete, onboardingCompleted: $onboardingCompleted, soundEnabled: $soundEnabled, soundVolume: $soundVolume, dailyAffirmationsTime: $dailyAffirmationsTime, openStreakRemindersTime: $openStreakRemindersTime)';
   }
 
   @override
@@ -558,8 +571,10 @@ class _$UserPrefsSnapshotImpl extends _UserPrefsSnapshot {
                 other.customizedPrimary == customizedPrimary) &&
             (identical(other.customizedSecondary, customizedSecondary) ||
                 other.customizedSecondary == customizedSecondary) &&
-            (identical(other.rewardType, rewardType) ||
-                other.rewardType == rewardType) &&
+            const DeepCollectionEquality().equals(
+              other._rewardTypes,
+              _rewardTypes,
+            ) &&
             (identical(other.skipToday, skipToday) ||
                 other.skipToday == skipToday) &&
             (identical(other.pauseGoals, pauseGoals) ||
@@ -599,7 +614,7 @@ class _$UserPrefsSnapshotImpl extends _UserPrefsSnapshot {
     customizedFont,
     customizedPrimary,
     customizedSecondary,
-    rewardType,
+    const DeepCollectionEquality().hash(_rewardTypes),
     skipToday,
     pauseGoals,
     registrationComplete,
@@ -639,7 +654,7 @@ abstract class _UserPrefsSnapshot extends UserPrefsSnapshot {
     final String customizedFont,
     final Color customizedPrimary,
     final Color customizedSecondary,
-    final String rewardType,
+    final List<String> rewardTypes,
     final bool skipToday,
     final bool pauseGoals,
     final bool registrationComplete,
@@ -681,8 +696,10 @@ abstract class _UserPrefsSnapshot extends UserPrefsSnapshot {
   Color get customizedPrimary;
   @override
   Color get customizedSecondary;
+
+  /// Enabled reward types in stable order (min 1).
   @override
-  String get rewardType;
+  List<String> get rewardTypes;
   @override
   bool get skipToday;
   @override

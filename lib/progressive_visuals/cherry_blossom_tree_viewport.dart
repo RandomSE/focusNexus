@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'cherry_blossom_falling_petals.dart';
 import 'cherry_blossom_living_canopy_background.dart';
 import 'cherry_blossom_multiply_blend.dart';
+import 'cherry_blossom_peace_petals.dart';
+import 'cherry_blossom_power_petals.dart';
+import 'cherry_blossom_prestige_path.dart';
 import 'cherry_blossom_stage_catalog.dart';
 import 'cherry_blossom_stage_six_effects.dart';
 import 'cherry_blossom_stage_six_leaves.dart';
@@ -18,6 +21,12 @@ class CherryBlossomTreeViewport extends StatelessWidget {
     this.growPulseT = 1.0,
     this.animateEffects = true,
   });
+
+  /// Stack key for the tree image layer (z-order tests).
+  static const treeLayerKey = ValueKey<String>('cherry_tree_layer');
+
+  /// Stack key for finale peace/power petal overlay (must be above tree).
+  static const finalePetalsKey = ValueKey<String>('cherry_finale_petals');
 
   final CherryBlossomTreeState tree;
   final Size size;
@@ -36,14 +45,18 @@ class CherryBlossomTreeViewport extends StatelessWidget {
       tree.growthStepsInStage,
     );
     final pulseBoost = 0.02 * Curves.easeOutCubic.transform(growPulseT);
-    final heightFraction = CherryBlossomStageCatalog.treeHeightFraction(
-      stageIndex: stage,
-      growthStepsInStage: tree.growthStepsInStage,
-    );
     final imageFit = CherryBlossomStageCatalog.imageFitFor(
       stageIndex: stage,
       fullBleed: fullBleed,
     );
+    final displayLevel = CherryBlossomStageCatalog.displayLevel(
+      stageIndex: stage,
+      growthStepsInStage: tree.growthStepsInStage,
+    );
+    final peaceFinale = stage == CherryBlossomStageCatalog.finaleStage &&
+        tree.prestigePath == CherryBlossomPrestigePath.peace;
+    final powerFinale = stage == CherryBlossomStageCatalog.finaleStage &&
+        tree.prestigePath == CherryBlossomPrestigePath.power;
 
     return ColoredBox(
       color: CherryBlossomStageCatalog.scaffoldColorFor(stage),
@@ -52,7 +65,12 @@ class CherryBlossomTreeViewport extends StatelessWidget {
         clipBehavior: Clip.hardEdge,
         children: [
           if (CherryBlossomStageCatalog.usesProgrammaticBackground(stage))
-            CherryBlossomTreeBackground(stageIndex: stage, size: size),
+            Positioned.fill(
+              child: CherryBlossomTreeBackground(
+                stageIndex: stage,
+                size: size,
+              ),
+            ),
           if (stage >= 6)
             CherryBlossomLivingCanopyBackground(
               size: size,
@@ -71,15 +89,36 @@ class CherryBlossomTreeViewport extends StatelessWidget {
               animate: animateEffects,
             ),
           _buildTreeLayer(
-            heightFraction: fullBleed ? 1.0 : heightFraction * (1.0 + pulseBoost),
+            key: treeLayerKey,
+            stage: stage,
             usesMultiply: usesMultiply,
-            fullBleed: fullBleed || CherryBlossomStageCatalog.usesFullBleedImage(stage),
+            fullBleed: fullBleed ||
+                CherryBlossomStageCatalog.usesFullBleedImage(stage),
             imageFit: imageFit,
+            pulseBoost: pulseBoost,
           ),
           if (stage == CherryBlossomStageCatalog.maxPlayableStage)
             CherryBlossomStageSixLeaves(
               size: size,
+              displayLevel: displayLevel,
               animate: animateEffects,
+            ),
+          // Finale petals MUST paint above the full-bleed tree image.
+          if (peaceFinale)
+            KeyedSubtree(
+              key: finalePetalsKey,
+              child: CherryBlossomPeacePetals(
+                size: size,
+                animate: animateEffects,
+              ),
+            ),
+          if (powerFinale)
+            KeyedSubtree(
+              key: finalePetalsKey,
+              child: CherryBlossomPowerPetals(
+                size: size,
+                animate: animateEffects,
+              ),
             ),
         ],
       ),
@@ -87,13 +126,16 @@ class CherryBlossomTreeViewport extends StatelessWidget {
   }
 
   Widget _buildTreeLayer({
-    required double heightFraction,
+    Key? key,
+    required int stage,
     required bool usesMultiply,
     required bool fullBleed,
     required BoxFit imageFit,
+    required double pulseBoost,
   }) {
     if (fullBleed) {
       return Positioned.fill(
+        key: key,
         child: Image.asset(
           tree.assetPath,
           fit: imageFit,
@@ -103,13 +145,32 @@ class CherryBlossomTreeViewport extends StatelessWidget {
       );
     }
 
-    final drawHeight = size.height * heightFraction.clamp(0.0, 1.0);
+    // Fixed max-height box; scale from content baseline so trunk does not lift.
+    final maxFraction = CherryBlossomStageCatalog.maxTreeHeightFraction(stage);
+    final growthScale = CherryBlossomStageCatalog.growthScaleRelativeToMax(
+      stageIndex: stage,
+      growthStepsInStage: tree.growthStepsInStage,
+    );
+    final scale = (growthScale * (1.0 + pulseBoost)).clamp(0.0, 1.2);
+    final pad = CherryBlossomStageCatalog.contentBottomPaddingFraction(stage);
+    final alignY = CherryBlossomStageCatalog.contentBaselineAlignmentY(pad);
+    final drawHeight = size.height * maxFraction.clamp(0.0, 1.0);
+
     Widget treeImage = Image.asset(
       tree.assetPath,
       fit: imageFit,
       width: size.width,
+      height: drawHeight,
       alignment: Alignment.bottomCenter,
       filterQuality: FilterQuality.high,
+    );
+
+    // Scale INSIDE blend wrappers. Do not set filterQuality on Transform: that
+    // rasterizes into its own layer and breaks BlendMode.multiply onto the sky.
+    treeImage = Transform.scale(
+      scale: scale,
+      alignment: Alignment(0, alignY),
+      child: treeImage,
     );
 
     if (usesMultiply) {
@@ -117,14 +178,16 @@ class CherryBlossomTreeViewport extends StatelessWidget {
     }
 
     return Positioned(
+      key: key,
       left: 0,
       right: 0,
-      bottom: 0,
-      height: drawHeight,
-      child: Align(
-        alignment: Alignment.bottomCenter,
-        child: treeImage,
+      bottom: CherryBlossomStageCatalog.treeLayerBottomOffset(
+        stageIndex: stage,
+        viewportHeight: size.height,
+        drawHeight: drawHeight,
       ),
+      height: drawHeight,
+      child: treeImage,
     );
   }
 }

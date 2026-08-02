@@ -42,7 +42,7 @@ class GardenItem with _$GardenItem {
     );
     assert(
       positionX >= 0 && positionX <= 1 && positionY >= 0 && positionY <= 1,
-      'position must be normalized 0–1',
+      'position must be normalized 0-1',
     );
   }
 

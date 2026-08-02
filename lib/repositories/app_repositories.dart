@@ -1,4 +1,5 @@
 import 'package:focusNexus/goals/goals_use_case.dart';
+import 'package:focusNexus/mini_games/mini_game_progress_repository.dart';
 import 'package:focusNexus/repositories/achievement_counters_repository.dart';
 import 'package:focusNexus/repositories/achievement_repository.dart';
 import 'package:focusNexus/repositories/garden_repository.dart';
@@ -20,10 +21,11 @@ class AppRepositories {
         templates = TemplatesRepository(storage),
         userPrefs = UserPrefsRepository(storage),
         counters = AchievementCountersRepository(storage),
-        achievements = AchievementRepository(storage) {
+        achievements = AchievementRepository(storage),
+        miniGames = MiniGameProgressRepository(storage) {
     theme = ThemeRepository(userPrefs);
     streaks = AchievementStreakService(counters, userPrefs);
-        garden = GardenRepository(storage, points: points);
+    garden = GardenRepository(storage, points: points);
     settings = AppSettings(userPrefs, theme);
     timeWindowRepeats = TimeWindowRepeatRepository(storage);
     goalsUseCase = GoalsUseCase(
@@ -42,6 +44,7 @@ class AppRepositories {
   final UserPrefsRepository userPrefs;
   final AchievementCountersRepository counters;
   final AchievementRepository achievements;
+  final MiniGameProgressRepository miniGames;
   late final ThemeRepository theme;
   late final AchievementStreakService streaks;
   late final GardenRepository garden;

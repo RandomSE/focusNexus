@@ -69,7 +69,7 @@ AssistantResolution? resolveAchievementGlossaryQuery(
   return AssistantResolution(
     kind: AssistantResolutionKind.achievement,
     text:
-        '“${best.title}” — ${best.task} '
+        '“${best.title}” - ${best.task} '
         'Open Achievements from the Dashboard to track progress and claim rewards.',
   );
 }

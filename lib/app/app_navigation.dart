@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focusNexus/app/app_route.dart';
 import 'package:focusNexus/providers/app_settings_provider.dart';
 
-/// Typed navigation helpers — prefer over raw [Navigator.pushNamed] strings.
+/// Typed navigation helpers - prefer over raw [Navigator.pushNamed] strings.
 extension AppNavigation on WidgetRef {
   Future<T?> pushRoute<T>(BuildContext context, AppRoute route) async {
     final settings = read(appSettingsProvider.notifier).service;

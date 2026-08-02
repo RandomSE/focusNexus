@@ -14,7 +14,7 @@ int decorInvestmentPoints(String kind, int stageIndex) {
   return base + growth;
 }
 
-/// Sell value for a decor item — half of investment, independent of restart discounts.
+/// Sell value for a decor item - half of investment, independent of restart discounts.
 int decorSellValue(DecorItem item) => decorInvestmentPoints(item.kind, item.stageIndex) ~/ 2;
 
 /// Cumulative growth cost for a plant at [stageIndex] (no purchase price).

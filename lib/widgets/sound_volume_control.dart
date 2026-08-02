@@ -5,7 +5,7 @@ import 'package:focusNexus/providers/app_settings_provider.dart';
 import 'package:focusNexus/providers/screen_ui_providers.dart';
 import 'package:focusNexus/utils/sound_volume.dart';
 
-/// Integer percent volume (0–100) with slider and ±1 / ±5 step buttons.
+/// Integer percent volume (0-100) with slider and ±1 / ±5 step buttons.
 class SoundVolumeControl extends ConsumerWidget {
   const SoundVolumeControl({
     super.key,

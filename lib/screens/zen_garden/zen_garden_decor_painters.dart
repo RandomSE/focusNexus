@@ -126,7 +126,7 @@ double _koiFishScaleForStage(int stageIndex) {
   };
 }
 
-/// Per-fish palette — stable for a given pond, fish index, and mutation state.
+/// Per-fish palette - stable for a given pond, fish index, and mutation state.
 ({Color body, Color accent, Color edge}) koiFishColors({
   required int fishIndex,
   required String pondId,
@@ -569,7 +569,7 @@ Rect zenStonePathUnionNormRect(DecorItem item, Size gardenSize) {
   );
 }
 
-/// Elapsed seconds from a repeating controller — monotonic, never wraps to zero.
+/// Elapsed seconds from a repeating controller - monotonic, never wraps to zero.
 double zenDecorAnimElapsedSeconds(AnimationController? controller) {
   if (controller == null) return 0;
   return (controller.lastElapsedDuration?.inMicroseconds ?? 0) / 1000000.0;
@@ -1498,7 +1498,7 @@ abstract final class ZenGardenDecorPainter {
   }
 }
 
-/// Warm sand glow beneath placeable stone lanterns (stages 3–5).
+/// Warm sand glow beneath placeable stone lanterns (stages 3-5).
 class LanternSandGlowPainter extends CustomPainter {
   LanternSandGlowPainter({
     required this.item,

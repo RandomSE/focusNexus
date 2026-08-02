@@ -64,6 +64,7 @@ class ZenGardenSessionState {
     required this.garden,
     required this.generation,
     this.chromeVisible = true,
+    this.menuOpen = false,
     this.placingDecorInventoryId,
     this.placingPlant = false,
     this.placingPlantInventoryId,
@@ -92,6 +93,7 @@ class ZenGardenSessionState {
   final GardenState garden;
   final int generation;
   final bool chromeVisible;
+  final bool menuOpen;
   final String? placingDecorInventoryId;
   final bool placingPlant;
   final String? placingPlantInventoryId;
@@ -113,6 +115,7 @@ class ZenGardenSessionState {
     GardenState? garden,
     int? generation,
     bool? chromeVisible,
+    bool? menuOpen,
     String? placingDecorInventoryId,
     bool? placingPlant,
     String? placingPlantInventoryId,
@@ -144,6 +147,7 @@ class ZenGardenSessionState {
       garden: garden ?? this.garden,
       generation: generation ?? this.generation,
       chromeVisible: chromeVisible ?? this.chromeVisible,
+      menuOpen: menuOpen ?? this.menuOpen,
       placingDecorInventoryId: clearPlacingDecorInventoryId
           ? null
           : (placingDecorInventoryId ?? this.placingDecorInventoryId),

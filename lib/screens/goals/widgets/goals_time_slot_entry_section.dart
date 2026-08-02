@@ -32,7 +32,9 @@ class GoalsTimeSlotEntrySection extends StatelessWidget {
         Text(
           'Scheduled time slots - goals that need to be done within a specific '
           'time slot (can also auto-repeat)',
-          style: bundle.textStyle.copyWith(fontSize: 12),
+          style: bundle.textStyle.copyWith(
+            fontSize: (bundle.textStyle.fontSize ?? 14) * 0.85,
+          ),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 12),

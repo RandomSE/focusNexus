@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:focusNexus/app/app_route.dart';
+import 'package:focusNexus/mini_games/mini_game_round_config.dart';
 import 'package:focusNexus/progressive_visuals/visual_theme_id.dart';
 import 'package:focusNexus/repositories/theme_repository.dart';
 import 'package:focusNexus/repositories/user_prefs_repository.dart';
+import 'package:focusNexus/rewards/reward_type_selection.dart';
 import 'package:focusNexus/services/storage/storage_keys.dart';
 import 'package:focusNexus/settings/app_settings.dart';
 
@@ -93,6 +95,42 @@ void main() {
       const route = ProgressiveVisualSectionRoute(VisualThemeId.zenGarden);
       expect(route.navigationArguments, VisualThemeId.zenGarden);
     });
+
+    test('parses mini-game lobby game id', () {
+      final route = AppRoute.fromRouteSettings(
+        const RouteSettings(
+          name: MiniGameLobbyRoute.routeName,
+          arguments: 'demo',
+        ),
+      );
+      expect(route, isA<MiniGameLobbyRoute>());
+      expect((route as MiniGameLobbyRoute).gameId, 'demo');
+      expect(route.navigationArguments, 'demo');
+    });
+
+    test('parses mini-game play round config', () {
+      final route = AppRoute.fromRouteSettings(
+        RouteSettings(
+          name: MiniGamePlayRoute.routeName,
+          arguments: const MiniGameRoundConfig(gameId: 'demo', endless: true),
+        ),
+      );
+      expect(route, isA<MiniGamePlayRoute>());
+      final play = route as MiniGamePlayRoute;
+      expect(play.gameId, 'demo');
+      expect(play.endless, isTrue);
+      final args = play.navigationArguments as MiniGameRoundConfig;
+      expect(args.gameId, 'demo');
+      expect(args.endless, isTrue);
+    });
+
+    test('parses sound effects route', () {
+      final route = AppRoute.fromRouteSettings(
+        const RouteSettings(name: SoundEffectsRoute.routeName),
+      );
+      expect(route, isA<SoundEffectsRoute>());
+      expect(route.path, SoundEffectsRoute.routeName);
+    });
   });
 
   group('RewardKind', () {
@@ -104,6 +142,27 @@ void main() {
       );
       expect(RewardKind.parse('Customization'), RewardKind.customization);
       expect(RewardKind.parse(null), RewardKind.miniGames);
+    });
+  });
+
+  group('RewardRoute thin back-compat', () {
+    test('fromRouteSettings still resolves reward path', () {
+      final route = AppRoute.fromRouteSettings(
+        const RouteSettings(name: RewardRoute.routeName),
+      );
+      expect(route, isA<RewardRoute>());
+      expect(route.path, RewardRoute.routeName);
+    });
+
+    test('RewardTypeSelection maps primary to direct destinations', () {
+      expect(
+        RewardTypeSelection.routeForStorageValue('Mini-games'),
+        AppRoute.miniGames,
+      );
+      expect(
+        RewardTypeSelection.routeForStorageValue('Customization'),
+        AppRoute.customization,
+      );
     });
   });
 }

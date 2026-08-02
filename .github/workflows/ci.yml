@@ -94,7 +94,7 @@ jobs:
           FULL_SUITE_RE='^(lib/.+|assets/.+|pubspec\.yaml|pubspec\.lock|analysis_options\.yaml|\.github/workflows/ci\.yml)$'
           # Lane regexes must match per-lane test jobs below. widget_test.dart lives only in data-and-infra.
           CORE_HEAVY_RE='^test/(goals|screens|widget|widgets|services)/.+'
-          UI_SMOKE_RE='^test/(assistant|smoke|progressive_visuals|views|settings|motivators)/.+'
+          UI_SMOKE_RE='^test/(assistant|smoke|progressive_visuals|views|settings|motivators|rewards|mini_games)/.+'
           DATA_INFRA_RE='^(test/(providers|utils|models|repositories|app|bootstrap|deps|helpers)/.+|test/widget_test\.dart)$'
 
           if echo "${CHANGED_FILES}" | grep -Eq "${FULL_SUITE_RE}"; then
@@ -208,7 +208,7 @@ jobs:
           echo "Running lane 'ui-smoke' with concurrency: ${JOBS}"
           flutter test --reporter compact -j "${JOBS}" \
             test/assistant test/smoke test/progressive_visuals test/views test/settings \
-            test/motivators
+            test/motivators test/rewards test/mini_games
           END_TS=$(date +%s)
           ELAPSED=$((END_TS - START_TS))
           {
@@ -356,7 +356,7 @@ jobs:
           flutter test --reporter compact -j "${JOBS}" \
             test/goals test/screens test/widget test/widgets test/services \
             test/assistant test/smoke test/progressive_visuals test/views test/settings \
-            test/motivators \
+            test/motivators test/rewards test/mini_games \
             test/providers test/utils test/models test/repositories test/app test/bootstrap test/deps test/helpers test/widget_test.dart
           PAR_END=$(date +%s)
           PAR_ELAPSED=$((PAR_END - PAR_START))

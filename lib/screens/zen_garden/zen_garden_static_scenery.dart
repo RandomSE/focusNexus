@@ -459,7 +459,7 @@ class ZenGardenStaticSceneryPainter extends CustomPainter {
     }
   }
 
-  /// Subtle empty-slot hint — dashed oval perimeter only (no fill, no center mark).
+  /// Subtle empty-slot hint - dashed oval perimeter only (no fill, no center mark).
   void _drawDashedPlacementOval(
     Canvas canvas,
     Offset center,

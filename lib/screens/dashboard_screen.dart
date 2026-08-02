@@ -13,6 +13,7 @@ import 'package:focusNexus/motivators/adhd_motivator_pack.dart';
 import 'package:focusNexus/providers/goals_provider.dart';
 import 'package:focusNexus/providers/points_balance_provider.dart';
 import 'package:focusNexus/providers/theme_bundle_provider.dart';
+import 'package:focusNexus/rewards/reward_type_selection.dart';
 import 'package:focusNexus/services/daily_open_reward_service.dart';
 import 'package:focusNexus/services/storage/storage_keys.dart';
 import 'package:focusNexus/utils/common_utils.dart';
@@ -100,7 +101,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     return SettingsThemedBuilder(
       builder: (context, bundle) {
-        final rewardType = settings.rewardType;
+        final rewardTypes = settings.rewardTypes;
+        final achievementService = ref.watch(achievementServiceProvider);
+        final hasClaimableAchievements = achievementService.all.any(
+          (a) => !a.isCompleted && a.progress >= 100,
+        );
         final pointsLabel = pointsAsync.when(
           data: (points) => 'Points: $points',
           loading: () => 'Points: ...',
@@ -109,8 +114,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
         return Theme(
           data: bundle.themeData,
-          child: Scaffold(
+          child: PopScope(
+            canPop: false,
+            child: Scaffold(
             appBar: AppBar(
+              automaticallyImplyLeading: false,
               title: Text(
                 'Dashboard',
                 style: bundle.textStyle,
@@ -184,26 +192,42 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   const SizedBox(height: 12),
                   CommonUtils.buildCenteredButton(
                     context,
-                    'Achievements',
+                    hasClaimableAchievements
+                        ? 'Achievements - ready to claim'
+                        : 'Achievements',
                     () => ref.pushRoute(context, AppRoute.achievements),
-                    bundle.textStyle,
-                    bundle.secondaryColor,
-                    borderColor: bundle.primaryColor,
-                    semanticsHint: 'Opens achievements',
+                    hasClaimableAchievements
+                        ? bundle.textStyle.copyWith(
+                            color: bundle.secondaryColor,
+                            fontWeight: FontWeight.w700,
+                          )
+                        : bundle.textStyle,
+                    hasClaimableAchievements
+                        ? bundle.primaryColor
+                        : bundle.secondaryColor,
+                    borderColor: hasClaimableAchievements
+                        ? bundle.accentColor
+                        : bundle.primaryColor,
+                    semanticsHint: hasClaimableAchievements
+                        ? 'Opens achievements; rewards ready to claim'
+                        : 'Opens achievements',
                   ),
                   const SizedBox(height: 12),
-                  CommonUtils.buildCenteredButton(
-                    context,
-                    rewardType == 'Customization'
-                        ? 'Customization'
-                        : 'Reward: $rewardType',
-                    () => ref.pushRoute(context, AppRoute.reward),
-                    bundle.textStyle,
-                    bundle.secondaryColor,
-                    borderColor: bundle.primaryColor,
-                    semanticsHint: 'Opens reward screen',
-                  ),
-                  const SizedBox(height: 12),
+                  for (final rewardLabel in rewardTypes) ...[
+                    CommonUtils.buildCenteredButton(
+                      context,
+                      rewardLabel,
+                      () => ref.pushRoute(
+                        context,
+                        RewardTypeSelection.routeForStorageValue(rewardLabel),
+                      ),
+                      bundle.textStyle,
+                      bundle.secondaryColor,
+                      borderColor: bundle.primaryColor,
+                      semanticsHint: 'Opens $rewardLabel',
+                    ),
+                    const SizedBox(height: 12),
+                  ],
                   CommonUtils.buildCenteredButton(
                     context,
                     'Assistant',
@@ -216,6 +240,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ],
               ),
             ),
+          ),
           ),
         );
       },
