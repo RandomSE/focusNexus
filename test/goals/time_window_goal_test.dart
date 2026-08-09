@@ -299,4 +299,30 @@ void main() {
       expect(isStrictWindow(const Duration(hours: 4)), isFalse);
     });
   });
+
+  group('computeActionWindow repeating intent', () {
+    test('clamps this occurrence to now but ideal start stays end-duration', () {
+      // 14:10 now, end 15:00, duration 1h -> occurrence 14:10; future ideal 14:00.
+      final now = DateTime(2026, 8, 9, 14, 10);
+      final end = DateTime(2026, 8, 9, 15, 0);
+      const duration = Duration(hours: 1);
+      final window = computeActionWindow(
+        endAt: end,
+        duration: duration,
+        now: now,
+      );
+      expect(window.start, now);
+      expect(window.wasStartClamped, isTrue);
+      expect(end.subtract(duration), DateTime(2026, 8, 9, 14, 0));
+
+      final nextDayEnd = DateTime(2026, 8, 10, 15, 0);
+      final future = computeActionWindow(
+        endAt: nextDayEnd,
+        duration: duration,
+        now: now,
+      );
+      expect(future.start, DateTime(2026, 8, 10, 14, 0));
+      expect(future.wasStartClamped, isFalse);
+    });
+  });
 }

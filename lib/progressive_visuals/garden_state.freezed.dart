@@ -18,6 +18,9 @@ final _privateConstructorUsedError = UnsupportedError(
 /// @nodoc
 mixin _$GardenState {
   int get pointsBalance => throw _privateConstructorUsedError;
+
+  /// Progressive-visuals points; spent before [pointsBalance] on PV purchases.
+  int get progressiveVisualsPointsBalance => throw _privateConstructorUsedError;
   List<GardenItem> get items => throw _privateConstructorUsedError;
   List<DecorItem> get decor => throw _privateConstructorUsedError;
   Map<String, int> get decorStash => throw _privateConstructorUsedError;
@@ -49,6 +52,7 @@ abstract class $GardenStateCopyWith<$Res> {
   @useResult
   $Res call({
     int pointsBalance,
+    int progressiveVisualsPointsBalance,
     List<GardenItem> items,
     List<DecorItem> decor,
     Map<String, int> decorStash,
@@ -82,6 +86,7 @@ class _$GardenStateCopyWithImpl<$Res, $Val extends GardenState>
   @override
   $Res call({
     Object? pointsBalance = null,
+    Object? progressiveVisualsPointsBalance = null,
     Object? items = null,
     Object? decor = null,
     Object? decorStash = null,
@@ -100,6 +105,11 @@ class _$GardenStateCopyWithImpl<$Res, $Val extends GardenState>
             pointsBalance: null == pointsBalance
                 ? _value.pointsBalance
                 : pointsBalance // ignore: cast_nullable_to_non_nullable
+                      as int,
+            progressiveVisualsPointsBalance:
+                null == progressiveVisualsPointsBalance
+                ? _value.progressiveVisualsPointsBalance
+                : progressiveVisualsPointsBalance // ignore: cast_nullable_to_non_nullable
                       as int,
             items: null == items
                 ? _value.items
@@ -179,6 +189,7 @@ abstract class _$$GardenStateImplCopyWith<$Res>
   @useResult
   $Res call({
     int pointsBalance,
+    int progressiveVisualsPointsBalance,
     List<GardenItem> items,
     List<DecorItem> decor,
     Map<String, int> decorStash,
@@ -212,6 +223,7 @@ class __$$GardenStateImplCopyWithImpl<$Res>
   @override
   $Res call({
     Object? pointsBalance = null,
+    Object? progressiveVisualsPointsBalance = null,
     Object? items = null,
     Object? decor = null,
     Object? decorStash = null,
@@ -230,6 +242,10 @@ class __$$GardenStateImplCopyWithImpl<$Res>
         pointsBalance: null == pointsBalance
             ? _value.pointsBalance
             : pointsBalance // ignore: cast_nullable_to_non_nullable
+                  as int,
+        progressiveVisualsPointsBalance: null == progressiveVisualsPointsBalance
+            ? _value.progressiveVisualsPointsBalance
+            : progressiveVisualsPointsBalance // ignore: cast_nullable_to_non_nullable
                   as int,
         items: null == items
             ? _value._items
@@ -289,6 +305,7 @@ class __$$GardenStateImplCopyWithImpl<$Res>
 class _$GardenStateImpl extends _GardenState {
   const _$GardenStateImpl({
     required this.pointsBalance,
+    this.progressiveVisualsPointsBalance = 0,
     final List<GardenItem> items = const <GardenItem>[],
     final List<DecorItem> decor = const <DecorItem>[],
     final Map<String, int> decorStash = const <String, int>{},
@@ -310,6 +327,11 @@ class _$GardenStateImpl extends _GardenState {
 
   @override
   final int pointsBalance;
+
+  /// Progressive-visuals points; spent before [pointsBalance] on PV purchases.
+  @override
+  @JsonKey()
+  final int progressiveVisualsPointsBalance;
   final List<GardenItem> _items;
   @override
   @JsonKey()
@@ -378,7 +400,7 @@ class _$GardenStateImpl extends _GardenState {
 
   @override
   String toString() {
-    return 'GardenState(pointsBalance: $pointsBalance, items: $items, decor: $decor, decorStash: $decorStash, decorInventory: $decorInventory, plantInventory: $plantInventory, freeFirstGrowthEverConsumed: $freeFirstGrowthEverConsumed, freeFirstGrowthEligibleItemId: $freeFirstGrowthEligibleItemId, lifetimeZenPointsSpent: $lifetimeZenPointsSpent, cherryBlossomTreeUnlocked: $cherryBlossomTreeUnlocked, suppressRestartGrowthPrompt: $suppressRestartGrowthPrompt, cherryBlossomUnlockToastShown: $cherryBlossomUnlockToastShown, cherryBlossomTree: $cherryBlossomTree)';
+    return 'GardenState(pointsBalance: $pointsBalance, progressiveVisualsPointsBalance: $progressiveVisualsPointsBalance, items: $items, decor: $decor, decorStash: $decorStash, decorInventory: $decorInventory, plantInventory: $plantInventory, freeFirstGrowthEverConsumed: $freeFirstGrowthEverConsumed, freeFirstGrowthEligibleItemId: $freeFirstGrowthEligibleItemId, lifetimeZenPointsSpent: $lifetimeZenPointsSpent, cherryBlossomTreeUnlocked: $cherryBlossomTreeUnlocked, suppressRestartGrowthPrompt: $suppressRestartGrowthPrompt, cherryBlossomUnlockToastShown: $cherryBlossomUnlockToastShown, cherryBlossomTree: $cherryBlossomTree)';
   }
 
   @override
@@ -388,6 +410,12 @@ class _$GardenStateImpl extends _GardenState {
             other is _$GardenStateImpl &&
             (identical(other.pointsBalance, pointsBalance) ||
                 other.pointsBalance == pointsBalance) &&
+            (identical(
+                  other.progressiveVisualsPointsBalance,
+                  progressiveVisualsPointsBalance,
+                ) ||
+                other.progressiveVisualsPointsBalance ==
+                    progressiveVisualsPointsBalance) &&
             const DeepCollectionEquality().equals(other._items, _items) &&
             const DeepCollectionEquality().equals(other._decor, _decor) &&
             const DeepCollectionEquality().equals(
@@ -441,6 +469,7 @@ class _$GardenStateImpl extends _GardenState {
   int get hashCode => Object.hash(
     runtimeType,
     pointsBalance,
+    progressiveVisualsPointsBalance,
     const DeepCollectionEquality().hash(_items),
     const DeepCollectionEquality().hash(_decor),
     const DeepCollectionEquality().hash(_decorStash),
@@ -467,6 +496,7 @@ class _$GardenStateImpl extends _GardenState {
 abstract class _GardenState extends GardenState {
   const factory _GardenState({
     required final int pointsBalance,
+    final int progressiveVisualsPointsBalance,
     final List<GardenItem> items,
     final List<DecorItem> decor,
     final Map<String, int> decorStash,
@@ -484,6 +514,10 @@ abstract class _GardenState extends GardenState {
 
   @override
   int get pointsBalance;
+
+  /// Progressive-visuals points; spent before [pointsBalance] on PV purchases.
+  @override
+  int get progressiveVisualsPointsBalance;
   @override
   List<GardenItem> get items;
   @override

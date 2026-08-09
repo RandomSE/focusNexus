@@ -8,6 +8,7 @@ import 'package:focusNexus/providers/app_repositories_provider.dart';
 import 'package:focusNexus/providers/app_services_provider.dart'; // goalNotifierWiringProvider
 import 'package:focusNexus/providers/app_settings_provider.dart';
 import 'package:focusNexus/providers/key_value_storage_provider.dart';
+import 'package:focusNexus/services/ambient_section_playback.dart';
 import 'package:focusNexus/services/sound_service.dart';
 import 'package:focusNexus/services/storage/key_value_storage.dart';
 import 'package:focusNexus/services/storage/storage_keys.dart';
@@ -150,7 +151,10 @@ Future<ProviderContainer> pumpFocusNexusApp(
   await tester.pumpWidget(
     testUncontrolledScope(
       container: container,
-      child: FocusNexusApp(initialRoute: initialRoute),
+      child: FocusNexusApp(
+        initialRoute: initialRoute,
+        ambientRouteObserver: AmbientRouteObserver(container),
+      ),
     ),
   );
   return container;

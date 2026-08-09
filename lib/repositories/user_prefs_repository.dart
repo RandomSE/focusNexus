@@ -48,6 +48,7 @@ class UserPrefsRepository {
       useDyslexiaFont: await readBool(StorageKeys.dyslexiaFont),
       highContrastMode: await readBool(StorageKeys.highContrast),
       dailyAffirmations: await readBool(StorageKeys.dailyAffirmations),
+      motivatorsDisabled: await readBool(StorageKeys.motivatorsDisabled),
       aiEncouragement: await readBool(StorageKeys.aiEncouragement),
       openStreakReminders: await readBool(StorageKeys.openStreakReminders),
       notificationFrequency:

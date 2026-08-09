@@ -110,20 +110,35 @@ class _TimeWindowWindowEditorState extends State<TimeWindowWindowEditor> {
       now: now,
     );
     widget.onStartChanged(start);
-    widget.onDurationChanged(widget.endAt.difference(start));
+    // Keep the requested duration intact; only the displayed start clamps to
+    // now. Recomputing from the clamped start would silently shrink the
+    // series windowDuration whenever start falls before now (bug).
+    widget.onDurationChanged(duration);
   }
 
   void _emitDuration() => _applyDuration(_duration);
 
   void _applyStart(DateTime start) {
     final now = DateTime.now();
+    final ideal = DateTime(
+      start.year,
+      start.month,
+      start.day,
+      start.hour,
+      start.minute,
+    );
     final clamped = clampActionWindowStart(
-      start: start,
+      start: ideal,
       end: widget.endAt,
       now: now,
     );
     widget.onStartChanged(clamped);
-    widget.onDurationChanged(widget.endAt.difference(clamped));
+    // Duration follows the requested (ideal) start, not the now-clamped
+    // display start, so repeating series keep the intended HH:mm window.
+    final requested = widget.endAt.difference(ideal);
+    if (requested > Duration.zero) {
+      widget.onDurationChanged(requested);
+    }
   }
 
   void _nudgeStart(Duration delta) {
@@ -149,14 +164,18 @@ class _TimeWindowWindowEditorState extends State<TimeWindowWindowEditor> {
   void _applyEnd(DateTime end) {
     final resolved = widget.fullDaysOnly ? _dayEnd(end) : end;
     final now = DateTime.now();
+    final requestedDuration = widget.duration;
     final start = clampActionWindowStart(
-      start: resolved.subtract(widget.duration),
+      start: resolved.subtract(requestedDuration),
       end: resolved,
       now: now,
     );
     widget.onEndChanged(resolved);
     widget.onStartChanged(start);
-    widget.onDurationChanged(resolved.difference(start));
+    // Moving the end date/time must not silently shrink the requested
+    // duration just because the display-only start clamps to now; the
+    // occurrence's actual start still clamps separately via computeActionWindow.
+    widget.onDurationChanged(requestedDuration);
   }
 
   Future<void> _pickEndDate() async {

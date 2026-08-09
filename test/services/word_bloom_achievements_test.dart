@@ -14,35 +14,35 @@ void main() {
     await service.initialize();
 
     expect(service.getById('156')!.title, 'Word Bloom I');
-    expect(service.getById('156')!.reward, '100 points');
+    expect(service.getById('156')!.reward, '40 points');
     expect(service.getById('156')!.isSecret, isFalse);
     expect(service.getById('156')!.task, contains('50'));
     expect(service.getById('157')!.title, 'Word Bloom II');
-    expect(service.getById('157')!.reward, '250 points');
+    expect(service.getById('157')!.reward, '100 points');
     expect(service.getById('158')!.title, 'Word Bloom III');
-    expect(service.getById('158')!.reward, '500 points');
+    expect(service.getById('158')!.reward, '200 points');
     expect(service.getById('159')!.title, 'Word Bloom IV');
-    expect(service.getById('159')!.reward, '1000 points');
+    expect(service.getById('159')!.reward, '400 points');
     expect(service.getById('160')!.title, 'Word Bloom V');
-    expect(service.getById('160')!.reward, '2500 points');
+    expect(service.getById('160')!.reward, '1000 points');
     expect(service.getById('160')!.task, contains('350'));
     expect(service.getById('161')!.title, 'Endless Lexicon');
-    expect(service.getById('161')!.reward, '2500 points');
+    expect(service.getById('161')!.reward, '400 points');
     expect(service.getById('161')!.task, contains('1000'));
 
     expect(service.getById('162')!.title, 'Order Streak I');
-    expect(service.getById('162')!.reward, '100 points');
+    expect(service.getById('162')!.reward, '40 points');
     expect(service.getById('163')!.title, 'Order Streak II');
-    expect(service.getById('163')!.reward, '250 points');
+    expect(service.getById('163')!.reward, '100 points');
     expect(service.getById('164')!.title, 'Order Streak III');
-    expect(service.getById('164')!.reward, '500 points');
+    expect(service.getById('164')!.reward, '200 points');
     expect(service.getById('165')!.title, 'Order Streak IV');
-    expect(service.getById('165')!.reward, '1000 points');
+    expect(service.getById('165')!.reward, '400 points');
     expect(service.getById('166')!.title, 'Order Streak V');
-    expect(service.getById('166')!.reward, '2500 points');
+    expect(service.getById('166')!.reward, '1000 points');
     expect(service.getById('166')!.task, contains('15'));
     expect(service.getById('167')!.title, 'Endless Order');
-    expect(service.getById('167')!.reward, '2500 points');
+    expect(service.getById('167')!.reward, '400 points');
     expect(service.getById('167')!.task, contains('30'));
   });
 

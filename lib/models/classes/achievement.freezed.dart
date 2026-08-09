@@ -25,6 +25,7 @@ mixin _$Achievement {
   String get title => throw _privateConstructorUsedError;
   String get reward => throw _privateConstructorUsedError;
   String get task => throw _privateConstructorUsedError;
+  @CompletionDateTimeConverter()
   DateTime? get dateCompleted => throw _privateConstructorUsedError;
   bool get isCompleted => throw _privateConstructorUsedError;
   bool get isSecret => throw _privateConstructorUsedError;
@@ -52,7 +53,7 @@ abstract class $AchievementCopyWith<$Res> {
     String title,
     String reward,
     String task,
-    DateTime? dateCompleted,
+    @CompletionDateTimeConverter() DateTime? dateCompleted,
     bool isCompleted,
     bool isSecret,
     double progress,
@@ -137,7 +138,7 @@ abstract class _$$AchievementImplCopyWith<$Res>
     String title,
     String reward,
     String task,
-    DateTime? dateCompleted,
+    @CompletionDateTimeConverter() DateTime? dateCompleted,
     bool isCompleted,
     bool isSecret,
     double progress,
@@ -214,7 +215,7 @@ class _$AchievementImpl extends _Achievement {
     required this.title,
     required this.reward,
     required this.task,
-    this.dateCompleted,
+    @CompletionDateTimeConverter() this.dateCompleted,
     this.isCompleted = false,
     this.isSecret = true,
     this.progress = 0.0,
@@ -232,6 +233,7 @@ class _$AchievementImpl extends _Achievement {
   @override
   final String task;
   @override
+  @CompletionDateTimeConverter()
   final DateTime? dateCompleted;
   @override
   @JsonKey()
@@ -301,7 +303,7 @@ abstract class _Achievement extends Achievement {
     required final String title,
     required final String reward,
     required final String task,
-    final DateTime? dateCompleted,
+    @CompletionDateTimeConverter() final DateTime? dateCompleted,
     final bool isCompleted,
     final bool isSecret,
     final double progress,
@@ -320,6 +322,7 @@ abstract class _Achievement extends Achievement {
   @override
   String get task;
   @override
+  @CompletionDateTimeConverter()
   DateTime? get dateCompleted;
   @override
   bool get isCompleted;

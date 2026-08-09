@@ -23,6 +23,7 @@ class GoalsCompletePlan {
     required this.goal,
     required this.pointsDelta,
     required this.goalsCompletedTodayCount,
+    this.pvMomentumQualifies = false,
   });
 
   final CompleteGoalResult result;
@@ -31,6 +32,10 @@ class GoalsCompletePlan {
   final GoalSet goal;
   final int pointsDelta;
   final int goalsCompletedTodayCount;
+
+  /// Whether this completion's pre-daily points qualify for PV momentum
+  /// (see `pv_daily_momentum.dart`).
+  final bool pvMomentumQualifies;
 }
 
 /// Batch create plan.

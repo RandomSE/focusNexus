@@ -13,6 +13,7 @@ enum SoundChannelGroup {
 
 /// Sub-sections inside the Music group (shown with dividers).
 enum SoundMusicSection {
+  ambient('Background music'),
   miniGames('Mini-games'),
   zenGarden('Zen garden'),
   cherryBlossom('Cherry blossom');
@@ -86,6 +87,70 @@ enum SoundChannel {
     assetPath: 'sounds/music/bonsai.mp3',
     group: SoundChannelGroup.music,
     musicSection: SoundMusicSection.cherryBlossom,
+    isMusic: true,
+  ),
+  ambientRunningWater(
+    id: 'running_water',
+    label: 'Running water',
+    assetPath: 'sounds/music/customization/running_stream.mp3',
+    group: SoundChannelGroup.music,
+    musicSection: SoundMusicSection.ambient,
+    isMusic: true,
+  ),
+  ambientWhiteNoise(
+    id: 'white_noise',
+    label: 'White noise',
+    assetPath: 'sounds/music/customization/white_noise.mp3',
+    group: SoundChannelGroup.music,
+    musicSection: SoundMusicSection.ambient,
+    isMusic: true,
+  ),
+  ambientForestAtNight(
+    id: 'forest_at_night',
+    label: 'Forest at night',
+    assetPath: 'sounds/music/customization/forest_at_night.mp3',
+    group: SoundChannelGroup.music,
+    musicSection: SoundMusicSection.ambient,
+    isMusic: true,
+  ),
+  ambientOceanWaves(
+    id: 'ocean_waves',
+    label: 'Ocean waves',
+    assetPath: 'sounds/music/customization/ocean_waves.mp3',
+    group: SoundChannelGroup.music,
+    musicSection: SoundMusicSection.ambient,
+    isMusic: true,
+  ),
+  ambientPinkNoise(
+    id: 'pink_noise',
+    label: 'Pink noise',
+    assetPath: 'sounds/music/customization/pink_noise.mp3',
+    group: SoundChannelGroup.music,
+    musicSection: SoundMusicSection.ambient,
+    isMusic: true,
+  ),
+  ambientWindChimes(
+    id: 'wind_chimes',
+    label: 'Wind chimes',
+    assetPath: 'sounds/music/customization/wind_chimes.mp3',
+    group: SoundChannelGroup.music,
+    musicSection: SoundMusicSection.ambient,
+    isMusic: true,
+  ),
+  ambientDistantThunder(
+    id: 'distant_thunder',
+    label: 'Distant thunder',
+    assetPath: 'sounds/music/customization/distant_thunder.mp3',
+    group: SoundChannelGroup.music,
+    musicSection: SoundMusicSection.ambient,
+    isMusic: true,
+  ),
+  ambientPiano(
+    id: 'piano',
+    label: 'Piano',
+    assetPath: 'sounds/music/customization/piano.mp3',
+    group: SoundChannelGroup.music,
+    musicSection: SoundMusicSection.ambient,
     isMusic: true,
   ),
 

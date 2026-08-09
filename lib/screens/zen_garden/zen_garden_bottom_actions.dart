@@ -3,6 +3,7 @@ import 'package:focusNexus/progressive_visuals/decor_catalog.dart';
 import 'package:focusNexus/progressive_visuals/decor_item.dart';
 import 'package:focusNexus/progressive_visuals/garden_item.dart';
 import 'package:focusNexus/progressive_visuals/garden_state.dart';
+import 'package:focusNexus/progressive_visuals/garden_zen_spend.dart';
 import 'package:intl/intl.dart';
 
 import 'zen_garden_stage_labels.dart';
@@ -29,6 +30,8 @@ class ZenGardenBottomActions extends StatelessWidget {
     required this.onRestartDecor,
     required this.onRemovePlant,
     required this.onRemoveDecor,
+    this.onPurchasePathBonsaiMutation,
+    this.onSetPathBonsaiMutationEnabled,
   });
 
   final TextStyle textStyle;
@@ -50,6 +53,8 @@ class ZenGardenBottomActions extends StatelessWidget {
   final VoidCallback? onRestartDecor;
   final VoidCallback? onRemovePlant;
   final VoidCallback? onRemoveDecor;
+  final VoidCallback? onPurchasePathBonsaiMutation;
+  final ValueChanged<bool>? onSetPathBonsaiMutationEnabled;
 
   static String _growPlantLabel(int? cost, bool firstPlantFree) {
     if (cost == null) return 'Grow next';
@@ -76,8 +81,12 @@ class ZenGardenBottomActions extends StatelessWidget {
     if (decor != null) {
       final d = decor!;
       final label = decorEntryByKind(d.kind)?.label ?? d.kind;
+      final pathLocked = isZenPathClaimBonsaiKind(d.kind);
+      final lockedBonsai = isZenLockedBonsaiKind(d.kind);
       final now = DateTime.now();
-      final waiting = d.nextAdvanceAllowedAt != null && now.isBefore(d.nextAdvanceAllowedAt!);
+      final waiting = !lockedBonsai &&
+          d.nextAdvanceAllowedAt != null &&
+          now.isBefore(d.nextAdvanceAllowedAt!);
       final remaining = waiting ? d.nextAdvanceAllowedAt!.difference(now) : Duration.zero;
       final skipCost = d.pendingSkipWaitCost;
       final waitTotal = zenWaitAfterAdvancingFrom(d.stageIndex - 1);
@@ -94,7 +103,7 @@ class ZenGardenBottomActions extends StatelessWidget {
               remaining: remaining,
               waitTotal: waitTotal,
               skipCost: skipCost,
-              balance: garden.pointsBalance,
+              balance: zenSpendableBalance(garden),
               textStyle: textStyle,
               primary: primary,
               onSkip: onSkipDecor,
@@ -103,11 +112,16 @@ class ZenGardenBottomActions extends StatelessWidget {
           ],
           Semantics(
             container: true,
-            label:
-                'Selected decoration $label, stage ${d.stageIndex + 1} of five.$mutLabel Balance ${garden.pointsBalance} points.',
+            label: lockedBonsai
+                ? 'Selected $label. Fully formed achievement bonsai. Cannot be sold.'
+                    '${pathLocked && d.mutationUnlocked ? (d.mutation != null ? ' Inverted variant enabled.' : ' Inverted variant unlocked, currently disabled.') : ''}'
+                : 'Selected decoration $label, stage ${d.stageIndex + 1} of five.$mutLabel Balance ${zenSpendableBalance(garden)} points.',
             child: Text(
-              '$label · Stage ${d.stageIndex + 1} of 5'
-              '${d.mutation != null ? ' · variant on' : ''}',
+              lockedBonsai
+                  ? '$label · Fully formed'
+                      '${pathLocked && d.mutationUnlocked ? (d.mutation != null ? ' · inverted on' : ' · inverted off') : ''}'
+                  : '$label · Stage ${d.stageIndex + 1} of 5'
+                      '${d.mutation != null ? ' · variant on' : ''}',
               style: textStyle,
             ),
           ),
@@ -121,61 +135,111 @@ class ZenGardenBottomActions extends StatelessWidget {
               child: const Text('To inventory'),
             ),
           ),
-          const SizedBox(height: 12),
-          if (!waiting && d.stageIndex < DecorItem.maxStageIndex)
-            Semantics(
-              button: true,
-              enabled:
-                  growCostDecor != null && garden.pointsBalance >= (growCostDecor ?? 0),
-              label: growCostDecor == 0
-                  ? 'Grow decoration to next stage, no points cost'
-                  : 'Grow decoration to next stage, costs $growCostDecor points',
-              child: FilledButton(
-                onPressed: (growCostDecor != null &&
-                        garden.pointsBalance >= growCostDecor!)
-                    ? onGrowDecor
-                    : null,
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(48),
-                  backgroundColor: primary,
-                  foregroundColor:
-                      ThemeData.estimateBrightnessForColor(primary) == Brightness.dark
-                          ? Colors.white
-                          : const Color(0xFF1C1B1A),
-                ),
-                child: Text(
-                  growCostDecor == 0
-                      ? 'Grow next (no points)'
-                      : 'Grow next ($growCostDecor pts)',
+          if (pathLocked) ...[
+            if (!d.mutationUnlocked) ...[
+              const SizedBox(height: 12),
+              Semantics(
+                button: true,
+                enabled: canAffordZenSpend(garden, zenPathBonsaiMutationPointCost),
+                label:
+                    'Buy inverted-color variant for $zenPathBonsaiMutationPointCost points',
+                child: FilledButton(
+                  onPressed: canAffordZenSpend(garden, zenPathBonsaiMutationPointCost)
+                      ? onPurchasePathBonsaiMutation
+                      : null,
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(48),
+                    backgroundColor: primary,
+                    foregroundColor:
+                        ThemeData.estimateBrightnessForColor(primary) == Brightness.dark
+                            ? Colors.white
+                            : const Color(0xFF1C1B1A),
+                  ),
+                  child: Text(
+                    'Buy inverted variant ($zenPathBonsaiMutationPointCost pts)',
+                  ),
                 ),
               ),
-            ),
-          if (d.stageIndex >= DecorItem.maxStageIndex) ...[
-            Text(
-              'This decoration is fully grown.',
-              style: textStyle.copyWith(fontWeight: FontWeight.normal),
-            ),
-            const SizedBox(height: 8),
-            Semantics(
-              button: true,
-              label: 'Restart growth from first stage for a new rare variant chance',
-              child: OutlinedButton(
-                onPressed: onRestartDecor,
-                style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-                child: const Text('Restart growth'),
+            ] else ...[
+              const SizedBox(height: 12),
+              Semantics(
+                button: true,
+                label: d.mutation != null
+                    ? 'Disable inverted-color variant'
+                    : 'Enable inverted-color variant',
+                child: OutlinedButton(
+                  onPressed: onSetPathBonsaiMutationEnabled == null
+                      ? null
+                      : () => onSetPathBonsaiMutationEnabled!(d.mutation == null),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(48),
+                  ),
+                  child: Text(
+                    d.mutation != null
+                        ? 'Disable inverted variant'
+                        : 'Enable inverted variant',
+                  ),
+                ),
               ),
-            ),
+            ],
           ],
-          if (d.mutation != null) ...[
-            const SizedBox(height: 8),
-            Semantics(
-              button: true,
-              label: 'Remove special color variant',
-              child: TextButton(
-                onPressed: onRemoveDecorMutation,
-                child: const Text('Remove special variant'),
+          if (!lockedBonsai) ...[
+            const SizedBox(height: 12),
+            if (!waiting && d.stageIndex < DecorItem.maxStageIndex)
+              Semantics(
+                button: true,
+                enabled: growCostDecor != null &&
+                    canAffordZenSpend(garden, growCostDecor ?? 0),
+                label: growCostDecor == 0
+                    ? 'Grow decoration to next stage, no points cost'
+                    : 'Grow decoration to next stage, costs $growCostDecor points',
+                child: FilledButton(
+                  onPressed: (growCostDecor != null &&
+                          canAffordZenSpend(garden, growCostDecor!))
+                      ? onGrowDecor
+                      : null,
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(48),
+                    backgroundColor: primary,
+                    foregroundColor:
+                        ThemeData.estimateBrightnessForColor(primary) == Brightness.dark
+                            ? Colors.white
+                            : const Color(0xFF1C1B1A),
+                  ),
+                  child: Text(
+                    growCostDecor == 0
+                        ? 'Grow next (no points)'
+                        : 'Grow next ($growCostDecor pts)',
+                  ),
+                ),
               ),
-            ),
+            if (d.stageIndex >= DecorItem.maxStageIndex) ...[
+              Text(
+                'This decoration is fully grown.',
+                style: textStyle.copyWith(fontWeight: FontWeight.normal),
+              ),
+              const SizedBox(height: 8),
+              Semantics(
+                button: true,
+                label: 'Restart growth from first stage for a new rare variant chance',
+                child: OutlinedButton(
+                  onPressed: onRestartDecor,
+                  style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                  child: const Text('Restart growth'),
+                ),
+              ),
+            ],
+            if (d.mutation != null) ...[
+              const SizedBox(height: 8),
+              Semantics(
+                button: true,
+                label: 'Remove special color variant',
+                child: TextButton(
+                  onPressed: onRemoveDecorMutation,
+                  child: const Text('Remove special variant'),
+                ),
+              ),
+            ],
           ],
         ],
       );
@@ -201,7 +265,7 @@ class ZenGardenBottomActions extends StatelessWidget {
             remaining: remaining,
             waitTotal: waitTotal,
             skipCost: skipCost,
-            balance: garden.pointsBalance,
+            balance: zenSpendableBalance(garden),
             textStyle: textStyle,
             primary: primary,
             onSkip: onSkip,
@@ -211,7 +275,7 @@ class ZenGardenBottomActions extends StatelessWidget {
         Semantics(
           container: true,
           label:
-              'Selected plant, stage $stageLabel of five.$mutLabel Balance ${garden.pointsBalance} points.',
+              'Selected plant, stage $stageLabel of five.$mutLabel Balance ${zenSpendableBalance(garden)} points.',
           child: Text(
             'Stage: $stageLabel (${i.stageIndex + 1} of 5)'
             '${i.mutation != null ? ' · variant on' : ''}',
@@ -232,10 +296,10 @@ class ZenGardenBottomActions extends StatelessWidget {
         if (!waiting && i.stageIndex < GardenItem.maxStageIndex)
           Semantics(
             button: true,
-            enabled: growCost != null && garden.pointsBalance >= (growCost ?? 0),
+            enabled: growCost != null && canAffordZenSpend(garden, growCost ?? 0),
             label: _growPlantSemanticsLabel(growCost, isFirstPlantFree),
             child: FilledButton(
-              onPressed: (growCost != null && garden.pointsBalance >= growCost!)
+              onPressed: (growCost != null && canAffordZenSpend(garden, growCost!))
                   ? onGrow
                   : null,
               style: FilledButton.styleFrom(

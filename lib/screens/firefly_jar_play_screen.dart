@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:focusNexus/achievements/notify_achievement_progress.dart';
+import 'package:focusNexus/models/classes/achievement.dart';
 import 'package:focusNexus/mini_games/firefly_jar/firefly_jar_achievements.dart';
 import 'package:focusNexus/mini_games/firefly_jar/firefly_jar_constants.dart';
 import 'package:focusNexus/mini_games/firefly_jar/firefly_jar_engine.dart';
@@ -106,11 +108,15 @@ class _FireflyJarPlayScreenState extends ConsumerState<FireflyJarPlayScreen>
       engine.currentDifficulty,
       endless: _endless,
     );
-    await FireflyJarAchievements.recordRound(
+    final newlyReady = await FireflyJarAchievements.recordRound(
       storage: repos.storage,
       achievements: ref.read(achievementServiceProvider),
       catchCount: engine.catchCount,
       endless: _endless,
+    );
+    notifyAchievementProgressUpdated(
+      ref,
+      newlyReady.whereType<Achievement>(),
     );
     if (!mounted) return;
     setState(() {});

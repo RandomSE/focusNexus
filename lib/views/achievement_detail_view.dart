@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:focusNexus/achievements/achievement_pv_rewards.dart';
+import 'package:focusNexus/achievements/refresh_zen_after_achievement_claim.dart';
 import 'package:focusNexus/providers/app_services_provider.dart';
 import 'package:focusNexus/providers/screen_ui_providers.dart';
 import 'package:focusNexus/services/achievement_progress.dart';
@@ -45,6 +47,8 @@ class AchievementDetailView extends ConsumerWidget {
         ? 'Complete'
         : '${displayProgress.toStringAsFixed(1)}%';
 
+    final pvReward = achievementPvRewardFor(achievement.id);
+
     final buttonDisabled = ref.watch(
       achievementDetailDisabledProvider(achievement.id),
     );
@@ -76,6 +80,13 @@ class AchievementDetailView extends ConsumerWidget {
               Text('Task: ${achievement.task}', style: textStyle),
               const SizedBox(height: 8),
               Text('Reward: ${achievement.reward}', style: textStyle),
+              if (pvReward > 0) ...[
+                const SizedBox(height: 4),
+                Text(
+                  '+ $pvReward Progressive Visuals points',
+                  style: textStyle.copyWith(fontStyle: FontStyle.italic),
+                ),
+              ],
               const SizedBox(height: 8),
               Text('Progress: $progressLabel', style: textStyle),
               const SizedBox(height: 8),
@@ -105,6 +116,7 @@ class AchievementDetailView extends ConsumerWidget {
                     await ref
                         .read(achievementServiceProvider)
                         .completeAchievement(achievement.id);
+                    await refreshZenAfterAchievementClaim(ref);
                     if (!context.mounted) return;
                     ref
                         .read(

@@ -13,6 +13,8 @@ class GardenState with _$GardenState {
 
   const factory GardenState({
     required int pointsBalance,
+    /// Progressive-visuals points; spent before [pointsBalance] on PV purchases.
+    @Default(0) int progressiveVisualsPointsBalance,
     @Default(<GardenItem>[]) List<GardenItem> items,
     @Default(<DecorItem>[]) List<DecorItem> decor,
     @Default(<String, int>{}) Map<String, int> decorStash,
@@ -29,6 +31,10 @@ class GardenState with _$GardenState {
 
   void validate() {
     assert(pointsBalance >= 0, 'pointsBalance must be non-negative');
+    assert(
+      progressiveVisualsPointsBalance >= 0,
+      'progressiveVisualsPointsBalance must be non-negative',
+    );
     for (final item in items) {
       item.validate();
     }

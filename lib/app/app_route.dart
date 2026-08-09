@@ -7,7 +7,11 @@ import 'package:focusNexus/rewards/reward_type_selection.dart';
 import 'package:focusNexus/screens/achievements_screen.dart';
 import 'package:focusNexus/screens/ai_chat_screen.dart';
 import 'package:focusNexus/screens/auth_start_screen.dart';
+import 'package:focusNexus/screens/consistency_explorer_screen.dart';
+import 'package:focusNexus/screens/background_music_screen.dart';
+import 'package:focusNexus/screens/custom_affirmation_pack_screen.dart';
 import 'package:focusNexus/screens/customization_screen.dart';
+import 'package:focusNexus/services/custom_affirmation_pack.dart';
 import 'package:focusNexus/screens/dashboard_screen.dart';
 import 'package:focusNexus/screens/goals/time_window_bulk_create_wizard.dart';
 import 'package:focusNexus/screens/goals/time_window_calendar_placeholder_screen.dart';
@@ -70,6 +74,10 @@ sealed class AppRoute {
   static const settings = SettingsRoute();
   static const soundEffects = SoundEffectsRoute();
   static const music = MusicRoute();
+  static const backgroundMusic = BackgroundMusicRoute();
+  static const customAffirmationPack = CustomAffirmationPackRoute();
+  static const dashboardMotivatorPack = DashboardMotivatorPackRoute();
+  static const dailyAffirmationPack = DailyAffirmationPackRoute();
   static const reward = RewardRoute();
   static const miniGames = MiniGamesRoute();
   static const customization = CustomizationRoute();
@@ -79,6 +87,7 @@ sealed class AppRoute {
   static const timeWindowHub = TimeWindowHubRoute();
   static const progressiveVisual = ProgressiveVisualRoute();
   static const cherryBlossomTree = CherryBlossomTreeRoute();
+  static const consistencyExplorer = ConsistencyExplorerRoute();
 
   static AppRoute fromRouteSettings(RouteSettings settings) {
     return switch (settings.name) {
@@ -88,6 +97,10 @@ sealed class AppRoute {
       SettingsRoute.routeName => AppRoute.settings,
       SoundEffectsRoute.routeName => soundEffects,
       MusicRoute.routeName => music,
+      BackgroundMusicRoute.routeName => backgroundMusic,
+      CustomAffirmationPackRoute.routeName => customAffirmationPack,
+      DashboardMotivatorPackRoute.routeName => dashboardMotivatorPack,
+      DailyAffirmationPackRoute.routeName => dailyAffirmationPack,
       RewardRoute.routeName => reward,
       MiniGamesRoute.routeName => miniGames,
       MiniGameLobbyRoute.routeName => MiniGameLobbyRoute(
@@ -111,6 +124,8 @@ sealed class AppRoute {
         ProgressiveVisualSectionRoute.themeIdFrom(settings.arguments),
       ),
       CherryBlossomTreeRoute.routeName => cherryBlossomTree,
+      ConsistencyExplorerRoute.routeName =>
+        ConsistencyExplorerRoute.fromArguments(settings.arguments),
       _ => UnknownRoute(settings.name),
     };
   }
@@ -154,6 +169,34 @@ final class SoundEffectsRoute extends AppRoute {
 final class MusicRoute extends AppRoute {
   const MusicRoute();
   static const routeName = 'music';
+  @override
+  String get path => routeName;
+}
+
+final class BackgroundMusicRoute extends AppRoute {
+  const BackgroundMusicRoute();
+  static const routeName = 'background_music';
+  @override
+  String get path => routeName;
+}
+
+final class CustomAffirmationPackRoute extends AppRoute {
+  const CustomAffirmationPackRoute();
+  static const routeName = 'custom_affirmation_pack';
+  @override
+  String get path => routeName;
+}
+
+final class DashboardMotivatorPackRoute extends AppRoute {
+  const DashboardMotivatorPackRoute();
+  static const routeName = 'dashboard_motivator_pack';
+  @override
+  String get path => routeName;
+}
+
+final class DailyAffirmationPackRoute extends AppRoute {
+  const DailyAffirmationPackRoute();
+  static const routeName = 'daily_affirmation_pack';
   @override
   String get path => routeName;
 }
@@ -234,6 +277,43 @@ final class AchievementsRoute extends AppRoute {
   static const routeName = 'achievements';
   @override
   String get path => routeName;
+}
+
+final class ConsistencyExplorerRoute extends AppRoute {
+  const ConsistencyExplorerRoute({
+    this.year,
+    this.month,
+    this.selectedDay,
+    this.useMockData = false,
+  });
+
+  final int? year;
+  final int? month;
+  final DateTime? selectedDay;
+  final bool useMockData;
+
+  static const routeName = 'consistency_explorer';
+
+  factory ConsistencyExplorerRoute.fromArguments(Object? arguments) {
+    final args = ConsistencyExplorerArgs.fromArguments(arguments);
+    return ConsistencyExplorerRoute(
+      year: args.year,
+      month: args.month,
+      selectedDay: args.selectedDay,
+      useMockData: args.useMockData,
+    );
+  }
+
+  @override
+  String get path => routeName;
+
+  @override
+  Object? get navigationArguments => ConsistencyExplorerArgs(
+        year: year,
+        month: month,
+        selectedDay: selectedDay,
+        useMockData: useMockData,
+      );
 }
 
 final class GoalsRoute extends AppRoute {
@@ -382,6 +462,14 @@ abstract final class AppRouteRegistry {
           const _GuardedRouteScreen(route: AppRoute.soundEffects),
       MusicRoute.routeName: (_) =>
           const _GuardedRouteScreen(route: AppRoute.music),
+      BackgroundMusicRoute.routeName: (_) =>
+          const _GuardedRouteScreen(route: AppRoute.backgroundMusic),
+      CustomAffirmationPackRoute.routeName: (_) =>
+          const _GuardedRouteScreen(route: AppRoute.customAffirmationPack),
+      DashboardMotivatorPackRoute.routeName: (_) =>
+          const _GuardedRouteScreen(route: AppRoute.dashboardMotivatorPack),
+      DailyAffirmationPackRoute.routeName: (_) =>
+          const _GuardedRouteScreen(route: AppRoute.dailyAffirmationPack),
       RewardRoute.routeName: (_) =>
           const _GuardedRouteScreen(route: AppRoute.reward),
       MiniGamesRoute.routeName: (_) =>
@@ -404,6 +492,12 @@ abstract final class AppRouteRegistry {
           const _GuardedRouteScreen(route: AppRoute.chat),
       AchievementsRoute.routeName: (_) =>
           const _GuardedRouteScreen(route: AppRoute.achievements),
+      ConsistencyExplorerRoute.routeName: (context) {
+        final requested = AppRoute.fromRouteSettings(
+          ModalRoute.of(context)!.settings,
+        );
+        return _GuardedRouteScreen(route: requested);
+      },
       GoalsRoute.routeName: (context) {
         final requested = AppRoute.fromRouteSettings(
           ModalRoute.of(context)!.settings,
@@ -439,6 +533,14 @@ abstract final class AppRouteRegistry {
       SettingsRoute() => const SettingsScreen(),
       SoundEffectsRoute() => const SoundEffectsScreen(),
       MusicRoute() => const MusicScreen(),
+      BackgroundMusicRoute() => const BackgroundMusicScreen(),
+      CustomAffirmationPackRoute() => const CustomAffirmationPackScreen(),
+      DashboardMotivatorPackRoute() => const PhrasePackScreen(
+            kind: PhrasePackKind.dashboardMotivator,
+          ),
+      DailyAffirmationPackRoute() => const PhrasePackScreen(
+            kind: PhrasePackKind.dailyAffirmation,
+          ),
       RewardRoute() => const RewardRouteScreen(),
       MiniGamesRoute() => const MiniGamesScreen(),
       MiniGameLobbyRoute(:final gameId) => MiniGameLobbyScreen(gameId: gameId),
@@ -468,6 +570,17 @@ abstract final class AppRouteRegistry {
       CustomizationRoute() => const CustomizationScreen(),
       ChatRoute() => const AiChatScreen(),
       AchievementsRoute() => const AchievementScreen(),
+      ConsistencyExplorerRoute(
+        :final year,
+        :final month,
+        :final selectedDay,
+        :final useMockData,
+      ) => ConsistencyExplorerScreen(
+        initialYear: year,
+        initialMonth: month,
+        initialSelectedDay: selectedDay,
+        useMockData: useMockData,
+      ),
       GoalsRoute(:final highlightGoalId) => GoalsScreen(
         highlightGoalId: highlightGoalId,
       ),

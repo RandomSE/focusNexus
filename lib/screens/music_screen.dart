@@ -1,9 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focusNexus/app/app_route.dart';
+import 'package:focusNexus/providers/app_repositories_provider.dart';
 import 'package:focusNexus/providers/app_services_provider.dart';
 import 'package:focusNexus/providers/app_settings_provider.dart';
 import 'package:focusNexus/providers/zen_garden_session_provider.dart';
+import 'package:focusNexus/repositories/ambient_soundscape_repository.dart';
+import 'package:focusNexus/services/ambient_section_playback.dart';
+import 'package:focusNexus/services/ambient_soundscape.dart';
 import 'package:focusNexus/services/music_unlock.dart';
 import 'package:focusNexus/services/sound_channel.dart';
 import 'package:focusNexus/services/sound_service.dart';
@@ -22,8 +28,11 @@ class MusicScreen extends ConsumerStatefulWidget {
 
 class _MusicScreenState extends ConsumerState<MusicScreen> {
   Map<SoundChannel, SoundChannelSettings>? _settings;
+  Set<String> _ownedAmbientIds = AmbientSoundscapeCatalog.freeTrackIds;
   bool _loading = true;
   SoundService? _sounds;
+  AmbientPlaybackCoordinator? _ambientCoordinator;
+  AmbientSoundscapeRepository? _ambientRepo;
 
   @override
   void initState() {
@@ -35,19 +44,35 @@ class _MusicScreenState extends ConsumerState<MusicScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _sounds ??= ref.read(soundServiceProvider);
+    _ambientCoordinator ??= ref.read(ambientPlaybackCoordinatorProvider);
+    _ambientRepo ??=
+        ref.read(appRepositoriesProvider).ambientSoundscapes;
   }
 
   @override
   void dispose() {
-    _sounds?.stopMusic();
+    final sounds = _sounds;
+    final coordinator = _ambientCoordinator;
+    final repo = _ambientRepo;
+    if (sounds != null) {
+      unawaited(() async {
+        await sounds.stopMusic();
+        if (coordinator != null && repo != null) {
+          await coordinator.resume(repo: repo, sounds: sounds);
+        }
+      }());
+    }
     super.dispose();
   }
 
   Future<void> _load() async {
     final loaded = await ref.read(soundServiceProvider).loadChannelSettings();
+    final owned =
+        await ref.read(appRepositoriesProvider).ambientSoundscapes.readOwnedIds();
     if (!mounted) return;
     setState(() {
       _settings = loaded;
+      _ownedAmbientIds = owned;
       _loading = false;
     });
   }
@@ -59,6 +84,10 @@ class _MusicScreenState extends ConsumerState<MusicScreen> {
 
   Future<void> _preview(SoundChannel channel) async {
     final sounds = ref.read(soundServiceProvider);
+    if (AmbientSoundscapeCatalog.isAmbientChannel(channel)) {
+      await sounds.previewAmbient(channel);
+      return;
+    }
     if (channel == SoundChannel.breathBackground) {
       await sounds.previewBreathBackground(
         onCompleted: () async {
@@ -99,6 +128,7 @@ class _MusicScreenState extends ConsumerState<MusicScreen> {
                 garden: garden,
                 progressiveVisualsEnabled: progressiveVisualsEnabled,
                 miniGamesEnabled: miniGamesEnabled,
+                ownedAmbientIds: _ownedAmbientIds,
               );
             }).toList(growable: false);
             if (channels.isEmpty) continue;

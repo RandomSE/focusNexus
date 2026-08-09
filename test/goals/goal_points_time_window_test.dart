@@ -47,8 +47,8 @@ void main() {
       expect(points, 70);
     });
 
-    test('applies 1.5x on deadline-bonus base for standard slots', () {
-      final base = GoalPoints.calculatePointsFromTemplate(
+    test('applies 1.5x on unrounded deadline-bonus base for standard slots', () {
+      final rawBase = GoalPoints.rawPointsFromTemplate(
         complexity: 'Low',
         effort: 'Low',
         motivation: 'Low',
@@ -64,11 +64,11 @@ void main() {
         steps: '1',
         windowDuration: const Duration(hours: 5),
       );
-      expect(boosted, GoalPoints.roundUpToNearestFive(base * 1.5));
+      expect(boosted, GoalPoints.roundUpToNearestFive(rawBase * 1.5));
     });
 
-    test('applies 2x on deadline-bonus base for strict slots', () {
-      final base = GoalPoints.calculatePointsFromTemplate(
+    test('applies 2x on unrounded deadline-bonus base for strict slots', () {
+      final rawBase = GoalPoints.rawPointsFromTemplate(
         complexity: 'Low',
         effort: 'Low',
         motivation: 'Low',
@@ -84,7 +84,7 @@ void main() {
         steps: '1',
         windowDuration: const Duration(hours: 2),
       );
-      expect(boosted, GoalPoints.roundUpToNearestFive(base * 2.0));
+      expect(boosted, GoalPoints.roundUpToNearestFive(rawBase * 2.0));
     });
   });
 }

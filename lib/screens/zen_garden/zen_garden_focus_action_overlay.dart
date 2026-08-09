@@ -39,6 +39,8 @@ class ZenGardenFocusActionOverlay extends StatelessWidget {
     required this.onRestartDecor,
     required this.onRemovePlant,
     required this.onRemoveDecor,
+    this.onPurchasePathBonsaiMutation,
+    this.onSetPathBonsaiMutationEnabled,
   });
 
   final bool multiMode;
@@ -63,6 +65,8 @@ class ZenGardenFocusActionOverlay extends StatelessWidget {
   final VoidCallback? onRestartDecor;
   final VoidCallback? onRemovePlant;
   final VoidCallback? onRemoveDecor;
+  final VoidCallback? onPurchasePathBonsaiMutation;
+  final ValueChanged<bool>? onSetPathBonsaiMutationEnabled;
 
   Widget _buildGardenOverlayShell({
     required BuildContext context,
@@ -132,6 +136,10 @@ class ZenGardenFocusActionOverlay extends StatelessWidget {
         onRestartDecor: focusDecor == null ? null : onRestartDecor,
         onRemovePlant: focusPlant == null ? null : onRemovePlant,
         onRemoveDecor: focusDecor == null ? null : onRemoveDecor,
+        onPurchasePathBonsaiMutation:
+            focusDecor == null ? null : onPurchasePathBonsaiMutation,
+        onSetPathBonsaiMutationEnabled:
+            focusDecor == null ? null : onSetPathBonsaiMutationEnabled,
       ),
     );
   }

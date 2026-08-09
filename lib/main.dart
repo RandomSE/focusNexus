@@ -6,6 +6,8 @@ import 'package:focusNexus/app/app_routes.dart';
 import 'package:focusNexus/bootstrap/app_bootstrap.dart';
 import 'package:focusNexus/goals/goals_notification_navigation.dart';
 import 'package:focusNexus/providers/app_settings_provider.dart';
+import 'package:focusNexus/services/ambient_section_playback.dart';
+import 'package:focusNexus/services/music_lifecycle_binder.dart';
 import 'package:focusNexus/utils/theme_styles.dart';
 import 'package:focusNexus/widgets/skeleton_loaders.dart';
 
@@ -22,7 +24,10 @@ void main() async {
   runApp(
     UncontrolledProviderScope(
       container: container,
-      child: FocusNexusApp(initialRoute: initialRoute),
+      child: FocusNexusApp(
+        initialRoute: initialRoute,
+        ambientRouteObserver: AmbientRouteObserver(container),
+      ),
     ),
   );
 
@@ -34,9 +39,14 @@ void main() async {
 
 /// Root app widget. Uses [MaterialApp] named [routes], not [MaterialApp.router].
 class FocusNexusApp extends ConsumerWidget {
-  const FocusNexusApp({super.key, required this.initialRoute});
+  const FocusNexusApp({
+    super.key,
+    required this.initialRoute,
+    this.ambientRouteObserver,
+  });
 
   final String initialRoute;
+  final AmbientRouteObserver? ambientRouteObserver;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -71,6 +81,9 @@ class FocusNexusApp extends ConsumerWidget {
       navigatorKey: rootNavigatorKey,
       title: 'FocusNexus',
       debugShowCheckedModeBanner: false,
+      navigatorObservers: [
+        if (ambientRouteObserver != null) ambientRouteObserver!,
+      ],
       theme: appTheme.copyWith(
         pageTransitionsTheme: const PageTransitionsTheme(
           builders: {
@@ -84,9 +97,11 @@ class FocusNexusApp extends ConsumerWidget {
       ),
       builder: (context, child) {
         final bg = resolveScaffoldBackground(snap);
-        return ColoredBox(
-          color: bg,
-          child: child ?? const SizedBox.shrink(),
+        return MusicLifecycleBinder(
+          child: ColoredBox(
+            color: bg,
+            child: child ?? const SizedBox.shrink(),
+          ),
         );
       },
       initialRoute: initialRoute,

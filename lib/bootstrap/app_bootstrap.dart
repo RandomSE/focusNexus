@@ -5,6 +5,7 @@ import 'package:focusNexus/providers/app_repositories_provider.dart';
 import 'package:focusNexus/providers/app_services_provider.dart';
 import 'package:focusNexus/providers/app_settings_provider.dart';
 import 'package:focusNexus/providers/points_balance_provider.dart';
+import 'package:focusNexus/services/ambient_soundscape.dart';
 import 'package:focusNexus/services/storage/storage_keys.dart';
 import 'package:focusNexus/utils/notifier.dart';
 
@@ -32,6 +33,16 @@ Future<void> ensureAppReady(ProviderContainer container) async {
     StorageKeys.categoriesWithAllTypesCompleted,
   });
   await container.read(pointsBalanceProvider.future);
+  // Prefs + current ambient asset so first page music is near-instant.
+  final sounds = container.read(soundServiceProvider);
+  await sounds.warmPlaybackCache();
+  final ambientRepo = repos.ambientSoundscapes;
+  final channel = await ambientRepo.resolveForSection(
+    AmbientAppSection.dashboard,
+  );
+  if (channel != null) {
+    await sounds.prepareAmbient(channel);
+  }
 }
 
 /// Heavy work that can run after [runApp] (notifications only).

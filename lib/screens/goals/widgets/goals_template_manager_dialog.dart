@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:focusNexus/goals/goal_field_validators.dart';
 import 'package:focusNexus/providers/goals_screen_ui_provider.dart';
 import 'package:focusNexus/providers/theme_bundle_provider.dart';
 import 'package:focusNexus/utils/common_utils.dart';
@@ -166,11 +167,9 @@ class GoalsTemplateManagerDialog extends ConsumerWidget {
                   bundle.secondaryColor,
                   true,
                   (v) {
-                    final parsed = int.tryParse(v?.trim() ?? '');
-                    if (parsed == null || parsed < 1 || parsed > 999) {
-                      return 'Please enter a whole number > 0 and < 1000';
-                    }
-                    minutesRequired = parsed;
+                    final error = GoalFieldValidators.timeMinutes(v);
+                    if (error != null) return error;
+                    minutesRequired = int.parse(v!.trim());
                     return null;
                   },
                   keyboardType: TextInputType.number,
@@ -203,16 +202,7 @@ class GoalsTemplateManagerDialog extends ConsumerWidget {
                   bundle.textStyle,
                   bundle.secondaryColor,
                   true,
-                  (v) {
-                    final trimmed = v?.trim();
-                    final parsed = int.tryParse(
-                      trimmed?.isEmpty ?? true ? '1' : trimmed!,
-                    );
-                    if (parsed == null || parsed < 1 || parsed > 999) {
-                      return 'Please enter a valid whole number > 0 and smaller than 1000';
-                    }
-                    return null;
-                  },
+                  GoalFieldValidators.steps,
                 ),
                 CommonUtils.buildElevatedButton(
                   'Save Template',

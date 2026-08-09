@@ -10,10 +10,10 @@ import 'package:focusNexus/services/storage/storage_keys.dart';
 import '../helpers/in_memory_key_value_storage.dart';
 
 void main() {
-  test('stage achievement reward is max(100, 10% of stage total)', () {
-    expect(cherryBlossomStageAchievementReward(0), 100);
-    expect(cherryBlossomStageAchievementReward(1), 250);
-    expect(cherryBlossomStageAchievementReward(2), 1250);
+  test('stage achievement reward helper tracks 10% of geometric stage totals', () {
+    expect(cherryBlossomStageAchievementReward(0), 100); // max(100, 50)
+    expect(cherryBlossomStageAchievementReward(1), 200); // 10% of 2000
+    expect(cherryBlossomStageAchievementReward(2), 800); // 10% of 8000
     expect(
       cherryBlossomStageAchievementReward(6),
       (0.10 * CherryBlossomStageCatalog.stageTotalFor(6)).round(),

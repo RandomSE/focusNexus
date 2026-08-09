@@ -37,6 +37,9 @@ abstract final class AffirmationSelector {
     'You are a work in progress, and that is beautiful.',
   ];
 
+  /// Built-in affirmation cores (read-only catalog for customization seeding).
+  static List<String> get cores => List<String>.unmodifiable(_pool);
+
   static const _weekdayPrefixes = <int, List<String>>{
     DateTime.monday: [
       'New week, new momentum.',
@@ -75,12 +78,16 @@ abstract final class AffirmationSelector {
   };
 
   /// Stable message for [date] (time-of-day ignored). Varies by day and context.
+  ///
+  /// When [coreOverride] is non-null, it replaces the built-in pool core while
+  /// weekday / style prefixes still apply.
   static String forDate(
     DateTime date, {
     String notificationStyle = 'Minimal',
+    String? coreOverride,
   }) {
     final day = DateTime(date.year, date.month, date.day);
-    final core = _coreForDay(day);
+    final core = coreOverride ?? _coreForDay(day);
     final prefix = _contextualPrefix(day, notificationStyle);
     if (prefix.isEmpty) return core;
     return '$prefix$core';

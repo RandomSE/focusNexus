@@ -4,18 +4,22 @@ import 'package:focusNexus/progressive_visuals/cherry_blossom_stage_catalog.dart
 void main() {
   group('CherryBlossomStageCatalog', () {
     test('stage totals sum to grand total', () {
-      expect(CherryBlossomStageCatalog.grandTotalToMaxStage6(), 2665500);
+      expect(CherryBlossomStageCatalog.grandTotalToMaxStage6(), 1682500);
+    });
+
+    test('path switch cost is 100000 after rebalance', () {
+      expect(CherryBlossomStageCatalog.pathSwitchCost, 100000);
     });
 
     test('each stage has 25 flat round costs matching total', () {
       const expectedPerLevel = <int>[
         20, // 500
-        100, // 2500
-        500, // 12500
-        2000, // 50000
-        4000, // 100000
-        20000, // 500000
-        80000, // 2000000
+        80, // 2000
+        320, // 8000
+        1280, // 32000
+        5120, // 128000
+        20480, // 512000
+        40000, // 1000000
       ];
       for (var stage = 0; stage < CherryBlossomStageCatalog.stageCount; stage++) {
         final costs = CherryBlossomStageCatalog.stageCostsFor(stage);
@@ -38,21 +42,21 @@ void main() {
           stageIndex: 6,
           growthStepsInStage: 0,
         ),
-        80000,
+        40000,
       );
       expect(
         CherryBlossomStageCatalog.costForGrow(
           stageIndex: 6,
           growthStepsInStage: 12,
         ),
-        80000,
+        40000,
       );
       expect(
         CherryBlossomStageCatalog.costForPrestige(
           stageIndex: 6,
           growthStepsInStage: 24,
         ),
-        80000,
+        40000,
       );
     });
 

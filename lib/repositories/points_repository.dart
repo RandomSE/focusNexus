@@ -14,6 +14,19 @@ class PointsRepository {
 
   static const defaultBalance = 50;
 
+  /// Shared-wallet floor (never negative).
+  static const minBalance = 0;
+
+  /// Shared-wallet ceiling enforced on every write/credit path.
+  static const maxBalance = 99999999;
+
+  /// Clamps [balance] into [[minBalance], [maxBalance]].
+  static int clampBalance(int balance) {
+    if (balance < minBalance) return minBalance;
+    if (balance > maxBalance) return maxBalance;
+    return balance;
+  }
+
   void addBalanceListener(PointsBalanceListener listener) {
     _balanceListeners.add(listener);
   }
@@ -35,8 +48,9 @@ class PointsRepository {
   }
 
   Future<void> _writeBalance(int balance, {required bool notify}) async {
-    _cachedBalance = balance;
-    await _storage.write(key: StorageKeys.points, value: balance.toString());
+    final clamped = clampBalance(balance);
+    _cachedBalance = clamped;
+    await _storage.write(key: StorageKeys.points, value: clamped.toString());
     if (notify) {
       _notifyBalanceChanged();
     }
@@ -44,7 +58,7 @@ class PointsRepository {
 
   Future<int> readBalance() async {
     if (_cachedBalance != null) return _cachedBalance!;
-    final stored = await _readStoredBalance();
+    final stored = clampBalance(await _readStoredBalance());
     _cachedBalance = stored;
     return stored;
   }
@@ -52,21 +66,22 @@ class PointsRepository {
   /// Updates in-memory balance immediately (listeners fire before disk write).
   void creditBalance(int delta) {
     if (delta == 0) return;
-    final next = (_cachedBalance ?? defaultBalance) + delta;
+    final next = clampBalance((_cachedBalance ?? defaultBalance) + delta);
     _cachedBalance = next;
     _notifyBalanceChanged();
   }
 
   /// Sets in-memory balance and notifies listeners without writing storage.
   void setCachedBalance(int balance) {
-    if (_cachedBalance == balance) return;
-    _cachedBalance = balance;
+    final clamped = clampBalance(balance);
+    if (_cachedBalance == clamped) return;
+    _cachedBalance = clamped;
     _notifyBalanceChanged();
   }
 
   /// Sets in-memory balance without notifying listeners.
   void primeCachedBalance(int balance) {
-    _cachedBalance = balance;
+    _cachedBalance = clampBalance(balance);
   }
 
   /// Ensures a persisted balance exists; returns the effective balance.
@@ -76,8 +91,12 @@ class PointsRepository {
       await _writeBalance(defaultBalance, notify: false);
       return defaultBalance;
     }
-    _cachedBalance = int.tryParse(raw) ?? defaultBalance;
-    return _cachedBalance!;
+    final parsed = clampBalance(int.tryParse(raw) ?? defaultBalance);
+    _cachedBalance = parsed;
+    if (parsed.toString() != raw) {
+      await _writeBalance(parsed, notify: false);
+    }
+    return parsed;
   }
 
   Future<void> writeBalance(int balance) async {
@@ -102,12 +121,54 @@ class PointsRepository {
   }
 
   /// Deducts [amount] when sufficient; returns new balance or null if insufficient.
+  ///
+  /// Successful spends increment [StorageKeys.lifetimePointsSpent] (FU-3 breadth).
   Future<int?> trySpend(int amount) async {
+    if (amount < 0) {
+      throw ArgumentError.value(amount, 'amount', 'must be non-negative');
+    }
     final current = await readBalance();
     if (current < amount) return null;
     final next = current - amount;
     await writeBalance(next);
+    if (amount > 0) {
+      await recordLifetimeSpent(amount);
+    }
     return next;
+  }
+
+  /// Cumulative wallet spends used for cherry unlock (alongside zen garden field).
+  Future<int> readLifetimeSpent() async {
+    final raw = await _storage.read(key: StorageKeys.lifetimePointsSpent);
+    return int.tryParse(raw ?? '') ?? 0;
+  }
+
+  /// Adds to [StorageKeys.lifetimePointsSpent] (zen sync and trySpend).
+  Future<void> recordLifetimeSpent(int amount) async {
+    if (amount <= 0) return;
+    final current = await readLifetimeSpent();
+    await _storage.write(
+      key: StorageKeys.lifetimePointsSpent,
+      value: (current + amount).toString(),
+    );
+  }
+
+  /// Raises lifetime spent to at least [minimum] (garden -> wallet sync).
+  Future<void> ensureLifetimeSpentAtLeast(int minimum) async {
+    if (minimum <= 0) return;
+    final current = await readLifetimeSpent();
+    if (minimum <= current) return;
+    await _storage.write(
+      key: StorageKeys.lifetimePointsSpent,
+      value: minimum.toString(),
+    );
+  }
+
+  /// Removes previously granted points; floored at [minBalance] via clamp.
+  Future<void> clawback(int amount) async {
+    if (amount <= 0) return;
+    final current = await readBalance();
+    await writeBalance(current - amount);
   }
 
   /// Adds [amount] to the persisted balance and syncs [_cachedBalance].

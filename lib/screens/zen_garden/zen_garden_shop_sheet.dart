@@ -5,8 +5,9 @@ import 'package:focusNexus/providers/zen_garden_shop_provider.dart';
 import 'package:focusNexus/progressive_visuals/decor_catalog.dart';
 import 'package:focusNexus/progressive_visuals/garden_engine.dart';
 import 'package:focusNexus/progressive_visuals/garden_op_result.dart';
+import 'package:focusNexus/progressive_visuals/garden_zen_spend.dart';
+import 'package:focusNexus/progressive_visuals/progressive_visuals_balance_label.dart';
 import 'package:focusNexus/progressive_visuals/garden_state.dart';
-import 'package:focusNexus/progressive_visuals/visual_theme_id.dart';
 
 class ZenGardenShopSheet extends ConsumerStatefulWidget {
   const ZenGardenShopSheet({
@@ -38,7 +39,7 @@ class _ZenGardenShopSheetState extends ConsumerState<ZenGardenShopSheet> {
   void initState() {
     super.initState();
     _qtyControllers = {
-      for (final e in decorCatalogFor(VisualThemeId.zenGarden))
+      for (final e in zenDecorShopCatalog())
         e.id: TextEditingController(text: '1'),
     };
     WidgetsBinding.instance.addPostFrameCallback((_) => _syncCartWallet());
@@ -48,9 +49,16 @@ class _ZenGardenShopSheetState extends ConsumerState<ZenGardenShopSheet> {
     final wallet = ref.read(pointsBalanceProvider).valueOrNull;
     if (wallet == null) return;
     final cart = ref.read(zenGardenShopCartProvider(widget.garden));
-    if (cart.pointsBalance == wallet) return;
+    final pv = widget.garden.progressiveVisualsPointsBalance;
+    if (cart.pointsBalance == wallet &&
+        cart.progressiveVisualsPointsBalance == pv) {
+      return;
+    }
     ref.read(zenGardenShopCartProvider(widget.garden).notifier).setGarden(
-          cart.copyWith(pointsBalance: wallet),
+          cart.copyWith(
+            pointsBalance: wallet,
+            progressiveVisualsPointsBalance: pv,
+          ),
         );
   }
 
@@ -81,8 +89,15 @@ class _ZenGardenShopSheetState extends ConsumerState<ZenGardenShopSheet> {
     final wallet = ref.read(pointsBalanceProvider).valueOrNull;
     final cart = ref.read(zenGardenShopCartProvider(widget.garden));
     final working = wallet != null
-        ? cart.copyWith(pointsBalance: wallet)
-        : cart;
+        ? cart.copyWith(
+            pointsBalance: wallet,
+            progressiveVisualsPointsBalance:
+                widget.garden.progressiveVisualsPointsBalance,
+          )
+        : cart.copyWith(
+            progressiveVisualsPointsBalance:
+                widget.garden.progressiveVisualsPointsBalance,
+          );
     final r = widget.engine.purchaseDecor(working, entry.id, quantity: q);
     if (r.isSuccess && r.state != null) {
       ref.read(zenGardenShopCartProvider(widget.garden).notifier).setGarden(
@@ -99,11 +114,16 @@ class _ZenGardenShopSheetState extends ConsumerState<ZenGardenShopSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final entries = decorCatalogFor(VisualThemeId.zenGarden);
+    final entries = zenDecorShopCatalog();
     ref.watch(pointsBalanceProvider);
     final cartGarden = ref.watch(zenGardenShopCartProvider(widget.garden));
-    final balance =
+    final points =
         ref.watch(pointsBalanceProvider).valueOrNull ?? cartGarden.pointsBalance;
+    final spendGarden = cartGarden.copyWith(
+      pointsBalance: points,
+      progressiveVisualsPointsBalance:
+          widget.garden.progressiveVisualsPointsBalance,
+    );
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
 
     return ValueListenableBuilder<int>(
@@ -132,7 +152,7 @@ class _ZenGardenShopSheetState extends ConsumerState<ZenGardenShopSheet> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Text(
-                    'Balance: $balance pts',
+                    progressiveVisualsBalanceLabel(spendGarden),
                     style: widget.textStyle.copyWith(
                       fontWeight: FontWeight.normal,
                       fontSize: 13,
@@ -149,7 +169,7 @@ class _ZenGardenShopSheetState extends ConsumerState<ZenGardenShopSheet> {
                       final e = entries[i];
                       final q = _parsedQty(e.id);
                       final total = e.pointCost * q;
-                      final canBuy = balance >= total;
+                      final canBuy = canAffordZenSpend(spendGarden, total);
                       return Card(
                         margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
                         child: Padding(

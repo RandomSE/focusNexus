@@ -32,6 +32,9 @@ mixin _$DecorItem {
   int? get pendingSkipWaitCost => throw _privateConstructorUsedError;
   @MutationKindJsonConverter()
   MutationKind? get mutation => throw _privateConstructorUsedError;
+
+  /// Owned paid/rare inverted look; [mutation] is the current on/off display.
+  bool get mutationUnlocked => throw _privateConstructorUsedError;
   bool get awaitingRegrowthForRemutation => throw _privateConstructorUsedError;
   bool get mutationRolledThisCycle => throw _privateConstructorUsedError;
   int get rebirthCount => throw _privateConstructorUsedError;
@@ -61,6 +64,7 @@ abstract class $DecorItemCopyWith<$Res> {
     DateTime? nextAdvanceAllowedAt,
     int? pendingSkipWaitCost,
     @MutationKindJsonConverter() MutationKind? mutation,
+    bool mutationUnlocked,
     bool awaitingRegrowthForRemutation,
     bool mutationRolledThisCycle,
     int rebirthCount,
@@ -91,6 +95,7 @@ class _$DecorItemCopyWithImpl<$Res, $Val extends DecorItem>
     Object? nextAdvanceAllowedAt = freezed,
     Object? pendingSkipWaitCost = freezed,
     Object? mutation = freezed,
+    Object? mutationUnlocked = null,
     Object? awaitingRegrowthForRemutation = null,
     Object? mutationRolledThisCycle = null,
     Object? rebirthCount = null,
@@ -133,6 +138,10 @@ class _$DecorItemCopyWithImpl<$Res, $Val extends DecorItem>
                 ? _value.mutation
                 : mutation // ignore: cast_nullable_to_non_nullable
                       as MutationKind?,
+            mutationUnlocked: null == mutationUnlocked
+                ? _value.mutationUnlocked
+                : mutationUnlocked // ignore: cast_nullable_to_non_nullable
+                      as bool,
             awaitingRegrowthForRemutation: null == awaitingRegrowthForRemutation
                 ? _value.awaitingRegrowthForRemutation
                 : awaitingRegrowthForRemutation // ignore: cast_nullable_to_non_nullable
@@ -170,6 +179,7 @@ abstract class _$$DecorItemImplCopyWith<$Res>
     DateTime? nextAdvanceAllowedAt,
     int? pendingSkipWaitCost,
     @MutationKindJsonConverter() MutationKind? mutation,
+    bool mutationUnlocked,
     bool awaitingRegrowthForRemutation,
     bool mutationRolledThisCycle,
     int rebirthCount,
@@ -199,6 +209,7 @@ class __$$DecorItemImplCopyWithImpl<$Res>
     Object? nextAdvanceAllowedAt = freezed,
     Object? pendingSkipWaitCost = freezed,
     Object? mutation = freezed,
+    Object? mutationUnlocked = null,
     Object? awaitingRegrowthForRemutation = null,
     Object? mutationRolledThisCycle = null,
     Object? rebirthCount = null,
@@ -241,6 +252,10 @@ class __$$DecorItemImplCopyWithImpl<$Res>
             ? _value.mutation
             : mutation // ignore: cast_nullable_to_non_nullable
                   as MutationKind?,
+        mutationUnlocked: null == mutationUnlocked
+            ? _value.mutationUnlocked
+            : mutationUnlocked // ignore: cast_nullable_to_non_nullable
+                  as bool,
         awaitingRegrowthForRemutation: null == awaitingRegrowthForRemutation
             ? _value.awaitingRegrowthForRemutation
             : awaitingRegrowthForRemutation // ignore: cast_nullable_to_non_nullable
@@ -271,6 +286,7 @@ class _$DecorItemImpl extends _DecorItem {
     this.nextAdvanceAllowedAt,
     this.pendingSkipWaitCost,
     @MutationKindJsonConverter() this.mutation,
+    this.mutationUnlocked = false,
     this.awaitingRegrowthForRemutation = false,
     this.mutationRolledThisCycle = false,
     this.rebirthCount = 0,
@@ -302,6 +318,11 @@ class _$DecorItemImpl extends _DecorItem {
   @override
   @MutationKindJsonConverter()
   final MutationKind? mutation;
+
+  /// Owned paid/rare inverted look; [mutation] is the current on/off display.
+  @override
+  @JsonKey()
+  final bool mutationUnlocked;
   @override
   @JsonKey()
   final bool awaitingRegrowthForRemutation;
@@ -314,7 +335,7 @@ class _$DecorItemImpl extends _DecorItem {
 
   @override
   String toString() {
-    return 'DecorItem(id: $id, themeId: $themeId, kind: $kind, positionX: $positionX, positionY: $positionY, stageIndex: $stageIndex, nextAdvanceAllowedAt: $nextAdvanceAllowedAt, pendingSkipWaitCost: $pendingSkipWaitCost, mutation: $mutation, awaitingRegrowthForRemutation: $awaitingRegrowthForRemutation, mutationRolledThisCycle: $mutationRolledThisCycle, rebirthCount: $rebirthCount)';
+    return 'DecorItem(id: $id, themeId: $themeId, kind: $kind, positionX: $positionX, positionY: $positionY, stageIndex: $stageIndex, nextAdvanceAllowedAt: $nextAdvanceAllowedAt, pendingSkipWaitCost: $pendingSkipWaitCost, mutation: $mutation, mutationUnlocked: $mutationUnlocked, awaitingRegrowthForRemutation: $awaitingRegrowthForRemutation, mutationRolledThisCycle: $mutationRolledThisCycle, rebirthCount: $rebirthCount)';
   }
 
   @override
@@ -337,6 +358,8 @@ class _$DecorItemImpl extends _DecorItem {
                 other.pendingSkipWaitCost == pendingSkipWaitCost) &&
             (identical(other.mutation, mutation) ||
                 other.mutation == mutation) &&
+            (identical(other.mutationUnlocked, mutationUnlocked) ||
+                other.mutationUnlocked == mutationUnlocked) &&
             (identical(
                   other.awaitingRegrowthForRemutation,
                   awaitingRegrowthForRemutation,
@@ -365,6 +388,7 @@ class _$DecorItemImpl extends _DecorItem {
     nextAdvanceAllowedAt,
     pendingSkipWaitCost,
     mutation,
+    mutationUnlocked,
     awaitingRegrowthForRemutation,
     mutationRolledThisCycle,
     rebirthCount,
@@ -395,6 +419,7 @@ abstract class _DecorItem extends DecorItem {
     final DateTime? nextAdvanceAllowedAt,
     final int? pendingSkipWaitCost,
     @MutationKindJsonConverter() final MutationKind? mutation,
+    final bool mutationUnlocked,
     final bool awaitingRegrowthForRemutation,
     final bool mutationRolledThisCycle,
     final int rebirthCount,
@@ -424,6 +449,10 @@ abstract class _DecorItem extends DecorItem {
   @override
   @MutationKindJsonConverter()
   MutationKind? get mutation;
+
+  /// Owned paid/rare inverted look; [mutation] is the current on/off display.
+  @override
+  bool get mutationUnlocked;
   @override
   bool get awaitingRegrowthForRemutation;
   @override

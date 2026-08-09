@@ -219,6 +219,27 @@ class ZenGardenSession extends _$ZenGardenSession {
     });
   }
 
+  /// Reloads cherry tree (+ unlock/lifetime fields) from disk after external
+  /// mutations (e.g. path-claim bonsai grant) without dropping sandbox layout.
+  Future<void> refreshCherryTreeFromDisk() async {
+    if (!_hasLoadedFromDisk || _notifierDisposed) return;
+    final disk = await _repos.garden.load();
+    if (_notifierDisposed) return;
+    final mergedLife = disk.lifetimeZenPointsSpent >
+            state.garden.lifetimeZenPointsSpent
+        ? disk.lifetimeZenPointsSpent
+        : state.garden.lifetimeZenPointsSpent;
+    _commitGarden(
+      state.garden.copyWith(
+        cherryBlossomTree: disk.cherryBlossomTree,
+        lifetimeZenPointsSpent: mergedLife,
+        cherryBlossomTreeUnlocked:
+            state.garden.cherryBlossomTreeUnlocked ||
+            disk.cherryBlossomTreeUnlocked,
+      ),
+    );
+  }
+
   void setViewportMoved(bool moved) {
     if (_notifierDisposed) return;
     if (state.viewportMoved == moved) return;

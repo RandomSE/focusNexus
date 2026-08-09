@@ -16,16 +16,16 @@ void main() {
       await service.initialize();
 
       expect(service.getById('136')!.title, 'Meteor Shower I');
-      expect(service.getById('136')!.reward, '100 points');
+      expect(service.getById('136')!.reward, '40 points');
       expect(service.getById('136')!.isSecret, isFalse);
       expect(service.getById('137')!.title, 'Meteor Shower II');
-      expect(service.getById('137')!.reward, '250 points');
+      expect(service.getById('137')!.reward, '100 points');
       expect(service.getById('138')!.title, 'Meteor Shower III');
-      expect(service.getById('138')!.reward, '500 points');
+      expect(service.getById('138')!.reward, '200 points');
       expect(service.getById('139')!.title, 'Meteor Shower IV');
-      expect(service.getById('139')!.reward, '1000 points');
+      expect(service.getById('139')!.reward, '400 points');
       expect(service.getById('140')!.title, 'Endless Skies');
-      expect(service.getById('140')!.reward, '2500 points');
+      expect(service.getById('140')!.reward, '400 points');
       expect(service.getById('140')!.isSecret, isFalse);
     },
   );
@@ -36,13 +36,13 @@ void main() {
     await service.initialize();
 
     expect(service.getById('150')!.title, 'Meteor Streak I');
-    expect(service.getById('150')!.reward, '100 points');
-    expect(service.getById('151')!.reward, '250 points');
-    expect(service.getById('152')!.reward, '500 points');
-    expect(service.getById('153')!.reward, '1000 points');
-    expect(service.getById('154')!.reward, '2500 points');
+    expect(service.getById('150')!.reward, '40 points');
+    expect(service.getById('151')!.reward, '100 points');
+    expect(service.getById('152')!.reward, '200 points');
+    expect(service.getById('153')!.reward, '400 points');
+    expect(service.getById('154')!.reward, '1000 points');
     expect(service.getById('155')!.title, 'Endless Streak');
-    expect(service.getById('155')!.reward, '2500 points');
+    expect(service.getById('155')!.reward, '400 points');
     expect(service.getById('155')!.task, contains('100'));
   });
 

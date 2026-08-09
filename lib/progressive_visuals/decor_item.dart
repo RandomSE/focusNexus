@@ -23,6 +23,8 @@ class DecorItem with _$DecorItem {
     DateTime? nextAdvanceAllowedAt,
     int? pendingSkipWaitCost,
     @MutationKindJsonConverter() MutationKind? mutation,
+    /// Owned paid/rare inverted look; [mutation] is the current on/off display.
+    @Default(false) bool mutationUnlocked,
     @Default(false) bool awaitingRegrowthForRemutation,
     @Default(false) bool mutationRolledThisCycle,
     @Default(0) int rebirthCount,

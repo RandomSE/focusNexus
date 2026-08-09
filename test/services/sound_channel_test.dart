@@ -12,6 +12,14 @@ void main() {
       'cherry_peace_music',
       'cherry_power_music',
       'bonsai_music',
+      'running_water',
+      'white_noise',
+      'forest_at_night',
+      'ocean_waves',
+      'pink_noise',
+      'wind_chimes',
+      'distant_thunder',
+      'piano',
     ]);
     expect(SoundChannel.forGroup(SoundChannelGroup.goals).map((c) => c.id), [
       'goal_created',
@@ -45,6 +53,17 @@ void main() {
       SoundChannel.breathBackground.assetPath,
       'sounds/music/breath_background.mp3',
     );
+  });
+
+  test('ambient music channels live under sounds/music/customization/', () {
+    final ambient = SoundChannel.musicForSection(SoundMusicSection.ambient);
+    expect(ambient.length, 8);
+    for (final channel in ambient) {
+      expect(
+        channel.assetPath.startsWith('sounds/music/customization/'),
+        isTrue,
+      );
+    }
   });
 
   test('codec round-trips channel enable and volume', () {

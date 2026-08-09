@@ -54,11 +54,11 @@ void main() {
       expect(
         [for (var id = 131; id <= 135; id++) service.getById('$id')?.reward],
         [
+          '40 points',
           '100 points',
-          '250 points',
-          '500 points',
-          '1000 points',
-          '2500 points',
+          '200 points',
+          '400 points',
+          '400 points', // Endless Serenity (135) after PV-earn endless rebalance
         ],
       );
       expect(

@@ -10,10 +10,15 @@ import 'package:focusNexus/progressive_visuals/cherry_blossom_tree_state.dart';
 import 'package:focusNexus/progressive_visuals/cherry_blossom_tree_viewport.dart';
 import 'package:focusNexus/progressive_visuals/cherry_blossom_prestige_transition.dart';
 import 'package:focusNexus/progressive_visuals/garden_state.dart';
+import 'package:focusNexus/progressive_visuals/garden_zen_spend.dart';
+import 'package:focusNexus/progressive_visuals/progressive_visuals_balance_label.dart';
+import 'package:focusNexus/providers/app_repositories_provider.dart';
 import 'package:focusNexus/providers/app_services_provider.dart';
 import 'package:focusNexus/providers/points_balance_provider.dart';
 import 'package:focusNexus/providers/zen_garden_session_provider.dart';
 import 'package:focusNexus/screens/zen_garden/bonsai_garden_screen.dart';
+import 'package:focusNexus/services/ambient_section_playback.dart';
+import 'package:focusNexus/services/ambient_soundscape.dart';
 import 'package:focusNexus/services/music_unlock.dart';
 import 'package:focusNexus/services/sound_channel.dart';
 import 'package:focusNexus/services/sound_service.dart';
@@ -105,18 +110,50 @@ class _CherryBlossomTreeScreenState extends ConsumerState<CherryBlossomTreeScree
   }
 
   Future<void> _syncCherryMusic() async {
+    final repo = ref.read(appRepositoriesProvider).ambientSoundscapes;
+    final suppress = await repo.shouldSuppressFeatureBgm(
+      AmbientAppSection.progressiveVisuals,
+    );
+    if (suppress) {
+      _activeMusic = null;
+      await ref.read(soundServiceProvider).stopMusic();
+      return;
+    }
     final tree = ref.read(zenGardenSessionProvider).garden.cherryBlossomTree;
     final channel = cherryBlossomMusicForTree(tree);
-    if (_activeMusic == channel) return;
-    _activeMusic = channel;
-    await ref.read(soundServiceProvider).startMusic(channel);
+    final sounds = ref.read(soundServiceProvider);
+    final audible = await sounds.isMusicChannelAudible(channel);
+    // Sticky only while the intended output is already playing.
+    if (_activeMusic == channel) {
+      if (audible && sounds.activeFeatureMusic == channel) return;
+      if (!audible && sounds.isAmbientRequested && !sounds.hasActiveFeatureMusic) {
+        return;
+      }
+    }
+    final coordinator = ref.read(ambientPlaybackCoordinatorProvider);
+    final started = await startFeatureMusicOrAmbientFallback(
+      sounds: sounds,
+      repo: repo,
+      coordinator: coordinator,
+      featureChannel: channel,
+    );
+    // Only sticky on success so a disabled-channel miss can retry / fall back.
+    _activeMusic = started ? channel : null;
+  }
+
+  @override
+  void activate() {
+    super.activate();
+    // Re-evaluate after returning from Sound effects / settings overlays.
+    unawaited(_syncCherryMusic());
   }
 
   @override
   void dispose() {
     final sounds = _sounds;
-    if (sounds != null) {
-      unawaited(sounds.stopMusic());
+    final channel = _activeMusic;
+    if (sounds != null && channel != null) {
+      unawaited(sounds.stopMusicIfChannel(channel));
     }
     _pulseController.dispose();
     _prestigeController.dispose();
@@ -166,6 +203,7 @@ class _CherryBlossomTreeScreenState extends ConsumerState<CherryBlossomTreeScree
         setState(() => _prestigeBusy = false);
       }
       await _prestigeController.forward(from: 0);
+      unawaited(_syncCherryMusic());
       return;
     }
 
@@ -471,16 +509,15 @@ class _CherryBlossomTreeScreenState extends ConsumerState<CherryBlossomTreeScree
     final garden = ref.watch(zenGardenSessionProvider).garden;
     final tree = garden.cherryBlossomTree.normalized();
     final engine = CherryBlossomTreeEngine(tree);
-    final balance =
-        ref.watch(pointsBalanceProvider).valueOrNull ?? garden.pointsBalance;
+    final spendable = zenSpendableBalance(garden);
     final nextCost = engine.nextGrowCost();
     final prestigeCost = engine.prestigeCost();
-    final maxCost = engine.maxGrowCost(balance);
-    final canGrow = engine.canGrow() && engine.canAffordGrow(balance);
+    final maxCost = engine.maxGrowCost(spendable);
+    final canGrow = engine.canGrow() && engine.canAffordGrow(spendable);
     final canMax = !_prestigeBusy && engine.canGrow() && maxCost > 0;
     final showPrestige =
         !_prestigeBusy && engine.canPrestige() && !tree.isFinale;
-    final canAffordPrestige = engine.canAffordPrestige(balance);
+    final canAffordPrestige = engine.canAffordPrestige(spendable);
     final sceneColor = CherryBlossomStageCatalog.scaffoldColorFor(tree.stageIndex);
 
     return Scaffold(
@@ -553,7 +590,7 @@ class _CherryBlossomTreeScreenState extends ConsumerState<CherryBlossomTreeScree
                                 fit: BoxFit.scaleDown,
                                 alignment: Alignment.centerLeft,
                                 child: Text(
-                                  'Wallet: $balance pts',
+                                  progressiveVisualsBalanceLabel(garden),
                                   style: widget.textStyle.copyWith(
                                     color: widget.primaryColor,
                                     fontWeight: FontWeight.w600,
@@ -598,7 +635,7 @@ class _CherryBlossomTreeScreenState extends ConsumerState<CherryBlossomTreeScree
                           tree: tree,
                           engine: engine,
                           garden: garden,
-                          balance: balance,
+                          balance: spendable,
                           nextCost: nextCost,
                           prestigeCost: prestigeCost,
                           maxCost: maxCost,

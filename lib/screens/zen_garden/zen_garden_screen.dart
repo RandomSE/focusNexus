@@ -9,9 +9,13 @@ import 'package:focusNexus/app/app_route.dart';
 import 'package:focusNexus/providers/points_balance_provider.dart';
 import 'package:focusNexus/providers/zen_garden_session_provider.dart';
 import 'package:focusNexus/providers/zen_garden_session_state.dart';
+import 'package:focusNexus/providers/app_repositories_provider.dart';
 import 'package:focusNexus/providers/app_services_provider.dart';
+import 'package:focusNexus/services/ambient_section_playback.dart';
+import 'package:focusNexus/services/ambient_soundscape.dart';
 import 'package:focusNexus/services/sound_channel.dart';
 import 'package:focusNexus/services/sound_service.dart';
+import 'package:focusNexus/progressive_visuals/progressive_visuals_balance_label.dart';
 import 'package:focusNexus/utils/common_utils.dart';
 import 'package:focusNexus/progressive_visuals/cherry_blossom_unlock.dart';
 import 'package:focusNexus/progressive_visuals/decor_catalog.dart';
@@ -65,6 +69,7 @@ class ZenGardenScreen extends ConsumerStatefulWidget {
 
 class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen> {
   SoundService? _sounds;
+  SoundChannel? _startedFeatureChannel;
   final _random = Random();
   final SandboxHitTester _hitTester = const ZenGardenHitTester();
   final TransformationController _viewportTransform = TransformationController();
@@ -119,7 +124,7 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen> {
     _session = ref.read(zenGardenSessionProvider.notifier);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      unawaited(_startZenMusic());
+      unawaited(_startZenMusicIfAllowed());
     });
     ref.listenManual(pointsBalanceProvider, (previous, next) {
       next.whenData((balance) {
@@ -150,22 +155,34 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen> {
     _sounds ??= ref.read(soundServiceProvider);
   }
 
-  Future<void> _startZenMusic() async {
-    await ref.read(soundServiceProvider).startMusic(SoundChannel.zenGardenMusic);
+  Future<void> _startZenMusicIfAllowed() async {
+    final repo = ref.read(appRepositoriesProvider).ambientSoundscapes;
+    final suppress = await repo.shouldSuppressFeatureBgm(
+      AmbientAppSection.progressiveVisuals,
+    );
+    if (suppress) {
+      _startedFeatureChannel = null;
+      await ref.read(soundServiceProvider).stopMusic();
+      return;
+    }
+    final sounds = ref.read(soundServiceProvider);
+    final coordinator = ref.read(ambientPlaybackCoordinatorProvider);
+    final started = await startFeatureMusicOrAmbientFallback(
+      sounds: sounds,
+      repo: repo,
+      coordinator: coordinator,
+      featureChannel: SoundChannel.zenGardenMusic,
+    );
+    _startedFeatureChannel = started ? SoundChannel.zenGardenMusic : null;
   }
 
   Future<void> _openCherryBlossomTree() async {
+    _startedFeatureChannel = null;
     await ref.read(soundServiceProvider).stopMusic();
     if (!mounted) return;
     await ref.pushRoute(context, AppRoute.cherryBlossomTree);
     if (!mounted) return;
-    await _startZenMusic();
-  }
-
-  int get _walletBalance {
-    final fromProvider = ref.watch(pointsBalanceProvider).valueOrNull;
-    if (fromProvider != null) return fromProvider;
-    return _garden.pointsBalance;
+    await _startZenMusicIfAllowed();
   }
 
   void _showZenGardenHelp() {
@@ -197,8 +214,9 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen> {
   @override
   void dispose() {
     final sounds = _sounds;
-    if (sounds != null) {
-      unawaited(sounds.stopMusic());
+    final channel = _startedFeatureChannel;
+    if (sounds != null && channel != null) {
+      unawaited(sounds.stopMusicIfChannel(channel));
     }
     _viewportTransform.removeListener(_syncViewportMoved);
     _viewportTransform.dispose();
@@ -725,6 +743,26 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen> {
     _apply(_engine.removeDecor(_garden, id), announce: 'Decoration moved to inventory.');
     _selection.clearFocus();
     _touch();
+  }
+
+  void _purchasePathBonsaiMutation() {
+    final id = _selection.focusDecorId;
+    if (id == null) return;
+    _apply(
+      _engine.purchasePathBonsaiMutation(_garden, id),
+      announce: 'Path bonsai inverted variant unlocked.',
+    );
+  }
+
+  void _setPathBonsaiMutationEnabled(bool enabled) {
+    final id = _selection.focusDecorId;
+    if (id == null) return;
+    _apply(
+      _engine.setPathBonsaiMutationEnabled(_garden, id, enabled: enabled),
+      announce: enabled
+          ? 'Inverted variant enabled.'
+          : 'Inverted variant disabled.',
+    );
   }
 
   void _growDecorSelected() {
@@ -1303,7 +1341,7 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen> {
                                 fit: BoxFit.scaleDown,
                                 alignment: Alignment.centerLeft,
                                 child: Text(
-                                  'Points: $_walletBalance',
+                                  progressiveVisualsBalanceLabel(_garden),
                                   style: widget.textStyle,
                                   maxLines: 1,
                                   softWrap: false,
@@ -1571,6 +1609,10 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen> {
                                 onRestartDecor: _confirmDecorRestart,
                                 onRemovePlant: _removeFocusPlant,
                                 onRemoveDecor: _removeFocusDecor,
+                                onPurchasePathBonsaiMutation:
+                                    _purchasePathBonsaiMutation,
+                                onSetPathBonsaiMutationEnabled:
+                                    _setPathBonsaiMutationEnabled,
                               ),
                             if (_menuOpen)
                               _buildGardenMenuOverlay(context, bulkCount: bulkCount),

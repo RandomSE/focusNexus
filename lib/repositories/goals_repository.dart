@@ -61,4 +61,17 @@ class GoalsRepository {
     final stored = await readCompletedTodayRaw();
     return CompletedTodayCodec.nextCount(stored: stored, today: today);
   }
+
+  Future<String?> readPvMomentumQualifyingTodayRaw() =>
+      _storage.read(key: StorageKeys.pvMomentumQualifyingToday);
+
+  Future<void> writePvMomentumQualifyingToday({
+    required String today,
+    required int count,
+  }) {
+    return _storage.write(
+      key: StorageKeys.pvMomentumQualifyingToday,
+      value: CompletedTodayCodec.encode(today: today, count: count),
+    );
+  }
 }

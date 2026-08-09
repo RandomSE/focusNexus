@@ -76,6 +76,7 @@ flutter:
     - assets/images/mini_games/
     - assets/sounds/
     - assets/sounds/music/
+    - assets/sounds/music/customization/
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

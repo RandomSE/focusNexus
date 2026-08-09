@@ -1,16 +1,24 @@
 import 'dart:convert';
 
 import 'cherry_blossom_unlock.dart';
+import 'decor_catalog.dart';
 import 'decor_item.dart';
 import 'garden_persisted_payload.dart';
 import 'garden_state.dart';
 import 'visual_theme_id.dart';
 
-/// Persists layout and flags; [GardenState.pointsBalance] comes from the wallet.
+/// Persists layout and flags; wallet balances come from repositories.
 class GardenPersistence {
-  static GardenState decodeZenGarden(String? json, int pointsFromWallet) {
+  static GardenState decodeZenGarden(
+    String? json,
+    int pointsFromWallet, {
+    int progressiveVisualsPointsFromWallet = 0,
+  }) {
     if (json == null || json.isEmpty) {
-      return GardenState(pointsBalance: pointsFromWallet);
+      return GardenState(
+        pointsBalance: pointsFromWallet,
+        progressiveVisualsPointsBalance: progressiveVisualsPointsFromWallet,
+      );
     }
     try {
       final map = jsonDecode(json) as Map<String, dynamic>;
@@ -27,10 +35,13 @@ class GardenPersistence {
       );
       final loaded = GardenState(
         pointsBalance: pointsFromWallet,
+        progressiveVisualsPointsBalance: progressiveVisualsPointsFromWallet,
         items: payload.items,
-        decor: payload.decor,
+        decor: _migratePathBonsaiMutationUnlock(payload.decor),
         decorStash: const {},
-        decorInventory: _mergeInventory(payload.decorInventory, payload.decorStash),
+        decorInventory: _migratePathBonsaiMutationUnlock(
+          _mergeInventory(payload.decorInventory, payload.decorStash),
+        ),
         plantInventory: payload.plantInventory,
         freeFirstGrowthEverConsumed: payload.freeFirstGrowthEverConsumed,
         freeFirstGrowthEligibleItemId: payload.freeFirstGrowthEligibleItemId,
@@ -43,7 +54,10 @@ class GardenPersistence {
       );
       return evaluateCherryBlossomUnlock(loaded);
     } catch (_) {
-      return GardenState(pointsBalance: pointsFromWallet);
+      return GardenState(
+        pointsBalance: pointsFromWallet,
+        progressiveVisualsPointsBalance: progressiveVisualsPointsFromWallet,
+      );
     }
   }
 
@@ -85,6 +99,18 @@ class GardenPersistence {
       freeFirstGrowthEverConsumed: everConsumed,
       freeFirstGrowthEligibleItemId: eligible,
     );
+  }
+
+  static List<DecorItem> _migratePathBonsaiMutationUnlock(List<DecorItem> items) {
+    return [
+      for (final item in items)
+        if (isZenPathClaimBonsaiKind(item.kind) &&
+            item.mutation != null &&
+            !item.mutationUnlocked)
+          item.copyWith(mutationUnlocked: true)
+        else
+          item,
+    ];
   }
 
   static Map<String, int> _sanitizeStash(Map<String, int> raw) {

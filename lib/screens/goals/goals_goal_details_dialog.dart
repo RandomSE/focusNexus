@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:focusNexus/goals/goal_deadline_label.dart';
+import 'package:focusNexus/goals/goal_points_labels.dart';
 import 'package:focusNexus/goals/goal_time_window_label.dart';
 import 'package:focusNexus/goals/repeat_rule.dart';
 import 'package:focusNexus/goals/time_window_goal.dart';
@@ -63,7 +64,12 @@ Future<void> showGoalsGoalDetailsDialog({
                   style: bundle.textStyle,
                 ),
               Text('Steps: ${goal.steps}', style: bundle.textStyle),
-              Text('Points: ${goal.points}', style: bundle.textStyle),
+              Text(
+                isCompleted
+                    ? completedGoalDetailPointsLabel(goal.points)
+                    : activeGoalDetailPointsLabel(goal.points),
+                style: bundle.textStyle,
+              ),
               Text('Id: ${goal.goalId}', style: bundle.textStyle),
             ],
           ),

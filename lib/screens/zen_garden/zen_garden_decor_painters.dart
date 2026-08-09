@@ -662,9 +662,61 @@ abstract final class ZenGardenDecorPainter {
         _paintBambooFence(canvas, size, c, st, m, item.id);
       case 'zen.moss_rock':
         _paintMossRock(canvas, size, c, st, m, item.id);
+      case 'zen.peace_bonsai':
+        _paintPathClaimBonsai(canvas, size, c, st, true);
+      case 'zen.power_bonsai':
+        _paintPathClaimBonsai(canvas, size, c, st, false);
       default:
         _paintFallbackRock(canvas, c, st);
     }
+  }
+
+  static void _paintPathClaimBonsai(
+    Canvas canvas,
+    Size size,
+    Offset c,
+    int st,
+    bool peace,
+  ) {
+    final scale = 0.55 + st * 0.08;
+    final trunk = Paint()
+      ..color = const Color(0xFF5D4037)
+      ..strokeWidth = 3.5 * scale
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    canvas.drawLine(
+      Offset(c.dx, c.dy + 18 * scale),
+      Offset(c.dx, c.dy - 6 * scale),
+      trunk,
+    );
+    final canopy = Paint()
+      ..color = peace
+          ? const Color(0xFFF8BBD0).withValues(alpha: 0.92)
+          : const Color(0xFFFF8A65).withValues(alpha: 0.92)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(c.dx, c.dy - 14 * scale), 16 * scale, canopy);
+    canvas.drawCircle(
+      Offset(c.dx - 10 * scale, c.dy - 8 * scale),
+      11 * scale,
+      canopy,
+    );
+    canvas.drawCircle(
+      Offset(c.dx + 10 * scale, c.dy - 8 * scale),
+      11 * scale,
+      canopy,
+    );
+    final pot = Paint()
+      ..color = const Color(0xFF8D6E63)
+      ..style = PaintingStyle.fill;
+    final potRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: Offset(c.dx, c.dy + 22 * scale),
+        width: 22 * scale,
+        height: 10 * scale,
+      ),
+      Radius.circular(2 * scale),
+    );
+    canvas.drawRRect(potRect, pot);
   }
 
   static void _paintStonePath(

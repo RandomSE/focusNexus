@@ -1,4 +1,6 @@
-// lib/screens/dashboard_screen.dart
+import 'dart:async';
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +8,7 @@ import 'package:focusNexus/app/app_navigation.dart';
 import 'package:focusNexus/app/app_route.dart';
 import 'package:focusNexus/providers/app_repositories_provider.dart';
 import 'package:focusNexus/providers/app_services_provider.dart';
+import 'package:focusNexus/providers/achievements_list_refresh_provider.dart';
 import 'package:focusNexus/providers/app_settings_provider.dart';
 import 'package:focusNexus/goals/dashboard_goals_label.dart';
 import 'package:focusNexus/goals/time_window_goal.dart';
@@ -14,6 +17,7 @@ import 'package:focusNexus/providers/goals_provider.dart';
 import 'package:focusNexus/providers/points_balance_provider.dart';
 import 'package:focusNexus/providers/theme_bundle_provider.dart';
 import 'package:focusNexus/rewards/reward_type_selection.dart';
+import 'package:focusNexus/services/custom_affirmation_pack.dart';
 import 'package:focusNexus/services/daily_open_reward_service.dart';
 import 'package:focusNexus/services/storage/storage_keys.dart';
 import 'package:focusNexus/utils/common_utils.dart';
@@ -21,6 +25,7 @@ import 'package:focusNexus/utils/debug_log.dart';
 import 'package:focusNexus/utils/notifier.dart';
 import 'package:focusNexus/utils/screen_semantics.dart';
 import 'package:focusNexus/widgets/dashboard_motivator_banner.dart';
+import 'package:focusNexus/widgets/dashboard_consistency_section.dart';
 import 'package:focusNexus/widgets/settings_themed_builder.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -32,16 +37,81 @@ class DashboardScreen extends ConsumerStatefulWidget {
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   late int _motivatorIndex;
+  late String _motivatorText;
+  int _randomMessageIndex = 0;
+  CustomAffirmationPackData _pack = CustomAffirmationPackData.empty;
   bool _motivatorDismissed = false;
   bool _dailyRewardAttempted = false;
 
   @override
   void initState() {
     super.initState();
-    _motivatorIndex = AdhdMotivatorPack.seedForDate(DateTime.now());
+    final now = DateTime.now();
+    _motivatorIndex = AdhdMotivatorPack.seedForDate(now);
+    _motivatorText = AdhdMotivatorPack.lineAt(_motivatorIndex);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(goalsProvider.notifier).load();
+      unawaited(_loadMotivatorPack());
       _tryDailyOpenReward();
+    });
+  }
+
+  Future<void> _loadMotivatorPack() async {
+    final pack = await ref
+        .read(appRepositoriesProvider)
+        .phrasePacks
+        .read(PhrasePackKind.dashboardMotivator);
+    if (!mounted) return;
+    final now = DateTime.now();
+    setState(() {
+      _pack = pack;
+      if (pack.enabled && pack.playbackMessages.isNotEmpty) {
+        if (pack.mode == CustomAffirmationPlaybackMode.random) {
+          _motivatorText =
+              CustomAffirmationPackSelector.customCoreForDate(pack, now)!;
+          _randomMessageIndex =
+              CustomAffirmationPackSelector.messageIndexForText(
+            pack,
+            _motivatorText,
+          );
+        } else {
+          _motivatorIndex =
+              CustomAffirmationPackSelector.sequenceIndexForDate(pack, now);
+          _motivatorText = CustomAffirmationPackSelector.lineAtPlaylistIndex(
+            pack,
+            _motivatorIndex,
+          );
+        }
+      } else {
+        _motivatorIndex = AdhdMotivatorPack.seedForDate(now);
+        _motivatorText = AdhdMotivatorPack.lineAt(_motivatorIndex);
+      }
+    });
+  }
+
+  void _swapMotivator() {
+    setState(() {
+      final playback = _pack.playbackMessages;
+      if (_pack.enabled && playback.isNotEmpty) {
+        if (_pack.mode == CustomAffirmationPlaybackMode.random) {
+          _randomMessageIndex =
+              CustomAffirmationPackSelector.nextRandomMessageIndex(
+            messageCount: playback.length,
+            currentIndex: _randomMessageIndex,
+            random: Random(),
+          );
+          _motivatorText = playback[_randomMessageIndex].text;
+        } else {
+          _motivatorIndex++;
+          _motivatorText = CustomAffirmationPackSelector.lineAtPlaylistIndex(
+            _pack,
+            _motivatorIndex,
+          );
+        }
+      } else {
+        _motivatorIndex++;
+        _motivatorText = AdhdMotivatorPack.lineAt(_motivatorIndex);
+      }
     });
   }
 
@@ -103,6 +173,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       builder: (context, bundle) {
         final rewardTypes = settings.rewardTypes;
         final achievementService = ref.watch(achievementServiceProvider);
+        // Rebuild when mini-games / claim flows bump refresh (service is keepAlive).
+        ref.watch(achievementsListRefreshProvider);
         final hasClaimableAchievements = achievementService.all.any(
           (a) => !a.isCompleted && a.progress >= 100,
         );
@@ -129,9 +201,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             backgroundColor: bundle.secondaryColor,
             body: Container(
               color: bundle.secondaryColor,
-              child: ListView(
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16.0),
-                children: [
+                child: Column(
+                  children: [
                   Align(
                     alignment: Alignment.centerLeft,
                     child: ScreenSemantics.statusText(
@@ -140,17 +213,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       textAlign: TextAlign.left,
                     ),
                   ),
-                  if (!_motivatorDismissed) ...[
+                  if (!settings.motivatorsDisabled && !_motivatorDismissed) ...[
                     const SizedBox(height: 12),
                     DashboardMotivatorBanner(
-                      text: DashboardMotivatorBanner.textFor(
-                        index: _motivatorIndex,
-                      ),
+                      text: _motivatorText,
                       textStyle: bundle.textStyle,
                       accentColor: bundle.primaryColor,
-                      onSwap: () {
-                        setState(() => _motivatorIndex++);
-                      },
+                      onSwap: _swapMotivator,
                       onDismiss: () {
                         setState(() => _motivatorDismissed = true);
                       },
@@ -169,6 +238,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       borderColor: bundle.primaryColor,
                     ),
                   ],
+                  const SizedBox(height: 16),
+                  DashboardConsistencySection(bundle: bundle),
                   const SizedBox(height: 24),
                   CommonUtils.buildCenteredButton(
                     context,
@@ -238,6 +309,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     semanticsHint: 'Opens app assistant',
                   ),
                 ],
+                ),
               ),
             ),
           ),

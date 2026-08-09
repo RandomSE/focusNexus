@@ -21,6 +21,8 @@ class UserPrefsSnapshot with _$UserPrefsSnapshot {
     @Default(false) bool useDyslexiaFont,
     @Default(false) bool highContrastMode,
     @Default(false) bool dailyAffirmations,
+    /// When true, dashboard motivator banner is hidden.
+    @Default(false) bool motivatorsDisabled,
     @Default(false) bool aiEncouragement,
     @Default(false) bool openStreakReminders,
     @Default('Low') String notificationFrequency,

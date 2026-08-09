@@ -13,15 +13,15 @@ void main() {
     final service = AchievementService(storage: storage);
     await service.initialize();
 
-    expect(service.getById('123')!.reward, '100 points');
-    expect(service.getById('124')!.reward, '250 points');
-    expect(service.getById('125')!.reward, '500 points');
-    expect(service.getById('126')!.reward, '1000 points');
-    expect(service.getById('127')!.reward, '2500 points');
+    expect(service.getById('123')!.reward, '40 points');
+    expect(service.getById('124')!.reward, '100 points');
+    expect(service.getById('125')!.reward, '200 points');
+    expect(service.getById('126')!.reward, '400 points');
+    expect(service.getById('127')!.reward, '1000 points');
     expect(service.getById('128')!.title, 'Endless Summit');
-    expect(service.getById('128')!.reward, '5000 points');
+    expect(service.getById('128')!.reward, '800 points');
     expect(service.getById('129')!.title, 'Beat the Clock');
-    expect(service.getById('129')!.reward, '250 points');
+    expect(service.getById('129')!.reward, '100 points');
   });
 
   test('best height advances cairn climber progress', () async {

@@ -88,23 +88,45 @@ void main() {
     });
   });
 
-  group('computeDailyCompletionReward', () {
-    test('first completion doubles plus flat bonus', () {
-      expect(GoalPoints.computeDailyCompletionReward(10, 1), 120);
+  group('computeDailyCompletionReward Option 1', () {
+    test('first of day: 1.35x effort + 10 momentum', () {
+      // 5*1.35+10 = 16.75 -> 20; stays under Word Bloom playCost 80.
+      expect(GoalPoints.computeDailyCompletionReward(5, 1), 20);
+      expect(GoalPoints.computeDailyCompletionReward(220, 1), 310);
+      expect(GoalPoints.computeDailyCompletionReward(440, 1), 605);
     });
 
-    test('second through fifth use 1.5x + 20', () {
-      expect(GoalPoints.computeDailyCompletionReward(20, 2), 50);
-      expect(GoalPoints.computeDailyCompletionReward(10, 5), 35);
+    test('counts 2..5: 1.20x effort + 8 momentum', () {
+      expect(GoalPoints.computeDailyCompletionReward(5, 2), 15);
+      expect(GoalPoints.computeDailyCompletionReward(5, 5), 15);
+      expect(GoalPoints.computeDailyCompletionReward(20, 2), 35);
     });
 
-    test('sixth through tenth use 1.25x + 5', () {
+    test('counts 6..10: 1.10x effort + 5 momentum', () {
+      expect(GoalPoints.computeDailyCompletionReward(5, 6), 10);
+      expect(GoalPoints.computeDailyCompletionReward(5, 10), 10);
       expect(GoalPoints.computeDailyCompletionReward(20, 6), 30);
-      expect(GoalPoints.computeDailyCompletionReward(20, 10), 30);
     });
 
-    test('eleventh and beyond use base amount rounded', () {
+    test('eleventh and beyond: 1.0x effort + 0 momentum', () {
+      expect(GoalPoints.computeDailyCompletionReward(5, 11), 5);
       expect(GoalPoints.computeDailyCompletionReward(17, 11), 20);
+      expect(GoalPoints.computeDailyCompletionReward(220, 11), 220);
+    });
+
+    test('first-to-late ratio on trivial A stays at most ~4x', () {
+      final first = GoalPoints.computeDailyCompletionReward(5, 1);
+      final late = GoalPoints.computeDailyCompletionReward(5, 11);
+      expect(first / late, lessThanOrEqualTo(4.0));
+      expect(first, greaterThan(late));
+    });
+
+    test('breakdown exposes effort and momentum before final round', () {
+      final b = GoalPoints.computeDailyCompletionBreakdown(5, 1);
+      expect(b.effortAward, closeTo(6.75, 1e-9));
+      expect(b.momentumBonus, 10);
+      expect(b.total, 20);
+      expect(b.total, GoalPoints.computeDailyCompletionReward(5, 1));
     });
   });
 }

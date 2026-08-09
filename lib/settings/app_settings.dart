@@ -32,6 +32,7 @@ class AppSettings {
   bool get highContrastMode => _snapshot.highContrastMode;
   bool get useDyslexiaFont => _snapshot.useDyslexiaFont;
   bool get dailyAffirmations => _snapshot.dailyAffirmations;
+  bool get motivatorsDisabled => _snapshot.motivatorsDisabled;
   bool get aiEncouragement => _snapshot.aiEncouragement;
   bool get openStreakReminders => _snapshot.openStreakReminders;
   bool get skipToday => _snapshot.skipToday;
@@ -241,6 +242,11 @@ class AppSettings {
     _apply(_snapshot.copyWith(dailyAffirmations: value));
   }
 
+  Future<void> setMotivatorsDisabled(bool value) async {
+    await _prefs.writeBool(StorageKeys.motivatorsDisabled, value);
+    _apply(_snapshot.copyWith(motivatorsDisabled: value));
+  }
+
   Future<void> setOpenStreakReminders(bool value) async {
     await _prefs.writeBool(StorageKeys.openStreakReminders, value);
     _apply(_snapshot.copyWith(openStreakReminders: value));
@@ -343,6 +349,7 @@ class AppSettings {
     await setUseDyslexiaFont(false);
     await setAiEncouragement(false);
     await setDailyAffirmations(false);
+    await setMotivatorsDisabled(false);
     await setOpenStreakReminders(false);
     await setOpenStreakRemindersTime('20:00');
     await setSkipToday(false);

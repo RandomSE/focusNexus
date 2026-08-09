@@ -14,12 +14,12 @@ void main() {
     await service.initialize();
 
     expect(service.getById('118')!.isSecret, isFalse);
-    expect(service.getById('118')!.reward, '100 points');
-    expect(service.getById('119')!.reward, '250 points');
-    expect(service.getById('120')!.reward, '500 points');
-    expect(service.getById('121')!.reward, '1000 points');
+    expect(service.getById('118')!.reward, '40 points');
+    expect(service.getById('119')!.reward, '100 points');
+    expect(service.getById('120')!.reward, '200 points');
+    expect(service.getById('121')!.reward, '400 points');
     expect(service.getById('122')!.title, 'Endless Lantern');
-    expect(service.getById('122')!.reward, '2500 points');
+    expect(service.getById('122')!.reward, '400 points');
     expect(service.getById('122')!.isSecret, isFalse);
   });
 

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:focusNexus/progressive_visuals/cherry_blossom_bonsai_tile.dart';
+import 'package:focusNexus/progressive_visuals/color_math.dart';
+import 'package:focusNexus/progressive_visuals/decor_catalog.dart';
 import 'package:focusNexus/progressive_visuals/decor_item.dart';
+import 'package:focusNexus/progressive_visuals/mutation_kind.dart';
 
 import 'zen_garden_decor_painters.dart';
 import 'zen_garden_painters.dart';
@@ -28,6 +32,10 @@ class ZenDecorVisual extends StatefulWidget {
   static const double width = 96;
   static const double height = 90;
 
+  /// Paint size for path-claim peace/power bonsai (finale art, bonsai-scaled).
+  static const double pathBonsaiWidth = 88;
+  static const double pathBonsaiHeight = 84;
+
   @override
   State<ZenDecorVisual> createState() => _ZenDecorVisualState();
 }
@@ -39,10 +47,17 @@ class _ZenDecorVisualState extends State<ZenDecorVisual>
 
   bool get _koiPond => widget.item.kind == 'zen.koi_pond';
 
+  bool get _lockedBonsai => isZenLockedBonsaiKind(widget.item.kind);
+
+  bool get _pathClaimBonsai => isZenPathClaimBonsaiKind(widget.item.kind);
+
   bool get _needsAnimation {
     if (_koiPond) return true;
     return zenDecorNeedsAnimation(widget.item, reduceMotion: widget.reduceMotion);
   }
+
+  String? get _achievementBonsaiKey =>
+      zenAchievementBonsaiGardenKey(widget.item.kind);
 
   @override
   void initState() {
@@ -81,7 +96,100 @@ class _ZenDecorVisualState extends State<ZenDecorVisual>
     super.dispose();
   }
 
+  Widget _buildPathClaimBonsaiBody() {
+    final bonsaiKey = _achievementBonsaiKey!;
+    return Semantics(
+      container: true,
+      excludeSemantics: true,
+      child: AnimatedScale(
+        scale: widget.reduceMotion ? 1.0 : (widget.selected ? 1.05 : 1.0),
+        duration: widget.reduceMotion
+            ? Duration.zero
+            : const Duration(milliseconds: 200),
+        child: SizedBox(
+          width: ZenDecorVisual.width,
+          height: ZenDecorVisual.height,
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              if (widget.selected && !widget.reduceMotion)
+                Positioned(
+                  top: -4,
+                  child: Icon(
+                    Icons.arrow_drop_up,
+                    size: 30,
+                    color: widget.primary.withValues(alpha: 0.85),
+                  ),
+                ),
+              CustomPaint(
+                size: const Size(ZenDecorVisual.width, ZenDecorVisual.height),
+                painter: PlantHaloPainter(
+                  selected: widget.selected,
+                  primary: widget.primary,
+                  timerProgress: widget.timerProgress,
+                ),
+              ),
+              Positioned(
+                bottom: 2,
+                child: SizedBox(
+                  width: ZenDecorVisual.pathBonsaiWidth,
+                  height: ZenDecorVisual.pathBonsaiHeight,
+                  child: Stack(
+                    alignment: Alignment.bottomCenter,
+                    children: [
+                      CustomPaint(
+                        size: const Size(
+                          ZenDecorVisual.pathBonsaiWidth,
+                          14,
+                        ),
+                        painter: PlaceableGroundShadowPainter(
+                          center: const Offset(
+                            ZenDecorVisual.pathBonsaiWidth / 2,
+                            10,
+                          ),
+                          width: 58,
+                          height: 12,
+                        ),
+                      ),
+                      _achievementBonsaiTreeLayer(bonsaiKey),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _achievementBonsaiTreeLayer(String bonsaiKey) {
+    final tile = CherryBlossomBonsaiTile(
+      bonsaiKey: bonsaiKey,
+      animateEffects: !widget.reduceMotion,
+      showChrome: false,
+    );
+    // Invert is path-claim only; stage bonsai never invert.
+    if (!_pathClaimBonsai ||
+        widget.item.mutation != MutationKind.invertedColors) {
+      return tile;
+    }
+    return ColorFiltered(
+      colorFilter: rgbInvertColorFilter,
+      child: tile,
+    );
+  }
+
   Widget _buildDecorBody(double animSeconds) {
+    if (_lockedBonsai) {
+      // Petal tickers live inside CherryBlossomBonsaiTile; keep them alive.
+      return TickerMode(
+        enabled: !widget.reduceMotion,
+        child: _buildPathClaimBonsaiBody(),
+      );
+    }
+
     final showLanternGlow =
         widget.item.kind == 'zen.stone_lantern' && widget.item.stageIndex >= 2;
     final glowSize = showLanternGlow
@@ -157,7 +265,8 @@ class _ZenDecorVisualState extends State<ZenDecorVisual>
       excludeSemantics: true,
       child: AnimatedScale(
         scale: widget.reduceMotion ? 1.0 : (widget.selected ? 1.05 : 1.0),
-        duration: widget.reduceMotion ? Duration.zero : const Duration(milliseconds: 200),
+        duration:
+            widget.reduceMotion ? Duration.zero : const Duration(milliseconds: 200),
         child: SizedBox(
           width: ZenDecorVisual.width,
           height: ZenDecorVisual.height,
@@ -207,6 +316,9 @@ class _ZenDecorVisualState extends State<ZenDecorVisual>
 
   @override
   Widget build(BuildContext context) {
+    if (_lockedBonsai) {
+      return _buildDecorBody(0);
+    }
     if (_ticker != null && _needsAnimation) {
       return ValueListenableBuilder<double>(
         valueListenable: _animPhase,

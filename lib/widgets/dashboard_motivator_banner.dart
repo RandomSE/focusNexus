@@ -44,7 +44,11 @@ class DashboardMotivatorBanner extends StatelessWidget {
               children: [
                 Expanded(
                   child: ExcludeSemantics(
-                    child: Text(text, style: textStyle),
+                    child: Text(
+                      text,
+                      style: textStyle,
+                      softWrap: true,
+                    ),
                   ),
                 ),
                 Semantics(

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -37,7 +38,9 @@ class _MiniGamesScreenState extends ConsumerState<MiniGamesScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _reloadHubState());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _reloadHubState();
+    });
   }
 
   Future<void> _reloadHubState() async {
@@ -204,10 +207,22 @@ class _MiniGamesScreenState extends ConsumerState<MiniGamesScreen> {
                       children: [
                         Padding(
                           padding: const EdgeInsets.only(bottom: 8),
-                          child: CommonUtils.buildTextButton(
-                            _busy ? null : _openLastPlayedLobby,
-                            miniGamesLastPlayedButtonLabel(_lastPlayedTitle),
-                            bundle.textStyle,
+                          child: OutlinedButton(
+                            onPressed: _busy ? null : _openLastPlayedLobby,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: bundle.primaryColor,
+                              side: BorderSide(
+                                color: bundle.primaryColor,
+                                width: 1.5,
+                              ),
+                              minimumSize: const Size.fromHeight(48),
+                            ),
+                            child: Text(
+                              miniGamesLastPlayedButtonLabel(_lastPlayedTitle),
+                              style: bundle.textStyle,
+                              textAlign: TextAlign.center,
+                              softWrap: true,
+                            ),
                           ),
                         ),
                         Expanded(

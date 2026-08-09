@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 
+import 'package:focusNexus/goals/goal_field_validators.dart';
+import 'package:focusNexus/goals/goal_points_labels.dart';
 import 'package:focusNexus/models/classes/theme_bundle.dart';
 import 'package:focusNexus/providers/goals_screen_ui_provider.dart';
 import 'package:focusNexus/utils/common_utils.dart';
+import 'package:focusNexus/utils/goal_points.dart';
 
 /// Goal create form fields and action buttons (template through Manage Templates).
 class GoalsCreateFieldsSection extends StatelessWidget {
@@ -125,11 +128,9 @@ class GoalsCreateFieldsSection extends StatelessWidget {
             bundle.secondaryColor,
             true,
             (v) {
-              final parsed = int.tryParse(v?.trim() ?? '');
-              if (parsed == null || parsed < 1) {
-                return 'Please enter a valid whole number';
-              }
-              minutesRequired = parsed;
+              final error = GoalFieldValidators.timeMinutes(v);
+              if (error != null) return error;
+              minutesRequired = int.parse(v!.trim());
               return null;
             },
           ),
@@ -160,15 +161,44 @@ class GoalsCreateFieldsSection extends StatelessWidget {
             bundle.textStyle,
             bundle.secondaryColor,
             true,
-            (v) {
-              final trimmed = v?.trim();
-              final parsed = int.tryParse(
-                trimmed?.isEmpty ?? true ? '1' : trimmed!,
-              );
-              if (parsed == null || parsed < 1) {
-                return 'Please enter a valid whole number above 0';
+            GoalFieldValidators.steps,
+          ),
+          ListenableBuilder(
+            listenable: Listenable.merge([
+              timeController,
+              stepsController,
+              deadlineController,
+            ]),
+            builder: (context, _) {
+              final timeText = timeController.text.trim();
+              final stepsText = stepsController.text.trim().isEmpty
+                  ? '1'
+                  : stepsController.text.trim();
+              final timeOk = GoalFieldValidators.timeMinutes(timeText) == null;
+              final stepsOk = GoalFieldValidators.steps(stepsText) == null;
+              if (!timeOk || !stepsOk) {
+                return const SizedBox.shrink();
               }
-              return null;
+              final deadlineRaw = deadlineController.text.trim();
+              final deadline = deadlineRaw.isEmpty ||
+                      (int.tryParse(deadlineRaw) ?? 0) <= 0
+                  ? 'no deadline'
+                  : 'deadline';
+              final stored = GoalPoints.calculatePointsFromTemplate(
+                complexity: uiState.complexity,
+                effort: uiState.effort,
+                motivation: uiState.motivation,
+                time: timeText,
+                steps: stepsText,
+                deadline: deadline,
+              );
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  activeGoalDetailPointsLabel(stored),
+                  style: bundle.textStyle.copyWith(fontWeight: FontWeight.w600),
+                ),
+              );
             },
           ),
           const SizedBox(height: 10),
