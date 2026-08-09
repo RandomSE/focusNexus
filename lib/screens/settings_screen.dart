@@ -10,6 +10,7 @@ import 'package:focusNexus/models/classes/achievement_tracking_variables.dart';
 import 'package:focusNexus/providers/points_balance_provider.dart';
 import 'package:focusNexus/providers/screen_ui_providers.dart';
 import 'package:focusNexus/providers/zen_garden_session_provider.dart';
+import 'package:focusNexus/services/ambient_section_playback.dart';
 import 'package:focusNexus/utils/appearance_transition.dart';
 import 'package:focusNexus/utils/common_utils.dart';
 import 'package:focusNexus/utils/notifier.dart';
@@ -312,8 +313,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                           ),
                           primaryColor,
                         ),
+                        CommonUtils.buildSwitchListTile(
+                          'Hide motivational phrases',
+                          textStyle,
+                          settings.motivatorsDisabled,
+                          (val) => settings.setMotivatorsDisabled(val),
+                          primaryColor,
+                        ),
                         if (settings.notificationFrequency !=
                             'No notifications') ...[
+                          const Divider(),
+                          ScreenSemantics.sectionHeader(
+                            'Notification settings',
+                            textStyle,
+                          ),
                           CommonUtils.buildSwitchListTile(
                             'Daily Affirmations',
                             textStyle,
@@ -633,6 +646,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
       // and so cherry flags are not re-flipped from a stale unlocked tree.
       ref.read(zenGardenSessionProvider.notifier).resetForAccountWipe();
       final repos = ref.read(appRepositoriesProvider);
+      final sounds = ref.read(soundServiceProvider);
+      final ambientCoordinator = ref.read(ambientPlaybackCoordinatorProvider);
+      await ambientCoordinator.stopAll(sounds);
+      await sounds.stopMusic();
+      sounds.invalidatePlaybackCache();
       await repos.wipeAllUserData();
       final achievements = ref.read(achievementServiceProvider);
       await achievements.clearAll();

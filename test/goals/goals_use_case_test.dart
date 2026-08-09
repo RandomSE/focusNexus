@@ -112,6 +112,7 @@ void main() {
       expect(snapshot.active, isEmpty);
       expect(snapshot.completed.single.goalId, 100);
       expect(snapshot.completed.single.completedAt, isNotEmpty);
+      expect(snapshot.completed.single.points, result.pointsAwarded);
     });
 
     test('completeGoal persists awarded points to storage', () async {

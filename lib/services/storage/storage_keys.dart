@@ -16,6 +16,9 @@ abstract final class StorageKeys {
   // Wallet
   static const points = 'points';
 
+  /// Cumulative wallet spends (trySpend + synced zen spends) for cherry unlock.
+  static const lifetimePointsSpent = 'lifetimePointsSpent';
+
   /// JSON map of mini-game id -> unlock / high-score progress.
   static const miniGamesProgress = 'miniGamesProgress';
 
@@ -128,11 +131,49 @@ abstract final class StorageKeys {
   static const soundEnabled = 'soundEnabled';
   static const soundVolume = 'soundVolume';
 
+  /// Consistency calendar heatmap palette id ([ConsistencyPaletteId.storageValue]).
+  static const consistencyPalette = 'consistencyPalette';
+
   /// Master music volume percent (0-100); multiplies with [soundVolume] for BGM.
   static const musicVolume = 'musicVolume';
 
   /// JSON map of per-SFX channel enabled + volume percent.
   static const soundChannels = 'soundChannels';
+
+  /// JSON list of owned ambient soundscape channel ids.
+  static const ownedAmbientSounds = 'ownedAmbientSounds';
+
+  /// [AmbientSelectionMode.storageValue]: global vs per_section.
+  static const ambientSelectionMode = 'ambientSelectionMode';
+
+  /// Selected ambient track id when mode is global.
+  static const ambientGlobalTrackId = 'ambientGlobalTrackId';
+
+  /// JSON map of AmbientAppSection.storageValue -> ambient track id.
+  static const ambientSectionTracks = 'ambientSectionTracks';
+
+  /// Master toggle for ambient background music (Customization).
+  static const ambientEnabled = 'ambientEnabled';
+
+  /// Progressive-visuals-only points (spent before shared wallet in PV purchases).
+  static const progressiveVisualsPoints = 'progressiveVisualsPoints';
+
+  /// Daily counter (mirrors [completedToday]) of goal completions that
+  /// qualify for PV momentum (pre-daily points >= [PvDailyMomentum.qualifyingPointsThreshold]).
+  static const pvMomentumQualifyingToday = 'pvMomentumQualifyingToday';
+
+  /// Legacy shared pack key (migrated into the two keys below).
+  static const customAffirmationPack = 'customAffirmationPack';
+
+  /// Dashboard motivator pack (messages, queue, mode, enabled, presets).
+  static const dashboardMotivatorPack = 'dashboardMotivatorPack';
+
+  /// Daily affirmation pack (messages, queue, mode, enabled, presets).
+  static const dailyAffirmationPack = 'dailyAffirmationPack';
+
+  /// When true, dashboard motivator banner is hidden (Settings).
+  static const motivatorsDisabled = 'motivatorsDisabled';
+
   static const dailyAffirmationsTime = 'dailyAffirmationsTime';
 
   /// Last calendar day (yyyy-MM-dd) with a scheduled daily affirmation.

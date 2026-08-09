@@ -14,6 +14,8 @@ class SoundService {
   final KeyValueStorage _storage;
   AudioPlayer? _oneshotPlayer;
   AudioPlayer? _bgmPlayer;
+  AudioPlayer? _ambientPlayer;
+  AudioPlayer? _ambientStandbyPlayer;
   AudioPlayer? _breathClickPlayer;
   StreamSubscription<void>? _bgmCompleteSub;
   final List<AudioPlayer> _sfxPool = <AudioPlayer>[];
@@ -25,7 +27,21 @@ class SoundService {
   double? _cachedMusicVolume;
   Map<SoundChannel, SoundChannelSettings>? _cachedChannels;
   bool _breathBackgroundRequested = false;
+  bool _ambientRequested = false;
+  bool _ambientDucked = false;
+  bool _ambientStartInFlight = false;
+  SoundChannel? _ambientChannel;
+  SoundChannel? _activeFeatureMusic;
+  SoundChannel? _featureMusicBeforeBackground;
+  bool _suspendedForBackground = false;
+  int _ambientGeneration = 0;
   static bool _audioContextConfigured = false;
+  String? _bgmPreparedPath;
+  String? _ambientPreparedPath;
+  String? _ambientStandbyPreparedPath;
+  bool _bgmPlayerPrepared = false;
+  bool _ambientPlayerPrepared = false;
+  bool _ambientStandbyPrepared = false;
 
   /// Overlapping short SFX (firefly clicks) share this pool.
   static const int sfxPoolSize = 4;
@@ -42,6 +58,14 @@ class SoundService {
   /// The 17 MB Breath track needs a wider source preparation window on device.
   @visibleForTesting
   static const Duration backgroundPlaybackStartTimeout = Duration(seconds: 30);
+
+  /// Linear fade for ambient start/stop/duck. Keep short so track switches feel instant.
+  @visibleForTesting
+  static Duration ambientFadeDuration = const Duration(milliseconds: 120);
+
+  /// Artificial delay inside [startAmbient] for race tests (zero in production).
+  @visibleForTesting
+  static Duration ambientStartDelayForTesting = Duration.zero;
 
   /// Extra play-time attenuation (~40% quieter) for peaky clips.
   @visibleForTesting
@@ -120,7 +144,55 @@ class SoundService {
   int breathBackgroundDuckCount = 0;
 
   @visibleForTesting
+  int ambientStartCount = 0;
+
+  @visibleForTesting
+  int ambientStopCount = 0;
+
+  @visibleForTesting
+  int ambientDuckCount = 0;
+
+  @visibleForTesting
+  int ambientUnduckCount = 0;
+
+  /// Counts cold music [setSource] / prepare loads (ambient + feature BGM).
+  @visibleForTesting
+  int musicAssetSetSourceCount = 0;
+
+  @visibleForTesting
+  String? get ambientPreparedPathForTesting => _ambientPreparedPath;
+
+  @visibleForTesting
+  String? get ambientStandbyPreparedPathForTesting =>
+      _ambientStandbyPreparedPath;
+
+  @visibleForTesting
+  String? get bgmPreparedPathForTesting => _bgmPreparedPath;
+
+  @visibleForTesting
   bool get isBreathBackgroundRequested => _breathBackgroundRequested;
+
+  @visibleForTesting
+  bool get isAmbientRequested => _ambientRequested;
+
+  /// True while zen/cherry/bonsai/breath (or other feature) BGM is requested.
+  bool get hasActiveFeatureMusic =>
+      _activeFeatureMusic != null || _breathBackgroundRequested;
+
+  /// Feature BGM channel currently requested (zen/cherry/bonsai/breath), if any.
+  SoundChannel? get activeFeatureMusic => _activeFeatureMusic;
+
+  @visibleForTesting
+  SoundChannel? get activeFeatureMusicForTesting => _activeFeatureMusic;
+
+  @visibleForTesting
+  bool get isSuspendedForBackgroundForTesting => _suspendedForBackground;
+
+  @visibleForTesting
+  bool get isAmbientDucked => _ambientDucked;
+
+  @visibleForTesting
+  SoundChannel? get activeAmbientChannelForTesting => _ambientChannel;
 
   /// Unit tests: skip native audioplayers (MissingPluginException / zone noise).
   @visibleForTesting
@@ -130,7 +202,24 @@ class SoundService {
 
   AudioPlayer get _bgm => _bgmPlayer ??= AudioPlayer();
 
+  AudioPlayer get _ambient => _ambientPlayer ??= AudioPlayer();
+
+  AudioPlayer get _ambientStandby => _ambientStandbyPlayer ??= AudioPlayer();
+
   AudioPlayer get _breathClick => _breathClickPlayer ??= AudioPlayer();
+
+  void _swapAmbientPlayers() {
+    final active = _ambientPlayer;
+    final standby = _ambientStandbyPlayer;
+    _ambientPlayer = standby;
+    _ambientStandbyPlayer = active;
+    final activePath = _ambientPreparedPath;
+    _ambientPreparedPath = _ambientStandbyPreparedPath;
+    _ambientStandbyPreparedPath = activePath;
+    final activeReady = _ambientPlayerPrepared;
+    _ambientPlayerPrepared = _ambientStandbyPrepared;
+    _ambientStandbyPrepared = activeReady;
+  }
 
   /// Clears cached prefs so the next play re-reads storage.
   void invalidatePlaybackCache() {
@@ -293,29 +382,70 @@ class SoundService {
   }
 
   /// Starts playback without waiting for the clip to finish.
+  ///
+  /// When [reusePrepared] is true and [assetPath] matches the last prepared
+  /// source on this player, skips [setSource] (major latency win on page switches).
   Future<void> _startAsset(
     AudioPlayer player,
     String assetPath, {
     Duration startTimeout = sfxPlaybackStartTimeout,
+    bool reusePrepared = false,
+    String? preparedPath,
+    void Function(String path)? onPrepared,
+    Duration startAt = Duration.zero,
   }) async {
+    final canReuse = reusePrepared && preparedPath == assetPath;
+    if (!canReuse) {
+      try {
+        await player.stop().timeout(const Duration(milliseconds: 400));
+      } catch (_) {}
+    }
     try {
-      await player.stop().timeout(const Duration(milliseconds: 400));
-    } catch (_) {}
-    try {
-      // Prefer setSource + resume (avoids play()-until-complete hangs). Pooling
-      // concurrent SFX prevents Android MediaPlayer -38 on a shared oneshot.
-      await player.setSource(AssetSource(assetPath)).timeout(startTimeout);
+      if (!canReuse) {
+        await player.setSource(AssetSource(assetPath)).timeout(startTimeout);
+        onPrepared?.call(assetPath);
+        musicAssetSetSourceCount += 1;
+      }
+      if (startAt > Duration.zero) {
+        try {
+          await player.seek(startAt).timeout(const Duration(milliseconds: 800));
+        } catch (_) {}
+      }
       await player.resume().timeout(startTimeout);
     } on TimeoutException {
       debugLog('sound start timed out ($assetPath)');
     } catch (error) {
       debugLog('sound setSource/resume failed ($assetPath): $error');
       try {
-        await player.play(AssetSource(assetPath)).timeout(startTimeout);
+        await player.play(
+          AssetSource(assetPath),
+          position: startAt > Duration.zero ? startAt : null,
+        ).timeout(startTimeout);
+        onPrepared?.call(assetPath);
       } catch (fallbackError) {
         debugLog('sound play fallback failed ($assetPath): $fallbackError');
       }
     }
+  }
+
+  /// Optional seek past leading silence for known tracks (tune offline).
+  static Duration musicStartOffsetFor(SoundChannel channel) {
+    return switch (channel) {
+      // Soft pads / nature beds often have a short quiet head.
+      SoundChannel.cherryPeaceMusic ||
+      SoundChannel.cherryPowerMusic ||
+      SoundChannel.cherryBalanceMusic ||
+      SoundChannel.zenGardenMusic ||
+      SoundChannel.bonsaiMusic =>
+        const Duration(milliseconds: 350),
+      SoundChannel.ambientRunningWater ||
+      SoundChannel.ambientOceanWaves ||
+      SoundChannel.ambientForestAtNight ||
+      SoundChannel.ambientWindChimes ||
+      SoundChannel.ambientPiano =>
+        const Duration(milliseconds: 200),
+      _ => Duration.zero,
+    };
   }
 
   Future<void> _playChannel(
@@ -428,11 +558,419 @@ class SoundService {
       _playChannel(channel, preview: true);
 
   /// Starts looping (or one-shot) BGM for [channel]. Stops any current BGM first.
-  Future<void> startMusic(
+  ///
+  /// Returns false when master/channel settings prevent playback (caller should
+  /// fall back to customization ambient on feature screens).
+  Future<bool> startMusic(
     SoundChannel channel, {
     bool loop = true,
   }) async {
     assert(channel.isMusic, 'startMusic requires a music channel');
+    await _ensurePlaybackCache();
+    if (!(_cachedSoundEnabled! && _cachedVolume! > 0.0)) return false;
+    final channelSettings =
+        _cachedChannels?[channel] ?? const SoundChannelSettings();
+    if (!channelSettings.enabled || channelSettings.volumePercent <= 0) {
+      return false;
+    }
+    final gain =
+        (_cachedVolume ?? 0.0) *
+        _musicMasterGain() *
+        (channelSettings.volumePercent / 100.0);
+    if (gain <= 0) return false;
+
+    _activeFeatureMusic = channel;
+    await _startBgmInternal(
+      assetPath: channel.assetPath,
+      loop: loop,
+      gain: gain,
+      listenForComplete: false,
+      trackBreathCounters: channel == SoundChannel.breathBackground,
+      startAt: musicStartOffsetFor(channel),
+    );
+    return true;
+  }
+
+  /// Whether [channel] would pass the same gates as [startMusic] (no I/O side effects
+  /// beyond warming the prefs cache).
+  Future<bool> isMusicChannelAudible(SoundChannel channel) async {
+    assert(channel.isMusic, 'isMusicChannelAudible requires a music channel');
+    await _ensurePlaybackCache();
+    if (!(_cachedSoundEnabled! && _cachedVolume! > 0.0)) return false;
+    final channelSettings =
+        _cachedChannels?[channel] ?? const SoundChannelSettings();
+    if (!channelSettings.enabled || channelSettings.volumePercent <= 0) {
+      return false;
+    }
+    final gain =
+        (_cachedVolume ?? 0.0) *
+        _musicMasterGain() *
+        (channelSettings.volumePercent / 100.0);
+    return gain > 0;
+  }
+
+  /// Stops current BGM (zen / cherry / breath / bonsai).
+  Future<void> stopMusic() => _stopBreathBackground(clearRequest: true);
+
+  /// Stops feature BGM only when [channel] is still the active track.
+  ///
+  /// Disposing screens must use this so a lagged [stopMusic] cannot kill the
+  /// destination screen's newly started theme (zen after cherry pop).
+  Future<void> stopMusicIfChannel(SoundChannel channel) async {
+    if (_activeFeatureMusic != channel) return;
+    await stopMusic();
+  }
+
+  /// Preloads an ambient asset onto the standby player (volume 0) so the next
+  /// [startAmbient] can swap without a cold [setSource].
+  Future<void> prepareAmbient(SoundChannel channel) async {
+    assert(
+      channel.isMusic && channel.musicSection == SoundMusicSection.ambient,
+      'prepareAmbient requires an ambient music channel',
+    );
+    if (_ambientPreparedPath == channel.assetPath ||
+        _ambientStandbyPreparedPath == channel.assetPath) {
+      return;
+    }
+    if (suppressNativePlaybackForTesting) {
+      _ambientStandbyPreparedPath = channel.assetPath;
+      _ambientStandbyPrepared = true;
+      musicAssetSetSourceCount += 1;
+      return;
+    }
+    final player = _ambientStandby;
+    try {
+      if (!_ambientStandbyPrepared) {
+        await _preparePlayer(
+          player,
+          0.0,
+          audioContext: _ambientAudioContext(),
+        );
+        _ambientStandbyPrepared = true;
+      } else {
+        try {
+          await player.setVolume(0).timeout(const Duration(milliseconds: 400));
+        } catch (_) {}
+      }
+      await player.setReleaseMode(ReleaseMode.loop);
+      await player
+          .setSource(AssetSource(channel.assetPath))
+          .timeout(backgroundPlaybackStartTimeout);
+      _ambientStandbyPreparedPath = channel.assetPath;
+      musicAssetSetSourceCount += 1;
+    } catch (error) {
+      debugLog('ambient prepare failed (${channel.id}): $error');
+    }
+  }
+
+  /// Preloads feature BGM so [startMusic] can reuse the prepared source.
+  Future<void> prepareMusic(SoundChannel channel) async {
+    assert(channel.isMusic, 'prepareMusic requires a music channel');
+    if (_bgmPreparedPath == channel.assetPath) return;
+    if (suppressNativePlaybackForTesting) {
+      _bgmPreparedPath = channel.assetPath;
+      _bgmPlayerPrepared = true;
+      musicAssetSetSourceCount += 1;
+      return;
+    }
+    final player = _bgm;
+    try {
+      if (!_bgmPlayerPrepared) {
+        await _preparePlayer(
+          player,
+          0.0,
+          audioContext: AudioContext(
+            android: const AudioContextAndroid(
+              isSpeakerphoneOn: false,
+              stayAwake: true,
+              contentType: AndroidContentType.music,
+              usageType: AndroidUsageType.media,
+              audioFocus: AndroidAudioFocus.gain,
+            ),
+            iOS: AudioContextIOS(
+              category: AVAudioSessionCategory.playback,
+              options: const {AVAudioSessionOptions.mixWithOthers},
+            ),
+          ),
+        );
+        _bgmPlayerPrepared = true;
+      } else {
+        try {
+          await player.setVolume(0).timeout(const Duration(milliseconds: 400));
+        } catch (_) {}
+      }
+      await player
+          .setSource(AssetSource(channel.assetPath))
+          .timeout(backgroundPlaybackStartTimeout);
+      _bgmPreparedPath = channel.assetPath;
+      musicAssetSetSourceCount += 1;
+    } catch (error) {
+      debugLog('bgm prepare failed (${channel.id}): $error');
+    }
+  }
+
+  /// Starts ambient soundscape on the dedicated ambient player.
+  Future<void> startAmbient(SoundChannel channel, {bool loop = true}) async {
+    assert(
+      channel.isMusic && channel.musicSection == SoundMusicSection.ambient,
+      'startAmbient requires an ambient music channel',
+    );
+    // Feature BGM screens own audio; do not layer customization ambient.
+    if (hasActiveFeatureMusic) {
+      return;
+    }
+    await _ensurePlaybackCache();
+    if (hasActiveFeatureMusic) return;
+    if (!(_cachedSoundEnabled! && _cachedVolume! > 0.0)) return;
+    final channelSettings =
+        _cachedChannels?[channel] ?? const SoundChannelSettings();
+    if (!channelSettings.enabled || channelSettings.volumePercent <= 0) {
+      return;
+    }
+    final gain =
+        (_cachedVolume ?? 0.0) *
+        _musicMasterGain() *
+        (channelSettings.volumePercent / 100.0);
+    if (gain <= 0) return;
+
+    if (_ambientRequested &&
+        _ambientChannel == channel &&
+        !_ambientDucked &&
+        !_ambientStartInFlight) {
+      return;
+    }
+
+    final gen = ++_ambientGeneration;
+    ambientStartCount += 1;
+    _ambientRequested = true;
+    _ambientChannel = channel;
+    _ambientDucked = false;
+    _ambientStartInFlight = true;
+
+    if (ambientStartDelayForTesting > Duration.zero) {
+      await Future<void>.delayed(ambientStartDelayForTesting);
+      if (gen != _ambientGeneration || hasActiveFeatureMusic) {
+        if (hasActiveFeatureMusic && gen == _ambientGeneration) {
+          _ambientRequested = false;
+          _ambientChannel = null;
+          _ambientStartInFlight = false;
+        }
+        return;
+      }
+    }
+
+    if (suppressNativePlaybackForTesting) {
+      if (gen != _ambientGeneration) return;
+      // Honor prepare-ahead swaps in tests without native I/O.
+      if (_ambientStandbyPreparedPath == channel.assetPath &&
+          _ambientPreparedPath != channel.assetPath) {
+        _swapAmbientPlayers();
+      } else if (_ambientPreparedPath != channel.assetPath) {
+        _ambientPreparedPath = channel.assetPath;
+        musicAssetSetSourceCount += 1;
+      }
+      lastAppliedGain = gain;
+      _ambientStartInFlight = false;
+      return;
+    }
+
+    final startAt = musicStartOffsetFor(channel);
+    try {
+      // Standby already holds the next track: swap and go audible immediately.
+      if (_ambientStandbyPreparedPath == channel.assetPath &&
+          _ambientPreparedPath != channel.assetPath) {
+        final previous = _ambientPlayer;
+        final previousGain = lastAppliedGain ?? 0.0;
+        _swapAmbientPlayers();
+        final player = _ambient;
+        await player.setReleaseMode(loop ? ReleaseMode.loop : ReleaseMode.stop);
+        try {
+          await player.setVolume(0).timeout(const Duration(milliseconds: 400));
+        } catch (_) {}
+        if (startAt > Duration.zero) {
+          try {
+            await player.seek(startAt).timeout(const Duration(milliseconds: 800));
+          } catch (_) {}
+        }
+        await player.resume().timeout(backgroundPlaybackStartTimeout);
+        if (gen != _ambientGeneration) return;
+        await _fadeVolume(player, 0.0, gain);
+        if (gen != _ambientGeneration) return;
+        lastAppliedGain = gain;
+        _ambientStartInFlight = false;
+        if (previous != null) {
+          unawaited(() async {
+            try {
+              await _fadeVolume(previous, previousGain, 0.0);
+              await previous.stop().timeout(const Duration(milliseconds: 400));
+            } catch (_) {}
+          }());
+        }
+        return;
+      }
+
+      final player = _ambient;
+      final reusePath = _ambientPreparedPath == channel.assetPath;
+      if (_ambientPlayer != null && !reusePath) {
+        final previousGain = lastAppliedGain ?? 0.0;
+        await _fadeVolume(player, previousGain, 0.0);
+        if (gen != _ambientGeneration) return;
+        try {
+          await player.stop().timeout(const Duration(milliseconds: 400));
+        } catch (_) {}
+      }
+      if (gen != _ambientGeneration) return;
+      if (!_ambientPlayerPrepared) {
+        await _preparePlayer(
+          player,
+          reusePath ? gain : 0.0,
+          audioContext: _ambientAudioContext(),
+        );
+        _ambientPlayerPrepared = true;
+      } else if (reusePath) {
+        try {
+          await player
+              .setVolume(gain.clamp(0.0, 1.0))
+              .timeout(const Duration(milliseconds: 400));
+        } catch (_) {}
+      }
+      if (gen != _ambientGeneration) return;
+      await player.setReleaseMode(loop ? ReleaseMode.loop : ReleaseMode.stop);
+      if (reusePath) {
+        await _startAsset(
+          player,
+          channel.assetPath,
+          startTimeout: backgroundPlaybackStartTimeout,
+          reusePrepared: true,
+          preparedPath: _ambientPreparedPath,
+          onPrepared: (path) => _ambientPreparedPath = path,
+          startAt: startAt,
+        );
+        if (gen != _ambientGeneration) return;
+        lastAppliedGain = gain;
+        _ambientStartInFlight = false;
+        return;
+      }
+      await _startAsset(
+        player,
+        channel.assetPath,
+        startTimeout: backgroundPlaybackStartTimeout,
+        reusePrepared: false,
+        preparedPath: _ambientPreparedPath,
+        onPrepared: (path) => _ambientPreparedPath = path,
+        startAt: startAt,
+      );
+      if (gen != _ambientGeneration) return;
+      // Short fade-in; do not leave the track silent for a full second.
+      await _fadeVolume(player, 0.0, gain);
+      if (gen != _ambientGeneration) return;
+      lastAppliedGain = gain;
+      _ambientStartInFlight = false;
+    } catch (error) {
+      debugLog('ambient start failed (${channel.id}): $error');
+      if (gen == _ambientGeneration) {
+        _ambientStartInFlight = false;
+      }
+    }
+  }
+
+  /// Stops ambient playback (with optional fade).
+  Future<void> stopAmbient({bool fade = true}) async {
+    _ambientGeneration++;
+    _ambientStartInFlight = false;
+    if (!_ambientRequested && _ambientPlayer == null) return;
+    if (_ambientRequested) {
+      ambientStopCount += 1;
+    }
+    _ambientRequested = false;
+    _ambientDucked = false;
+    _ambientChannel = null;
+
+    if (suppressNativePlaybackForTesting) return;
+
+    final player = _ambientPlayer;
+    if (player == null) return;
+    try {
+      if (fade) {
+        await _fadeVolume(player, lastAppliedGain ?? 0.0, 0.0);
+      }
+      await player.stop().timeout(const Duration(milliseconds: 400));
+    } catch (_) {}
+  }
+
+  /// Preview an ambient track (locked or unlocked). Audible even if master off.
+  Future<void> previewAmbient(SoundChannel channel) async {
+    assert(
+      channel.isMusic && channel.musicSection == SoundMusicSection.ambient,
+      'previewAmbient requires an ambient music channel',
+    );
+    await _ensurePlaybackCache();
+    final channelSettings =
+        _cachedChannels?[channel] ?? const SoundChannelSettings();
+    if (!channelSettings.enabled || channelSettings.volumePercent <= 0) {
+      return;
+    }
+    final master = _cachedSoundEnabled != true ? 1.0 : (_cachedVolume ?? 0.0);
+    final gain =
+        master * _musicMasterGain() * (channelSettings.volumePercent / 100.0);
+    if (gain <= 0) return;
+
+    ambientStartCount += 1;
+    _ambientRequested = true;
+    _ambientChannel = channel;
+    _ambientDucked = false;
+
+    if (suppressNativePlaybackForTesting) {
+      lastAppliedGain = gain;
+      return;
+    }
+
+    final player = _ambient;
+    try {
+      try {
+        await player.stop().timeout(const Duration(milliseconds: 400));
+      } catch (_) {}
+      await _preparePlayer(
+        player,
+        0.0,
+        audioContext: _ambientAudioContext(),
+      );
+      await player.setReleaseMode(ReleaseMode.loop);
+      await _startAsset(
+        player,
+        channel.assetPath,
+        startTimeout: backgroundPlaybackStartTimeout,
+      );
+      await _fadeVolume(player, 0.0, gain);
+      lastAppliedGain = gain;
+    } catch (error) {
+      debugLog('ambient preview failed (${channel.id}): $error');
+    }
+  }
+
+  /// Fades ambient out while feature BGM plays; keeps selection for resume.
+  Future<void> duckAmbientForFeatureBgm() async {
+    if (!_ambientRequested || _ambientDucked) return;
+    ambientDuckCount += 1;
+    _ambientDucked = true;
+    if (suppressNativePlaybackForTesting) return;
+
+    final player = _ambientPlayer;
+    if (player == null) return;
+    try {
+      await _fadeVolume(player, lastAppliedGain ?? 0.0, 0.0);
+      await player.pause().timeout(const Duration(milliseconds: 400));
+    } catch (_) {}
+  }
+
+  /// Resumes ambient after feature BGM stops, if still requested.
+  Future<void> unduckAmbientAfterFeatureBgm() async {
+    if (!_ambientRequested || !_ambientDucked) return;
+    final channel = _ambientChannel;
+    if (channel == null) return;
+    ambientUnduckCount += 1;
+    _ambientDucked = false;
+
     await _ensurePlaybackCache();
     if (!(_cachedSoundEnabled! && _cachedVolume! > 0.0)) return;
     final channelSettings =
@@ -446,17 +984,64 @@ class SoundService {
         (channelSettings.volumePercent / 100.0);
     if (gain <= 0) return;
 
-    await _startBgmInternal(
-      assetPath: channel.assetPath,
-      loop: loop,
-      gain: gain,
-      listenForComplete: false,
-      trackBreathCounters: channel == SoundChannel.breathBackground,
-    );
+    if (suppressNativePlaybackForTesting) {
+      lastAppliedGain = gain;
+      return;
+    }
+
+    final player = _ambientPlayer;
+    if (player == null) return;
+    try {
+      await player.resume().timeout(const Duration(milliseconds: 800));
+      await _fadeVolume(player, 0.0, gain);
+      lastAppliedGain = gain;
+    } catch (error) {
+      debugLog('ambient unduck failed (${channel.id}): $error');
+      // Fallback: restart the loop.
+      _ambientDucked = false;
+      await startAmbient(channel);
+    }
   }
 
-  /// Stops current BGM (zen / cherry / breath / bonsai).
-  Future<void> stopMusic() => _stopBreathBackground(clearRequest: true);
+  static AudioContext _ambientAudioContext() => AudioContext(
+        android: const AudioContextAndroid(
+          isSpeakerphoneOn: false,
+          stayAwake: true,
+          contentType: AndroidContentType.music,
+          usageType: AndroidUsageType.media,
+          audioFocus: AndroidAudioFocus.none,
+        ),
+        iOS: AudioContextIOS(
+          category: AVAudioSessionCategory.playback,
+          options: const {AVAudioSessionOptions.mixWithOthers},
+        ),
+      );
+
+  Future<void> _fadeVolume(
+    AudioPlayer player,
+    double from,
+    double to,
+  ) async {
+    if (suppressNativePlaybackForTesting) {
+      lastAppliedGain = to;
+      return;
+    }
+    const steps = 10;
+    final stepMs = (ambientFadeDuration.inMilliseconds / steps)
+        .round()
+        .clamp(1, 200);
+    final stepDuration = Duration(milliseconds: stepMs);
+    for (var i = 1; i <= steps; i++) {
+      final t = i / steps;
+      final volume = from + (to - from) * t;
+      try {
+        await player
+            .setVolume(volume.clamp(0.0, 1.0))
+            .timeout(const Duration(milliseconds: 300));
+      } catch (_) {}
+      await Future<void>.delayed(stepDuration);
+    }
+  }
 
   /// Starts Breath background during play. Loops in Endless; Duration stops
   /// with [stopBreathBackground] when the round ends.
@@ -515,10 +1100,13 @@ class SoundService {
     required bool listenForComplete,
     VoidCallback? onCompleted,
     bool trackBreathCounters = false,
+    Duration startAt = Duration.zero,
   }) async {
     if (trackBreathCounters) {
       breathBackgroundStartCount += 1;
     }
+    // Do not await ambient fade - that added ~1s before feature BGM could start.
+    await stopAmbient(fade: false);
     await _stopBreathBackground(clearRequest: false);
     _breathBackgroundRequested = true;
     if (suppressNativePlaybackForTesting) return;
@@ -531,28 +1119,42 @@ class SoundService {
       });
     }
     try {
-      await _preparePlayer(
-        player,
-        gain,
-        audioContext: AudioContext(
-          android: const AudioContextAndroid(
-            isSpeakerphoneOn: false,
-            stayAwake: true,
-            contentType: AndroidContentType.music,
-            usageType: AndroidUsageType.media,
-            audioFocus: AndroidAudioFocus.gain,
+      final reusePath = _bgmPreparedPath == assetPath;
+      if (!_bgmPlayerPrepared) {
+        await _preparePlayer(
+          player,
+          gain,
+          audioContext: AudioContext(
+            android: const AudioContextAndroid(
+              isSpeakerphoneOn: false,
+              stayAwake: true,
+              contentType: AndroidContentType.music,
+              usageType: AndroidUsageType.media,
+              audioFocus: AndroidAudioFocus.gain,
+            ),
+            iOS: AudioContextIOS(
+              category: AVAudioSessionCategory.playback,
+              options: const {AVAudioSessionOptions.mixWithOthers},
+            ),
           ),
-          iOS: AudioContextIOS(
-            category: AVAudioSessionCategory.playback,
-            options: const {AVAudioSessionOptions.mixWithOthers},
-          ),
-        ),
-      );
+        );
+        _bgmPlayerPrepared = true;
+      } else {
+        try {
+          await player
+              .setVolume(gain.clamp(0.0, 1.0))
+              .timeout(const Duration(milliseconds: 400));
+        } catch (_) {}
+      }
       await player.setReleaseMode(loop ? ReleaseMode.loop : ReleaseMode.stop);
       await _startAsset(
         player,
         assetPath,
         startTimeout: backgroundPlaybackStartTimeout,
+        reusePrepared: reusePath,
+        preparedPath: _bgmPreparedPath,
+        onPrepared: (path) => _bgmPreparedPath = path,
+        startAt: startAt,
       );
     } catch (error) {
       debugLog('bgm start failed ($assetPath): $error');
@@ -566,14 +1168,66 @@ class SoundService {
     if (clearRequest && _breathBackgroundRequested) {
       breathBackgroundStopCount += 1;
       _breathBackgroundRequested = false;
+      _activeFeatureMusic = null;
     }
     await _bgmCompleteSub?.cancel();
     _bgmCompleteSub = null;
     final player = _bgmPlayer;
-    if (player == null) return;
+    if (player != null) {
+      try {
+        await player.stop().timeout(const Duration(milliseconds: 400));
+      } catch (_) {}
+    }
+    // Do not auto-unduck ambient: feature BGM hard-stops ambient. Route
+    // observer / coordinator.resume restarts ambient when appropriate.
+  }
+
+  /// Pauses/stops all looping music when the app is backgrounded (home button).
+  Future<void> pauseAllMusicForAppBackground() async {
+    if (_suspendedForBackground) return;
+    _suspendedForBackground = true;
+    _featureMusicBeforeBackground = _activeFeatureMusic;
+    if (suppressNativePlaybackForTesting) {
+      await stopMusic();
+      await stopAmbient(fade: false);
+      return;
+    }
+    // Prefer pause over stop+reload so resume is near-instant.
     try {
-      await player.stop().timeout(const Duration(milliseconds: 400));
+      await _bgmPlayer?.pause().timeout(const Duration(milliseconds: 400));
     } catch (_) {}
+    try {
+      await _ambientPlayer?.pause().timeout(const Duration(milliseconds: 400));
+    } catch (_) {}
+    try {
+      await _ambientStandbyPlayer?.pause().timeout(
+        const Duration(milliseconds: 400),
+      );
+    } catch (_) {}
+  }
+
+  /// Restores feature BGM after foreground if it was playing before suspend.
+  /// Ambient is restored by [AmbientPlaybackCoordinator.resume] when needed.
+  Future<void> resumeAfterAppForeground() async {
+    if (!_suspendedForBackground) return;
+    _suspendedForBackground = false;
+    final feature = _featureMusicBeforeBackground;
+    _featureMusicBeforeBackground = null;
+    if (feature == null) return;
+    if (suppressNativePlaybackForTesting) {
+      await startMusic(feature);
+      return;
+    }
+    // Same prepared source: resume without cold setSource.
+    if (_bgmPreparedPath == feature.assetPath && _bgmPlayer != null) {
+      _activeFeatureMusic = feature;
+      _breathBackgroundRequested = true;
+      try {
+        await _bgmPlayer!.resume().timeout(const Duration(milliseconds: 800));
+        return;
+      } catch (_) {}
+    }
+    await startMusic(feature);
   }
 
   Future<void> playFireflyClick() => _playChannel(SoundChannel.fireflyClick);

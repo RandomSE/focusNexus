@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:focusNexus/goals/goal_categories.dart';
+import 'package:focusNexus/goals/goal_field_validators.dart';
 import 'package:focusNexus/models/classes/theme_bundle.dart';
 import 'package:focusNexus/utils/common_utils.dart';
 
@@ -90,13 +91,7 @@ class TimeWindowGoalFieldsEditor extends StatelessWidget {
           bundle.textStyle,
           bundle.secondaryColor,
           true,
-          (v) {
-            final parsed = int.tryParse(v?.trim() ?? '');
-            if (parsed == null || parsed < 1) {
-              return 'Please enter a valid whole number';
-            }
-            return null;
-          },
+          GoalFieldValidators.timeMinutes,
         ),
         CommonUtils.buildTextFormField(
           stepsController,
@@ -104,16 +99,7 @@ class TimeWindowGoalFieldsEditor extends StatelessWidget {
           bundle.textStyle,
           bundle.secondaryColor,
           true,
-          (v) {
-            final trimmed = v?.trim();
-            final parsed = int.tryParse(
-              trimmed?.isEmpty ?? true ? '1' : trimmed!,
-            );
-            if (parsed == null || parsed < 1) {
-              return 'Please enter a valid whole number above 0';
-            }
-            return null;
-          },
+          GoalFieldValidators.steps,
         ),
       ],
     );

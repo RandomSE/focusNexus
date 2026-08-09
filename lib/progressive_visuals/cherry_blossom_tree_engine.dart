@@ -127,7 +127,7 @@ class CherryBlossomTreeEngine {
       );
     }
     final cost = nextGrowCost()!;
-    if (garden.pointsBalance < cost) {
+    if (!canAffordZenSpend(garden, cost)) {
       return CherryBlossomOpResult.failure('Not enough points');
     }
     final nextTree = _afterGrow(_tree, steps: 1);
@@ -138,7 +138,7 @@ class CherryBlossomTreeEngine {
   }
 
   CherryBlossomOpResult growToAffordableMax(GardenState garden) {
-    final steps = maxGrowSteps(garden.pointsBalance);
+    final steps = maxGrowSteps(zenSpendableBalance(garden));
     if (steps <= 0) {
       return CherryBlossomOpResult.failure('Not enough points for any growth');
     }
@@ -171,7 +171,7 @@ class CherryBlossomTreeEngine {
     }
 
     final cost = prestigeCost()!;
-    if (garden.pointsBalance < cost) {
+    if (!canAffordZenSpend(garden, cost)) {
       return CherryBlossomOpResult.failure('Not enough points');
     }
 
@@ -228,7 +228,7 @@ class CherryBlossomTreeEngine {
 
     final alreadyUnlocked = _tree.isFinalePathUnlocked(path);
     final cost = pathSwitchCost(path);
-    if (!alreadyUnlocked && garden.pointsBalance < cost) {
+    if (!alreadyUnlocked && !canAffordZenSpend(garden, cost)) {
       return CherryBlossomOpResult.failure('Not enough points');
     }
 

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focusNexus/mini_games/mini_game_round_config.dart';
+import 'package:focusNexus/achievements/notify_achievement_progress.dart';
+import 'package:focusNexus/models/classes/achievement.dart';
 import 'package:focusNexus/mini_games/word_bloom/word_bloom_achievements.dart';
 import 'package:focusNexus/mini_games/word_bloom/word_bloom_constants.dart';
 import 'package:focusNexus/mini_games/word_bloom/word_bloom_engine.dart';
@@ -166,12 +168,16 @@ class _WordBloomPlayScreenState extends ConsumerState<WordBloomPlayScreen>
       WordBloomConstants.baseDifficulty,
       endless: _endless,
     );
-    await WordBloomAchievements.recordRound(
+    final newlyReady = await WordBloomAchievements.recordRound(
       storage: repositories.storage,
       achievements: ref.read(achievementServiceProvider),
       score: engine.score,
       bestStreak: engine.bestOrderStreak,
       endless: _endless,
+    );
+    notifyAchievementProgressUpdated(
+      ref,
+      newlyReady.whereType<Achievement>(),
     );
     if (!mounted) return;
     // End overlay listens to hudRevision (isFinished).

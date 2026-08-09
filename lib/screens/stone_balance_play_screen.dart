@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focusNexus/mini_games/mini_game_round_config.dart';
+import 'package:focusNexus/achievements/notify_achievement_progress.dart';
+import 'package:focusNexus/models/classes/achievement.dart';
 import 'package:focusNexus/mini_games/stone_balance/stone_balance_achievements.dart';
 import 'package:focusNexus/mini_games/stone_balance/stone_balance_constants.dart';
 import 'package:focusNexus/mini_games/stone_balance/stone_balance_engine.dart';
@@ -112,12 +114,16 @@ class _StoneBalancePlayScreenState extends ConsumerState<StoneBalancePlayScreen>
           endless: _endless,
         );
     final repos = ref.read(appRepositoriesProvider);
-    await StoneBalanceAchievements.recordRound(
+    final newlyReady = await StoneBalanceAchievements.recordRound(
       storage: repos.storage,
       achievements: ref.read(achievementServiceProvider),
       height: engine.score,
       endless: _endless,
       finishedByTimeout: engine.finishedByTimeout,
+    );
+    notifyAchievementProgressUpdated(
+      ref,
+      newlyReady.whereType<Achievement>(),
     );
     if (!mounted) return;
     setState(() {});

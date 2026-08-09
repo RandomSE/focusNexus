@@ -20,6 +20,8 @@ AchievementService achievementService(Ref ref) {
     storage: repos.storage,
     repository: repos.achievements,
     pointsRepository: repos.points,
+    gardenRepository: repos.garden,
+    progressiveVisualsPointsRepository: repos.progressiveVisualsPoints,
     soundService: ref.watch(soundServiceProvider),
   );
 }

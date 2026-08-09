@@ -29,8 +29,12 @@ bool isMusicChannelUnlocked({
   required GardenState? garden,
   required bool progressiveVisualsEnabled,
   required bool miniGamesEnabled,
+  Set<String> ownedAmbientIds = const {},
 }) {
   if (!channel.isMusic) return true;
+  if (channel.musicSection == SoundMusicSection.ambient) {
+    return ownedAmbientIds.contains(channel.id);
+  }
   switch (channel) {
     case SoundChannel.breathBackground:
       return miniGamesEnabled;

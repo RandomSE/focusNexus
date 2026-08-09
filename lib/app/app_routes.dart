@@ -15,6 +15,10 @@ abstract final class AppRoutes {
   static const settings = SettingsRoute.routeName;
   static const soundEffects = SoundEffectsRoute.routeName;
   static const music = MusicRoute.routeName;
+  static const backgroundMusic = BackgroundMusicRoute.routeName;
+  static const customAffirmationPack = CustomAffirmationPackRoute.routeName;
+  static const dashboardMotivatorPack = DashboardMotivatorPackRoute.routeName;
+  static const dailyAffirmationPack = DailyAffirmationPackRoute.routeName;
   static const reward = RewardRoute.routeName;
   static const miniGames = MiniGamesRoute.routeName;
   static const miniGameLobby = MiniGameLobbyRoute.routeName;
@@ -22,6 +26,7 @@ abstract final class AppRoutes {
   static const customization = CustomizationRoute.routeName;
   static const chat = ChatRoute.routeName;
   static const achievements = AchievementsRoute.routeName;
+  static const consistencyExplorer = ConsistencyExplorerRoute.routeName;
   static const goals = GoalsRoute.routeName;
   static const timeWindowHub = TimeWindowHubRoute.routeName;
   static const timeWindowManual = TimeWindowManualRoute.routeName;

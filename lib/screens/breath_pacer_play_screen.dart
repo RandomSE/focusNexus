@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:focusNexus/achievements/notify_achievement_progress.dart';
 import 'package:focusNexus/mini_games/breath_pacer/breath_pacer_achievements.dart';
 import 'package:focusNexus/mini_games/breath_pacer/breath_pacer_constants.dart';
 import 'package:focusNexus/mini_games/breath_pacer/breath_pacer_engine.dart';
@@ -10,6 +12,9 @@ import 'package:focusNexus/mini_games/breath_pacer/breath_pacer_painter.dart';
 import 'package:focusNexus/mini_games/mini_game_round_config.dart';
 import 'package:focusNexus/providers/app_repositories_provider.dart';
 import 'package:focusNexus/providers/app_services_provider.dart';
+import 'package:focusNexus/services/ambient_section_playback.dart';
+import 'package:focusNexus/services/ambient_soundscape.dart';
+import 'package:focusNexus/services/sound_channel.dart';
 import 'package:focusNexus/services/sound_service.dart';
 import 'package:focusNexus/widgets/mini_game_end_overlay.dart';
 import 'package:focusNexus/widgets/mini_game_hud_chrome.dart';
@@ -63,15 +68,31 @@ class _BreathPacerPlayScreenState extends ConsumerState<BreathPacerPlayScreen>
   @override
   void dispose() {
     _ticker.dispose();
-    _sounds?.stopBreathBackground();
+    final sounds = _sounds;
+    if (sounds != null && _bgmStarted) {
+      unawaited(sounds.stopMusicIfChannel(SoundChannel.breathBackground));
+    }
     super.dispose();
   }
 
   Future<void> _startBgm() async {
     if (_bgmStarted || !mounted) return;
     _bgmStarted = true;
-    _sounds ??= ref.read(soundServiceProvider);
-    await _sounds!.startBreathBackground(loop: _endless);
+    final sounds = ref.read(soundServiceProvider);
+    _sounds = sounds;
+    final repo = ref.read(appRepositoriesProvider).ambientSoundscapes;
+    final coordinator = ref.read(ambientPlaybackCoordinatorProvider);
+    final started = await startFeatureMusicOrAmbientFallback(
+      sounds: sounds,
+      repo: repo,
+      coordinator: coordinator,
+      featureChannel: SoundChannel.breathBackground,
+      section: AmbientAppSection.miniGames,
+      loop: _endless,
+    );
+    if (!started) {
+      _bgmStarted = false;
+    }
   }
 
   void _ensureEngine(Size size) {
@@ -119,12 +140,13 @@ class _BreathPacerPlayScreenState extends ConsumerState<BreathPacerPlayScreen>
       BreathPacerConstants.baseDifficulty,
       endless: _endless,
     );
-    await BreathPacerAchievements.recordRound(
+    final newlyReady = await BreathPacerAchievements.recordRound(
       storage: repositories.storage,
       achievements: ref.read(achievementServiceProvider),
       score: engine.roundHighScore,
       endless: _endless,
     );
+    notifyAchievementProgressUpdated(ref, newlyReady);
     if (!mounted) return;
     setState(() {});
   }

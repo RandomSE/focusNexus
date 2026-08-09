@@ -49,6 +49,22 @@ void main() {
       expect(foundDifference, isTrue);
     });
 
+    test('coreOverride replaces pool core and keeps style prefix', () {
+      final day = DateTime(2026, 6, 3);
+      final custom = AffirmationSelector.forDate(
+        day,
+        notificationStyle: 'Minimal',
+        coreOverride: 'Custom core line',
+      );
+      expect(custom, contains('Custom core line'));
+      final vibrant = AffirmationSelector.forDate(
+        day,
+        notificationStyle: 'Vibrant',
+        coreOverride: 'Custom core line',
+      );
+      expect(vibrant, contains('Custom core line'));
+    });
+
     test('previewRange returns requested length', () {
       final preview = AffirmationSelector.previewRange(
         DateTime(2026, 5, 1),

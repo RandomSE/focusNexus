@@ -40,14 +40,11 @@ class DailyOpenRewardService {
   static const perStreakBonus = 10;
   static const maxReward = 350;
 
-  /// Documented alternate soft-cap for A/B tests (`rewardForStreak(..., maxCap: softCapAlt)`).
-  static const softCapAlt = 200;
-
   final KeyValueStorage _storage;
   final PointsRepository _points;
 
   /// Point amount for [streakDay] (1-based). Defaults to [maxReward]; pass [maxCap]
-  /// to parameterize (e.g. [softCapAlt] = 200).
+  /// to override the hard cap (tests / experiments).
   static int rewardForStreak(int streakDay, {int? maxCap}) {
     final day = streakDay < 1 ? 1 : streakDay;
     final cap = maxCap ?? maxReward;

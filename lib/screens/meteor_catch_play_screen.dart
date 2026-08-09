@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:focusNexus/achievements/notify_achievement_progress.dart';
+import 'package:focusNexus/models/classes/achievement.dart';
 import 'package:focusNexus/mini_games/meteor_catch/meteor_catch_achievements.dart';
 import 'package:focusNexus/mini_games/meteor_catch/meteor_catch_engine.dart';
 import 'package:focusNexus/mini_games/mini_game_round_config.dart';
@@ -517,12 +519,16 @@ class _MeteorCatchPlayScreenState extends ConsumerState<MeteorCatchPlayScreen>
       engine.currentDifficulty,
       endless: _endless,
     );
-    await MeteorCatchAchievements.recordRound(
+    final newlyReady = await MeteorCatchAchievements.recordRound(
       storage: repos.storage,
       achievements: ref.read(achievementServiceProvider),
       score: engine.score,
       bestStreak: engine.bestCatchStreak,
       endless: _endless,
+    );
+    notifyAchievementProgressUpdated(
+      ref,
+      newlyReady.whereType<Achievement>(),
     );
     if (!mounted) return;
     setState(() {});

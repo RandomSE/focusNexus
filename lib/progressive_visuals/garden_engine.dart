@@ -128,12 +128,15 @@ class ProgressiveGardenEngine {
     if (quantity < 1) {
       return GardenOpResult.failure('Invalid quantity');
     }
+    if (isZenLockedBonsaiKind(kind)) {
+      return GardenOpResult.failure('Achievement reward only');
+    }
     final price = decorPrice(kind);
     if (price == null) {
       return GardenOpResult.failure('Unknown decoration');
     }
     final total = price * quantity;
-    if (state.pointsBalance < total) {
+    if (!canAffordZenSpend(state, total)) {
       return GardenOpResult.failure('Not enough points');
     }
     final baseMs = DateTime.now().microsecondsSinceEpoch;
@@ -253,6 +256,9 @@ class ProgressiveGardenEngine {
       return GardenOpResult.failure('Item not in inventory');
     }
     final item = state.decorInventory[idx];
+    if (isZenLockedBonsaiKind(item.kind)) {
+      return GardenOpResult.failure('Achievement bonsai cannot be sold');
+    }
     final value = decorSellValue(item);
     final nextInv = [...state.decorInventory]..removeAt(idx);
     return GardenOpResult.success(
@@ -407,7 +413,7 @@ class ProgressiveGardenEngine {
       return GardenOpResult.failure('Wait already finished');
     }
     final cost = item.pendingSkipWaitCost ?? 0;
-    if (state.pointsBalance < cost) {
+    if (!canAffordZenSpend(state, cost)) {
       return GardenOpResult.failure('Not enough points to skip wait');
     }
     final cleared = item.clearedAdvanceLock();
@@ -434,7 +440,7 @@ class ProgressiveGardenEngine {
       return GardenOpResult.failure('Wait already finished');
     }
     final cost = d.pendingSkipWaitCost ?? 0;
-    if (state.pointsBalance < cost) {
+    if (!canAffordZenSpend(state, cost)) {
       return GardenOpResult.failure('Not enough points to skip wait');
     }
     final cleared = d.clearedAdvanceLock();
@@ -476,7 +482,7 @@ class ProgressiveGardenEngine {
     } else if (item.regrowthDiscountActive) {
       cost = (cost + 4) ~/ 5;
     }
-    if (state.pointsBalance < cost) {
+    if (!canAffordZenSpend(state, cost)) {
       return GardenOpResult.failure('Not enough points to grow');
     }
 
@@ -547,6 +553,9 @@ class ProgressiveGardenEngine {
       return GardenOpResult.failure('Decoration not found');
     }
     var d = state.decor[idx];
+    if (isZenLockedBonsaiKind(d.kind)) {
+      return GardenOpResult.failure('Achievement bonsai cannot grow');
+    }
     if (d.stageIndex >= DecorItem.maxStageIndex) {
       return GardenOpResult.failure('Already fully grown');
     }
@@ -556,7 +565,7 @@ class ProgressiveGardenEngine {
 
     final rule = _ruleFor(d.stageIndex);
     final cost = rule.pointCost;
-    if (state.pointsBalance < cost) {
+    if (!canAffordZenSpend(state, cost)) {
       return GardenOpResult.failure('Not enough points to grow');
     }
 
@@ -668,7 +677,7 @@ class ProgressiveGardenEngine {
     if (idx < 0) {
       return GardenOpResult.failure('Item not found');
     }
-    if (state.pointsBalance < pointCost) {
+    if (!canAffordZenSpend(state, pointCost)) {
       return GardenOpResult.failure('Not enough points to restart growth');
     }
     final existing = state.items[idx];
@@ -696,10 +705,13 @@ class ProgressiveGardenEngine {
     if (idx < 0) {
       return GardenOpResult.failure('Decoration not found');
     }
-    if (state.pointsBalance < pointCost) {
+    final existing = state.decor[idx];
+    if (isZenLockedBonsaiKind(existing.kind)) {
+      return GardenOpResult.failure('Achievement bonsai cannot restart growth');
+    }
+    if (!canAffordZenSpend(state, pointCost)) {
       return GardenOpResult.failure('Not enough points to restart growth');
     }
-    final existing = state.decor[idx];
     final d = existing
         .copyWith(
           stageIndex: 0,
@@ -712,5 +724,99 @@ class ProgressiveGardenEngine {
     final next = [...state.decor]..[idx] = d;
     final spent = pointCost > 0 ? applyZenSpend(state, pointCost) : state;
     return GardenOpResult.success(spent.copyWith(decor: next));
+  }
+
+  /// Pays [zenPathBonsaiMutationPointCost] for an inverted-color path bonsai.
+  ///
+  /// Unlocks free enable/disable thereafter. Looks up [itemId] in placed decor
+  /// first, then inventory. Enables the inverted look on purchase.
+  GardenOpResult purchasePathBonsaiMutation(GardenState state, String itemId) {
+    final cost = zenPathBonsaiMutationPointCost;
+    final decorIdx = state.decor.indexWhere((d) => d.id == itemId);
+    if (decorIdx >= 0) {
+      final item = state.decor[decorIdx];
+      final err = _pathBonsaiMutationPurchaseError(item);
+      if (err != null) return GardenOpResult.failure(err);
+      if (!canAffordZenSpend(state, cost)) {
+        return GardenOpResult.failure('Not enough points for path bonsai variant');
+      }
+      final next = [...state.decor]
+        ..[decorIdx] = item.copyWith(
+          mutation: MutationKind.invertedColors,
+          mutationUnlocked: true,
+        );
+      return GardenOpResult.success(
+        applyZenSpend(state, cost).copyWith(decor: next),
+      );
+    }
+    final invIdx = state.decorInventory.indexWhere((d) => d.id == itemId);
+    if (invIdx < 0) {
+      return GardenOpResult.failure('Path bonsai not found');
+    }
+    final item = state.decorInventory[invIdx];
+    final err = _pathBonsaiMutationPurchaseError(item);
+    if (err != null) return GardenOpResult.failure(err);
+    if (!canAffordZenSpend(state, cost)) {
+      return GardenOpResult.failure('Not enough points for path bonsai variant');
+    }
+    final nextInv = [...state.decorInventory]
+      ..[invIdx] = item.copyWith(
+        mutation: MutationKind.invertedColors,
+        mutationUnlocked: true,
+      );
+    return GardenOpResult.success(
+      applyZenSpend(state, cost).copyWith(decorInventory: nextInv),
+    );
+  }
+
+  /// Free enable/disable of a purchased path-bonsai inverted look.
+  GardenOpResult setPathBonsaiMutationEnabled(
+    GardenState state,
+    String itemId, {
+    required bool enabled,
+  }) {
+    final decorIdx = state.decor.indexWhere((d) => d.id == itemId);
+    if (decorIdx >= 0) {
+      final item = state.decor[decorIdx];
+      final err = _pathBonsaiMutationToggleError(item);
+      if (err != null) return GardenOpResult.failure(err);
+      final next = [...state.decor]
+        ..[decorIdx] = item.copyWith(
+          mutation: enabled ? MutationKind.invertedColors : null,
+        );
+      return GardenOpResult.success(state.copyWith(decor: next));
+    }
+    final invIdx = state.decorInventory.indexWhere((d) => d.id == itemId);
+    if (invIdx < 0) {
+      return GardenOpResult.failure('Path bonsai not found');
+    }
+    final item = state.decorInventory[invIdx];
+    final err = _pathBonsaiMutationToggleError(item);
+    if (err != null) return GardenOpResult.failure(err);
+    final nextInv = [...state.decorInventory]
+      ..[invIdx] = item.copyWith(
+        mutation: enabled ? MutationKind.invertedColors : null,
+      );
+    return GardenOpResult.success(state.copyWith(decorInventory: nextInv));
+  }
+
+  String? _pathBonsaiMutationPurchaseError(DecorItem item) {
+    if (!isZenPathClaimBonsaiKind(item.kind)) {
+      return 'Only path bonsai can buy this variant';
+    }
+    if (item.mutationUnlocked) {
+      return 'Path bonsai inverted variant already unlocked';
+    }
+    return null;
+  }
+
+  String? _pathBonsaiMutationToggleError(DecorItem item) {
+    if (!isZenPathClaimBonsaiKind(item.kind)) {
+      return 'Only path bonsai support this variant toggle';
+    }
+    if (!item.mutationUnlocked) {
+      return 'Unlock the inverted variant first';
+    }
+    return null;
   }
 }

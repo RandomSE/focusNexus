@@ -2,6 +2,7 @@ import 'package:focusNexus/utils/debug_log.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 import 'package:focusNexus/services/storage/storage_keys.dart';
+import 'package:focusNexus/services/custom_affirmation_pack.dart';
 
 import '../affirmation_selector.dart';
 import '../notification_schedule_utils.dart';
@@ -79,6 +80,25 @@ Future<void> startDailyAffirmations(String? timeToTrigger) async {
   final notificationStyle =
       (styleRaw ?? 'Minimal').trim().isEmpty ? 'Minimal' : styleRaw!.trim();
 
+  var packRaw =
+      await goalNotifierStorage().read(key: StorageKeys.dailyAffirmationPack);
+  if (packRaw == null || packRaw.trim().isEmpty) {
+    final legacy =
+        await goalNotifierStorage().read(key: StorageKeys.customAffirmationPack);
+    if (legacy != null && legacy.trim().isNotEmpty) {
+      final migrated = PhrasePackQueue.migrateLegacy(
+        CustomAffirmationPackCodec.decode(legacy),
+        PhrasePackKind.dailyAffirmation,
+      );
+      packRaw = CustomAffirmationPackCodec.encode(migrated);
+      await goalNotifierStorage().write(
+        key: StorageKeys.dailyAffirmationPack,
+        value: packRaw,
+      );
+    }
+  }
+  final pack = CustomAffirmationPackCodec.decode(packRaw);
+
   await cancelDailyAffirmationsNotification();
 
   final triggers = NotificationScheduleUtils.dailyTriggersFrom(
@@ -96,9 +116,12 @@ Future<void> startDailyAffirmations(String? timeToTrigger) async {
     if (!trigger.isAfter(tz.TZDateTime.now(tz.local))) {
       continue;
     }
+    final coreOverride =
+        CustomAffirmationPackSelector.customCoreForDate(pack, trigger);
     final body = AffirmationSelector.forDate(
       trigger,
       notificationStyle: notificationStyle,
+      coreOverride: coreOverride,
     );
     await scheduleDailyAffirmations(
       trigger,

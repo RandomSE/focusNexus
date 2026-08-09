@@ -15,7 +15,7 @@ void main() {
     await service.initialize();
 
     expect(service.getById('168')!.title, 'Rain Catcher I');
-    expect(service.getById('168')!.reward, '100 points');
+    expect(service.getById('168')!.reward, '40 points');
     expect(service.getById('168')!.isSecret, isFalse);
     expect(
       service.getById('168')!.task,

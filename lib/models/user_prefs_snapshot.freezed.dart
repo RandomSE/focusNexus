@@ -22,6 +22,9 @@ mixin _$UserPrefsSnapshot {
   bool get useDyslexiaFont => throw _privateConstructorUsedError;
   bool get highContrastMode => throw _privateConstructorUsedError;
   bool get dailyAffirmations => throw _privateConstructorUsedError;
+
+  /// When true, dashboard motivator banner is hidden.
+  bool get motivatorsDisabled => throw _privateConstructorUsedError;
   bool get aiEncouragement => throw _privateConstructorUsedError;
   bool get openStreakReminders => throw _privateConstructorUsedError;
   String get notificationFrequency => throw _privateConstructorUsedError;
@@ -64,6 +67,7 @@ abstract class $UserPrefsSnapshotCopyWith<$Res> {
     bool useDyslexiaFont,
     bool highContrastMode,
     bool dailyAffirmations,
+    bool motivatorsDisabled,
     bool aiEncouragement,
     bool openStreakReminders,
     String notificationFrequency,
@@ -106,6 +110,7 @@ class _$UserPrefsSnapshotCopyWithImpl<$Res, $Val extends UserPrefsSnapshot>
     Object? useDyslexiaFont = null,
     Object? highContrastMode = null,
     Object? dailyAffirmations = null,
+    Object? motivatorsDisabled = null,
     Object? aiEncouragement = null,
     Object? openStreakReminders = null,
     Object? notificationFrequency = null,
@@ -147,6 +152,10 @@ class _$UserPrefsSnapshotCopyWithImpl<$Res, $Val extends UserPrefsSnapshot>
             dailyAffirmations: null == dailyAffirmations
                 ? _value.dailyAffirmations
                 : dailyAffirmations // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            motivatorsDisabled: null == motivatorsDisabled
+                ? _value.motivatorsDisabled
+                : motivatorsDisabled // ignore: cast_nullable_to_non_nullable
                       as bool,
             aiEncouragement: null == aiEncouragement
                 ? _value.aiEncouragement
@@ -245,6 +254,7 @@ abstract class _$$UserPrefsSnapshotImplCopyWith<$Res>
     bool useDyslexiaFont,
     bool highContrastMode,
     bool dailyAffirmations,
+    bool motivatorsDisabled,
     bool aiEncouragement,
     bool openStreakReminders,
     String notificationFrequency,
@@ -286,6 +296,7 @@ class __$$UserPrefsSnapshotImplCopyWithImpl<$Res>
     Object? useDyslexiaFont = null,
     Object? highContrastMode = null,
     Object? dailyAffirmations = null,
+    Object? motivatorsDisabled = null,
     Object? aiEncouragement = null,
     Object? openStreakReminders = null,
     Object? notificationFrequency = null,
@@ -327,6 +338,10 @@ class __$$UserPrefsSnapshotImplCopyWithImpl<$Res>
         dailyAffirmations: null == dailyAffirmations
             ? _value.dailyAffirmations
             : dailyAffirmations // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        motivatorsDisabled: null == motivatorsDisabled
+            ? _value.motivatorsDisabled
+            : motivatorsDisabled // ignore: cast_nullable_to_non_nullable
                   as bool,
         aiEncouragement: null == aiEncouragement
             ? _value.aiEncouragement
@@ -418,6 +433,7 @@ class _$UserPrefsSnapshotImpl extends _UserPrefsSnapshot {
     this.useDyslexiaFont = false,
     this.highContrastMode = false,
     this.dailyAffirmations = false,
+    this.motivatorsDisabled = false,
     this.aiEncouragement = false,
     this.openStreakReminders = false,
     this.notificationFrequency = 'Low',
@@ -456,6 +472,11 @@ class _$UserPrefsSnapshotImpl extends _UserPrefsSnapshot {
   @override
   @JsonKey()
   final bool dailyAffirmations;
+
+  /// When true, dashboard motivator banner is hidden.
+  @override
+  @JsonKey()
+  final bool motivatorsDisabled;
   @override
   @JsonKey()
   final bool aiEncouragement;
@@ -532,7 +553,7 @@ class _$UserPrefsSnapshotImpl extends _UserPrefsSnapshot {
 
   @override
   String toString() {
-    return 'UserPrefsSnapshot(theme: $theme, fontSize: $fontSize, useDyslexiaFont: $useDyslexiaFont, highContrastMode: $highContrastMode, dailyAffirmations: $dailyAffirmations, aiEncouragement: $aiEncouragement, openStreakReminders: $openStreakReminders, notificationFrequency: $notificationFrequency, notificationStyle: $notificationStyle, customizationEnabled: $customizationEnabled, useCustomColorPalette: $useCustomColorPalette, allowedColors: $allowedColors, customizedFont: $customizedFont, customizedPrimary: $customizedPrimary, customizedSecondary: $customizedSecondary, rewardTypes: $rewardTypes, skipToday: $skipToday, pauseGoals: $pauseGoals, registrationComplete: $registrationComplete, onboardingCompleted: $onboardingCompleted, soundEnabled: $soundEnabled, soundVolume: $soundVolume, dailyAffirmationsTime: $dailyAffirmationsTime, openStreakRemindersTime: $openStreakRemindersTime)';
+    return 'UserPrefsSnapshot(theme: $theme, fontSize: $fontSize, useDyslexiaFont: $useDyslexiaFont, highContrastMode: $highContrastMode, dailyAffirmations: $dailyAffirmations, motivatorsDisabled: $motivatorsDisabled, aiEncouragement: $aiEncouragement, openStreakReminders: $openStreakReminders, notificationFrequency: $notificationFrequency, notificationStyle: $notificationStyle, customizationEnabled: $customizationEnabled, useCustomColorPalette: $useCustomColorPalette, allowedColors: $allowedColors, customizedFont: $customizedFont, customizedPrimary: $customizedPrimary, customizedSecondary: $customizedSecondary, rewardTypes: $rewardTypes, skipToday: $skipToday, pauseGoals: $pauseGoals, registrationComplete: $registrationComplete, onboardingCompleted: $onboardingCompleted, soundEnabled: $soundEnabled, soundVolume: $soundVolume, dailyAffirmationsTime: $dailyAffirmationsTime, openStreakRemindersTime: $openStreakRemindersTime)';
   }
 
   @override
@@ -549,6 +570,8 @@ class _$UserPrefsSnapshotImpl extends _UserPrefsSnapshot {
                 other.highContrastMode == highContrastMode) &&
             (identical(other.dailyAffirmations, dailyAffirmations) ||
                 other.dailyAffirmations == dailyAffirmations) &&
+            (identical(other.motivatorsDisabled, motivatorsDisabled) ||
+                other.motivatorsDisabled == motivatorsDisabled) &&
             (identical(other.aiEncouragement, aiEncouragement) ||
                 other.aiEncouragement == aiEncouragement) &&
             (identical(other.openStreakReminders, openStreakReminders) ||
@@ -604,6 +627,7 @@ class _$UserPrefsSnapshotImpl extends _UserPrefsSnapshot {
     useDyslexiaFont,
     highContrastMode,
     dailyAffirmations,
+    motivatorsDisabled,
     aiEncouragement,
     openStreakReminders,
     notificationFrequency,
@@ -644,6 +668,7 @@ abstract class _UserPrefsSnapshot extends UserPrefsSnapshot {
     final bool useDyslexiaFont,
     final bool highContrastMode,
     final bool dailyAffirmations,
+    final bool motivatorsDisabled,
     final bool aiEncouragement,
     final bool openStreakReminders,
     final String notificationFrequency,
@@ -676,6 +701,10 @@ abstract class _UserPrefsSnapshot extends UserPrefsSnapshot {
   bool get highContrastMode;
   @override
   bool get dailyAffirmations;
+
+  /// When true, dashboard motivator banner is hidden.
+  @override
+  bool get motivatorsDisabled;
   @override
   bool get aiEncouragement;
   @override

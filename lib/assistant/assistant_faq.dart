@@ -668,7 +668,7 @@ const List<AssistantFaqSection> assistantFaqSections = [
         question: 'What is the Cherry Blossom Tree?',
         answer:
             'Unlock it when you hold 10,000 points at once or have spent 10,000 lifetime '
-            'points in the Zen garden. Then tap Visit Cherry Blossom Tree. Open Menu for '
+            'wallet points (Zen garden and other spends). Then tap Visit Cherry Blossom Tree. Open Menu for '
             'Grow tree / Max tree / Prestige tree (and path choices); View tree or Hide menu '
             'clears chrome so the tree can fill the screen. Each stage has 25 '
             'growth levels. Use Grow tree for one level or Max tree to grow as far as your '
@@ -678,9 +678,11 @@ const List<AssistantFaqSection> assistantFaqSections = [
             'Later, if only one finale path is unlocked, Menu shows Change path with the '
             'unlock price beside Peace / Power. Once both paths are unlocked, Menu shows '
             'only the Peace and Power buttons. Clearing each growth stage unlocks a Cherry '
-            'achievement (about 10% of that stage total, min 100 points). Completing Peace or '
-            'Power finales unlocks hidden Path of Peace / Path of Power achievements '
-            '(500,000 points each). Each grow adds a mini tree toward Bonsai - '
+            'achievement with a small flat point reward (not a percent of stage cost). '
+            'Completing Peace or Power finales unlocks hidden Path of Peace / Path of Power '
+            'achievements that grant +1 Zen Garden placeable Peace or Power bonsai pot '
+            '(inventory decor; not a Bonsai garden count bump; no wallet points). '
+            'Each grow adds a mini tree toward Bonsai - '
             'open Bonsai from the tree screen.',
         keywords: [
           'cherry blossom',
@@ -1076,8 +1078,12 @@ const List<AssistantFaqSection> assistantFaqSections = [
             'from the Dashboard. Turn on Customized colours to preview and apply custom text '
             'and background colors (Theme Preview, then Save). Color Shop swatches cost '
             'points; built-in theme colors stay free. Pick Custom Color costs 10,000 points '
-            'for any RGB. Font size, Dark mode, and Dyslexia-friendly Font are free under '
-            'Settings Appearance / Accessibility - they are not Color Shop items.',
+            'for any RGB. Dashboard motivators and Daily affirmations are separate packs: '
+            'each loads its own built-in lines free so you can edit them (100 points to '
+            'add/edit; delete free), build queue sets and presets with positions, and turn '
+            'off to restore pristine built-ins while keeping your edits saved. Font size, '
+            'Dark mode, and Dyslexia-friendly Font '
+            'are free under Settings Appearance / Accessibility - they are not Color Shop items.',
         keywords: [
           'customization reward',
           'color shop',
@@ -1086,6 +1092,10 @@ const List<AssistantFaqSection> assistantFaqSections = [
           'customization screen',
           'theme preview',
           'pick custom color',
+          'custom affirmation',
+          'affirmation pack',
+          'dashboard motivators',
+          'daily affirmations pack',
         ],
       ),
     ],

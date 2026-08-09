@@ -14,25 +14,40 @@ import 'package:focusNexus/models/achievement_tracking_snapshot.dart';
 import 'package:focusNexus/goals/goal_categories.dart';
 import 'package:focusNexus/services/storage/storage_keys.dart';
 import 'package:focusNexus/mini_games/rain_catcher/rain_catcher_constants.dart';
+import 'package:focusNexus/progressive_visuals/cherry_blossom_stage_catalog.dart';
+import 'package:focusNexus/progressive_visuals/decor_catalog.dart';
+import 'package:focusNexus/progressive_visuals/decor_item.dart';
+import 'package:focusNexus/progressive_visuals/visual_theme_id.dart';
+import 'package:focusNexus/repositories/garden_repository.dart';
+import 'package:focusNexus/repositories/progressive_visuals_points_repository.dart';
+import 'package:focusNexus/utils/mini_game_achievement_rewards.dart';
+import 'package:focusNexus/achievements/achievement_pv_rewards.dart';
 
 class AchievementService {
   AchievementService({
     required KeyValueStorage storage,
     AchievementRepository? repository,
     PointsRepository? pointsRepository,
+    GardenRepository? gardenRepository,
+    ProgressiveVisualsPointsRepository? progressiveVisualsPointsRepository,
     SoundService? soundService,
     List<Achievement>? cachedAchievements,
   }) : _storage = storage,
        _repository = repository ?? AchievementRepository(storage),
        _pointsRepository = pointsRepository,
+       _gardenRepository = gardenRepository,
+       _pvPointsRepository = progressiveVisualsPointsRepository,
        _soundService = soundService ?? SoundService(storage),
        _cachedAchievements = List.of(cachedAchievements ?? []);
 
-  static const _numOfAchievements = 139;
+  /// Live catalog size after full seed (F5). Kept in sync with initialize catalog.
+  static const numOfAchievements = 181;
 
   final KeyValueStorage _storage;
   final AchievementRepository _repository;
   final PointsRepository? _pointsRepository;
+  final GardenRepository? _gardenRepository;
+  final ProgressiveVisualsPointsRepository? _pvPointsRepository;
   final SoundService _soundService;
 
   List<Achievement> _cachedAchievements;
@@ -135,6 +150,7 @@ class AchievementService {
       await _ensureWordBloomAchievements();
       await _ensureRainCatcherAchievements();
     }
+    await _migrateEconomyRewardCatalog();
     await _sanitizeStoredProgress();
     _initialized = true;
   }
@@ -502,9 +518,14 @@ class AchievementService {
     const pointRewardsSingleWeek = [250, 500, 1000];
     const pointRewardsSingleMonth = [250, 500, 1000];
     const pointRewardsHigh = [100, 200, 250, 500, 750, 1000, 1500, 2000, 3000];
-    const pointRewardsAllHigh = [1000, 2000, 3000, 4000, 5000, 7500, 10000];
-    const pointRewardsDailyStreak = [100, 1000, 250, 500, 1000];
-    const pointRewardsWeeklyStreak = [250, 500, 1000, 1500, 2000, 2500];
+    // 2026-08 PV-earn rebalance (lower-tier protection): 72-74 unchanged;
+    // 75 mono wallet-only; 76-78 wallet reduced with PV added (see
+    // achievement_pv_rewards.dart) to keep total value ahead of 75.
+    const pointRewardsAllHigh = [1000, 2000, 3000, 3200, 3600, 4000, 4500];
+    // F3: monotonic ascending (was II=1000 > III=250). Same sum 2850.
+    const pointRewardsDailyStreak = [100, 250, 500, 1000, 1000];
+    // 2026-08 rebalance: IV/V (98/99) wallet reduced with PV added.
+    const pointRewardsWeeklyStreak = [250, 500, 1000, 1500, 1700, 2000];
 
     await addBulkAchievements(
       1,
@@ -690,12 +711,14 @@ class AchievementService {
         isSecret: false,
       ),
     );
+    final invested = CherryBlossomStageCatalog.grandTotalToMaxStage6();
     await addAchievement(
       Achievement(
         id: '113',
         title: 'Eternal Bloom',
-        reward: '5000 points',
-        task: 'Fully grow the Cherry Blossom Tree (~1,000,000 points invested)',
+        reward: '1000 points',
+        task:
+            'Fully grow the Cherry Blossom Tree ($invested points invested)',
         isSecret: true,
       ),
     );
@@ -703,43 +726,35 @@ class AchievementService {
   }
 
   Future<void> _addCherryBlossomStageAndPathAchievements() async {
-    const stageNames = [
-      'Bare Beginning',
-      'Early Spring Morning',
-      'Midday Spring',
-      'Golden Afternoon',
-      'Deep Twilight',
-      'Aurora Veil',
-      'Living Canopy',
-    ];
-    const stageTotals = [500, 2500, 12500, 50000, 100000, 500000, 2000000];
-    for (var i = 0; i < stageNames.length; i++) {
-      final reward = stageTotals[i] * 10 ~/ 100;
-      final points = reward < 100 ? 100 : reward;
+    for (var i = 0; i < zenCherryStageBonsaiNames.length; i++) {
+      assert(
+        CherryBlossomStageCatalog.stageTotalFor(i) >= 0,
+        'stageTotals must stay in sync with CherryBlossomStageCatalog',
+      );
       await _addAchievementAfterZenGate(
         Achievement(
           id: '${141 + i}',
-          title: 'Cherry: ${stageNames[i]}',
-          reward: '$points points',
-          task: 'Clear Cherry Blossom Tree stage ${stageNames[i]}',
+          title: 'Cherry: ${zenCherryStageBonsaiNames[i]}',
+          reward: zenStageBonsaiRewardText(i),
+          task: 'Clear Cherry Blossom Tree stage ${zenCherryStageBonsaiNames[i]}',
           isSecret: false,
         ),
       );
     }
     await _addAchievementAfterZenGate(
-      Achievement(
+      const Achievement(
         id: '148',
         title: 'Path of Peace',
-        reward: '500000 points',
+        reward: 'Zen Garden Peace bonsai +1',
         task: 'Complete the Peace finale path on the Cherry Blossom Tree',
         isSecret: true,
       ),
     );
     await _addAchievementAfterZenGate(
-      Achievement(
+      const Achievement(
         id: '149',
         title: 'Path of Power',
-        reward: '500000 points',
+        reward: 'Zen Garden Power bonsai +1',
         task: 'Complete the Power finale path on the Cherry Blossom Tree',
         isSecret: true,
       ),
@@ -804,7 +819,8 @@ class AchievementService {
       Achievement(
         id: openStreakAchievementIds[3],
         title: 'Ninety Sunrises',
-        reward: '5000 points',
+        // 2026-08 rebalance: wallet reduced with PV added (achievement_pv_rewards.dart).
+        reward: '3500 points',
         task: 'Open the app on 90 consecutive days',
         isSecret: true,
       ),
@@ -830,7 +846,7 @@ class AchievementService {
       const Achievement(
         id: '118',
         title: 'Firefly Swarm I',
-        reward: '100 points',
+        reward: '40 points',
         task: 'Catch 100 fireflies in one Duration round of Firefly Jar',
         isSecret: false,
       ),
@@ -839,7 +855,7 @@ class AchievementService {
       const Achievement(
         id: '119',
         title: 'Firefly Swarm II',
-        reward: '250 points',
+        reward: '100 points',
         task: 'Catch 150 fireflies in one Duration round of Firefly Jar',
         isSecret: false,
       ),
@@ -848,7 +864,7 @@ class AchievementService {
       const Achievement(
         id: '120',
         title: 'Firefly Swarm III',
-        reward: '500 points',
+        reward: '200 points',
         task: 'Catch 200 fireflies in one Duration round of Firefly Jar',
         isSecret: false,
       ),
@@ -857,7 +873,7 @@ class AchievementService {
       const Achievement(
         id: '121',
         title: 'Firefly Swarm IV',
-        reward: '1000 points',
+        reward: '400 points',
         task: 'Catch 250 fireflies in one Duration round of Firefly Jar',
         isSecret: false,
       ),
@@ -866,7 +882,8 @@ class AchievementService {
       const Achievement(
         id: '122',
         title: 'Endless Lantern',
-        reward: '2500 points',
+        // 2026-08 rebalance: wallet reduced with PV added (achievement_pv_rewards.dart).
+        reward: '400 points',
         task: 'Catch 500 fireflies in one Endless round of Firefly Jar',
         isSecret: false,
       ),
@@ -889,7 +906,7 @@ class AchievementService {
       const Achievement(
         id: '123',
         title: 'Cairn Climber I',
-        reward: '100 points',
+        reward: '40 points',
         task: 'Reach height 25 in Stone Balance',
         isSecret: false,
       ),
@@ -898,7 +915,7 @@ class AchievementService {
       const Achievement(
         id: '124',
         title: 'Cairn Climber II',
-        reward: '250 points',
+        reward: '100 points',
         task: 'Reach height 35 in Stone Balance',
         isSecret: false,
       ),
@@ -907,7 +924,7 @@ class AchievementService {
       const Achievement(
         id: '125',
         title: 'Cairn Climber III',
-        reward: '500 points',
+        reward: '200 points',
         task: 'Reach height 40 in Stone Balance',
         isSecret: false,
       ),
@@ -916,7 +933,7 @@ class AchievementService {
       const Achievement(
         id: '126',
         title: 'Cairn Climber IV',
-        reward: '1000 points',
+        reward: '400 points',
         task: 'Reach height 50 in Stone Balance',
         isSecret: false,
       ),
@@ -925,7 +942,7 @@ class AchievementService {
       const Achievement(
         id: '127',
         title: 'Cairn Climber V',
-        reward: '2500 points',
+        reward: '1000 points',
         task: 'Reach height 60 in Stone Balance',
         isSecret: false,
       ),
@@ -934,7 +951,8 @@ class AchievementService {
       const Achievement(
         id: '128',
         title: 'Endless Summit',
-        reward: '5000 points',
+        // 2026-08 rebalance: wallet reduced with PV added (achievement_pv_rewards.dart).
+        reward: '800 points',
         task: 'Reach height 500 in one Endless round of Stone Balance',
         isSecret: false,
       ),
@@ -943,7 +961,7 @@ class AchievementService {
       const Achievement(
         id: '129',
         title: 'Beat the Clock',
-        reward: '250 points',
+        reward: '100 points',
         task:
             'Reach height 30 before time runs out in a Duration round of Stone Balance',
         isSecret: false,
@@ -1006,31 +1024,32 @@ class AchievementService {
       (
         id: '131',
         title: 'First Breath',
-        reward: '100 points',
+        reward: '40 points',
         task: 'Reach 200 points in one Duration round of Breath Pacer',
       ),
       (
         id: '132',
         title: 'Steady Rhythm',
-        reward: '250 points',
+        reward: '100 points',
         task: 'Reach 500 points in one Duration round of Breath Pacer',
       ),
       (
         id: '133',
         title: 'Deep Focus',
-        reward: '500 points',
+        reward: '200 points',
         task: 'Reach 1000 points in one Duration round of Breath Pacer',
       ),
       (
         id: '134',
         title: 'Breath Master',
-        reward: '1000 points',
+        reward: '400 points',
         task: 'Reach 1500 points in one Duration round of Breath Pacer',
       ),
       (
         id: '135',
         title: 'Endless Serenity',
-        reward: '2500 points',
+        // 2026-08 rebalance: wallet reduced with PV added (achievement_pv_rewards.dart).
+        reward: '400 points',
         task: 'Reach 5000 points in one Endless round of Breath Pacer',
       ),
     ];
@@ -1065,67 +1084,69 @@ class AchievementService {
       (
         id: '136',
         title: 'Meteor Shower I',
-        reward: '100 points',
+        reward: '40 points',
         task: 'Score 15 points in one Duration round of Meteor Catch',
       ),
       (
         id: '137',
         title: 'Meteor Shower II',
-        reward: '250 points',
+        reward: '100 points',
         task: 'Score 35 points in one Duration round of Meteor Catch',
       ),
       (
         id: '138',
         title: 'Meteor Shower III',
-        reward: '500 points',
+        reward: '200 points',
         task: 'Score 80 points in one Duration round of Meteor Catch',
       ),
       (
         id: '139',
         title: 'Meteor Shower IV',
-        reward: '1000 points',
+        reward: '400 points',
         task: 'Score 100 points in one Duration round of Meteor Catch',
       ),
       (
         id: '140',
         title: 'Endless Skies',
-        reward: '2500 points',
+        // 2026-08 rebalance: wallet reduced with PV added (achievement_pv_rewards.dart).
+        reward: '400 points',
         task: 'Score 250 points in one Endless round of Meteor Catch',
       ),
       (
         id: '150',
         title: 'Meteor Streak I',
-        reward: '100 points',
+        reward: '40 points',
         task: 'Catch 10 meteors in a row in one Duration round of Meteor Catch',
       ),
       (
         id: '151',
         title: 'Meteor Streak II',
-        reward: '250 points',
+        reward: '100 points',
         task: 'Catch 20 meteors in a row in one Duration round of Meteor Catch',
       ),
       (
         id: '152',
         title: 'Meteor Streak III',
-        reward: '500 points',
+        reward: '200 points',
         task: 'Catch 30 meteors in a row in one Duration round of Meteor Catch',
       ),
       (
         id: '153',
         title: 'Meteor Streak IV',
-        reward: '1000 points',
+        reward: '400 points',
         task: 'Catch 40 meteors in a row in one Duration round of Meteor Catch',
       ),
       (
         id: '154',
         title: 'Meteor Streak V',
-        reward: '2500 points',
+        reward: '1000 points',
         task: 'Catch 50 meteors in a row in one Duration round of Meteor Catch',
       ),
       (
         id: '155',
         title: 'Endless Streak',
-        reward: '2500 points',
+        // 2026-08 rebalance: wallet reduced with PV added (achievement_pv_rewards.dart).
+        reward: '400 points',
         task:
             'Catch 100 meteors in a row in one Endless round of Meteor Catch',
       ),
@@ -1177,78 +1198,80 @@ class AchievementService {
       (
         id: '156',
         title: 'Word Bloom I',
-        reward: '100 points',
+        reward: '40 points',
         task: 'Score 50 in one Duration round of Word Bloom',
       ),
       (
         id: '157',
         title: 'Word Bloom II',
-        reward: '250 points',
+        reward: '100 points',
         task: 'Score 100 in one Duration round of Word Bloom',
       ),
       (
         id: '158',
         title: 'Word Bloom III',
-        reward: '500 points',
+        reward: '200 points',
         task: 'Score 175 in one Duration round of Word Bloom',
       ),
       (
         id: '159',
         title: 'Word Bloom IV',
-        reward: '1000 points',
+        reward: '400 points',
         task: 'Score 250 in one Duration round of Word Bloom',
       ),
       (
         id: '160',
         title: 'Word Bloom V',
-        reward: '2500 points',
+        reward: '1000 points',
         task: 'Score 350 in one Duration round of Word Bloom',
       ),
       (
         id: '161',
         title: 'Endless Lexicon',
-        reward: '2500 points',
+        // 2026-08 rebalance: wallet reduced with PV added (achievement_pv_rewards.dart).
+        reward: '400 points',
         task: 'Score 1000 in one Endless round of Word Bloom',
       ),
       (
         id: '162',
         title: 'Order Streak I',
-        reward: '100 points',
+        reward: '40 points',
         task:
             'Reach an order streak of 3 in one Duration round of Word Bloom',
       ),
       (
         id: '163',
         title: 'Order Streak II',
-        reward: '250 points',
+        reward: '100 points',
         task:
             'Reach an order streak of 6 in one Duration round of Word Bloom',
       ),
       (
         id: '164',
         title: 'Order Streak III',
-        reward: '500 points',
+        reward: '200 points',
         task:
             'Reach an order streak of 9 in one Duration round of Word Bloom',
       ),
       (
         id: '165',
         title: 'Order Streak IV',
-        reward: '1000 points',
+        reward: '400 points',
         task:
             'Reach an order streak of 12 in one Duration round of Word Bloom',
       ),
       (
         id: '166',
         title: 'Order Streak V',
-        reward: '2500 points',
+        reward: '1000 points',
         task:
             'Reach an order streak of 15 in one Duration round of Word Bloom',
       ),
       (
         id: '167',
         title: 'Endless Order',
-        reward: '2500 points',
+        // 2026-08 rebalance: wallet reduced with PV added (achievement_pv_rewards.dart).
+        reward: '400 points',
         task:
             'Reach an order streak of 30 in one Endless round of Word Bloom',
       ),
@@ -1321,16 +1344,18 @@ class AchievementService {
       'VIII',
       'IX',
     ];
+    // 2026-08 rebalance: IX (187) wallet reduced with PV; VIII (186) and VII
+    // (185) nudged top-down for ascending mono (VII was 800 > VIII 700).
     const endlessRewards = [
+      '40 points',
       '100 points',
-      '250 points',
-      '500 points',
-      '750 points',
-      '1000 points',
-      '1500 points',
-      '2000 points',
-      '2500 points',
-      '2500 points',
+      '200 points',
+      '300 points',
+      '400 points',
+      '600 points',
+      '650 points',
+      '700 points',
+      '800 points',
     ];
     final definitions = <({
       String id,
@@ -1341,35 +1366,35 @@ class AchievementService {
       (
         id: '168',
         title: 'Rain Catcher I',
-        reward: '100 points',
+        reward: '40 points',
         task:
             'Catch ${duration[0]} raindrops in one Duration round of Rain Catcher',
       ),
       (
         id: '169',
         title: 'Rain Catcher II',
-        reward: '250 points',
+        reward: '100 points',
         task:
             'Catch ${duration[1]} raindrops in one Duration round of Rain Catcher',
       ),
       (
         id: '170',
         title: 'Rain Catcher III',
-        reward: '500 points',
+        reward: '200 points',
         task:
             'Catch ${duration[2]} raindrops in one Duration round of Rain Catcher',
       ),
       (
         id: '171',
         title: 'Rain Catcher IV',
-        reward: '1000 points',
+        reward: '400 points',
         task:
             'Catch ${duration[3]} raindrops in one Duration round of Rain Catcher',
       ),
       (
         id: '172',
         title: 'Rain Catcher V',
-        reward: '2500 points',
+        reward: '1000 points',
         task:
             'Catch ${duration[4]} raindrops in one Duration round of Rain Catcher',
       ),
@@ -1384,42 +1409,43 @@ class AchievementService {
       (
         id: '174',
         title: 'Rain Streak I',
-        reward: '100 points',
+        reward: '40 points',
         task:
             'Reach a catch streak of ${streak[0]} in one Duration round of Rain Catcher',
       ),
       (
         id: '175',
         title: 'Rain Streak II',
-        reward: '250 points',
+        reward: '100 points',
         task:
             'Reach a catch streak of ${streak[1]} in one Duration round of Rain Catcher',
       ),
       (
         id: '176',
         title: 'Rain Streak III',
-        reward: '500 points',
+        reward: '200 points',
         task:
             'Reach a catch streak of ${streak[2]} in one Duration round of Rain Catcher',
       ),
       (
         id: '177',
         title: 'Rain Streak IV',
-        reward: '1000 points',
+        reward: '400 points',
         task:
             'Reach a catch streak of ${streak[3]} in one Duration round of Rain Catcher',
       ),
       (
         id: '178',
         title: 'Rain Streak V',
-        reward: '2500 points',
+        reward: '1000 points',
         task:
             'Reach a catch streak of ${streak[4]} in one Duration round of Rain Catcher',
       ),
       (
         id: '179',
         title: 'Endless Rain Streak',
-        reward: '2500 points',
+        // 2026-08 rebalance: wallet reduced with PV added (achievement_pv_rewards.dart).
+        reward: '400 points',
         task:
             'Reach a catch streak of ${RainCatcherConstants.endlessStreakTarget} in one Endless round of Rain Catcher',
       ),
@@ -1648,7 +1674,11 @@ class AchievementService {
   }
 
   Future<void> _ensureCategoryAchievements() async {
-    if (_cachedAchievements.length >= _numOfAchievements) return;
+    // Do not early-return on catalog length: length >= N previously skipped
+    // ensures and blocked migrations when the catalog grew past 139 (F5).
+    final hasCategoryExplorer = _cachedAchievements.any((a) => a.id == '100');
+    final hasPerfectlyBalanced = _cachedAchievements.any((a) => a.id == '105');
+    if (hasCategoryExplorer && hasPerfectlyBalanced) return;
 
     final categoryKeys = [
       StorageKeys.goalsCompletedByCategory,
@@ -1661,10 +1691,9 @@ class AchievementService {
     ];
     await bulkSetAchievementVariablesInStorage(categoryKeys);
 
-    final hasCategoryExplorer = _cachedAchievements.any((a) => a.id == '100');
     if (!hasCategoryExplorer) {
       await _addCategoryAchievements();
-    } else if (!_cachedAchievements.any((a) => a.id == '105')) {
+    } else if (!hasPerfectlyBalanced) {
       await addAchievement(
         Achievement(
           id: '105',
@@ -1781,8 +1810,9 @@ class AchievementService {
       final pointsToAdd = AchievementProgress.parsePointsFromReward(reward);
       await _addPoints(pointsToAdd);
     } else {
-      debugLog('Special reward spotted. ID: $id reward: $reward');
+      await _grantSpecialReward(id, reward);
     }
+    await _grantAchievementPv(id);
     await _saveToStorage();
     await _soundService.playAchievementCompleted();
     debugLog(
@@ -1811,7 +1841,10 @@ class AchievementService {
       );
       if (current.reward.contains('points')) {
         pointsGained += AchievementProgress.parsePointsFromReward(current.reward);
+      } else {
+        await _grantSpecialReward(current.id, current.reward);
       }
+      await _grantAchievementPv(current.id);
     }
     if (pointsGained > 0) {
       await _addPoints(pointsGained);
@@ -1819,6 +1852,131 @@ class AchievementService {
     await _saveToStorage();
     await _soundService.playAchievementCompleted();
     return (claimedCount: claimable.length, pointsGained: pointsGained);
+  }
+
+  /// Credits PV for achievements in the rebalance map (0 wallet-only claims).
+  Future<void> _grantAchievementPv(String id) async {
+    final amount = achievementPvRewardFor(id);
+    if (amount <= 0) return;
+    final pv = _pvPointsRepository;
+    if (pv == null) return;
+    await pv.credit(amount);
+  }
+
+  /// Path/stage claims grant +1 zen garden placeable bonsai (0 wallet points).
+  Future<void> _grantSpecialReward(String id, String reward) async {
+    final stageId = int.tryParse(id);
+    if (stageId != null && stageId >= 141 && stageId <= 147) {
+      await _grantZenLockedBonsai(zenStageBonsaiKind(stageId - 141));
+      return;
+    }
+    if (id == '148' || id == '149') {
+      await _grantZenLockedBonsai(
+        id == '148' ? zenPeaceBonsaiKind : zenPowerBonsaiKind,
+      );
+      return;
+    }
+    debugLog('Special reward spotted. ID: $id reward: $reward');
+  }
+
+  Future<void> _grantZenLockedBonsai(String kind) async {
+    final gardenRepo = _gardenRepository;
+    if (gardenRepo == null) {
+      debugLog('Zen locked bonsai skipped: no GardenRepository (kind=$kind)');
+      return;
+    }
+    final garden = await gardenRepo.load();
+    final item = DecorItem(
+      id: 'ach_bonsai_${kind}_${DateTime.now().microsecondsSinceEpoch}',
+      themeId: VisualThemeId.zenGarden,
+      kind: kind,
+      // Fully formed pot; growth UI/engine are locked for achievement kinds.
+      stageIndex: DecorItem.maxStageIndex,
+    );
+    await gardenRepo.save(
+      garden.copyWith(
+        decorInventory: [...garden.decorInventory, item],
+      ),
+    );
+    debugLog('Zen locked bonsai granted kind=$kind');
+  }
+
+  /// Overwrites persisted reward/task strings so existing installs pick up
+  /// rebalance amounts (path, cherry stages, streak, mini-game ×0.4).
+  Future<void> _migrateEconomyRewardCatalog() async {
+    final invested = CherryBlossomStageCatalog.grandTotalToMaxStage6();
+    final expected = <String, ({String reward, String? task})>{
+      '88': (reward: '100 points', task: null),
+      '89': (reward: '250 points', task: null),
+      '90': (reward: '500 points', task: null),
+      '91': (reward: '1000 points', task: null),
+      '92': (reward: '1000 points', task: null),
+      '113': (
+        reward: '1000 points',
+        task: 'Fully grow the Cherry Blossom Tree ($invested points invested)',
+      ),
+      for (var i = 0; i < zenCherryStageBonsaiNames.length; i++)
+        '${141 + i}': (reward: zenStageBonsaiRewardText(i), task: null),
+      '148': (reward: 'Zen Garden Peace bonsai +1', task: null),
+      '149': (reward: 'Zen Garden Power bonsai +1', task: null),
+      // 2026-08 PV-earn rebalance (lower-tier protection). 75 is mono
+      // (wallet-only); 76-78 and the ids below get PV via achievement_pv_rewards.dart.
+      '75': (reward: '3200 points', task: null),
+      '76': (reward: '3600 points', task: null),
+      '77': (reward: '4000 points', task: null),
+      '78': (reward: '4500 points', task: null),
+      for (final id in const ['25', '34', '43', '52', '61', '70'])
+        id: (reward: '1700 points', task: null),
+      for (final id in const ['26', '35', '44', '53', '62', '71'])
+        id: (reward: '1900 points', task: null),
+      '98': (reward: '1700 points', task: null),
+      '99': (reward: '2000 points', task: null),
+      '117': (reward: '3500 points', task: null),
+    };
+
+    // Mini-game ×0.4 ceil (ids 118-129, 131-140, 150-187; skip 130 Patient One).
+    // 2026-08 rebalance: endless tiers 122/135/140/155/161/167/179 -> 400,
+    // 128/187 -> 800, 185 -> 650 / 186 -> 700 (mono under 187); PV added via
+    // achievement_pv_rewards.dart. Other duration/streak ladders untouched.
+    final miniGameBases = <String, int>{
+      '118': 100, '119': 250, '120': 500, '121': 1000, '122': 1000,
+      '123': 100, '124': 250, '125': 500, '126': 1000, '127': 2500,
+      '128': 2000, '129': 250,
+      '131': 100, '132': 250, '133': 500, '134': 1000, '135': 1000,
+      '136': 100, '137': 250, '138': 500, '139': 1000, '140': 1000,
+      '150': 100, '151': 250, '152': 500, '153': 1000, '154': 2500, '155': 1000,
+      '156': 100, '157': 250, '158': 500, '159': 1000, '160': 2500, '161': 1000,
+      '162': 100, '163': 250, '164': 500, '165': 1000, '166': 2500, '167': 1000,
+      '168': 100, '169': 250, '170': 500, '171': 1000, '172': 2500,
+      '173': 100, '180': 250, '181': 500, '182': 750, '183': 1000,
+      '184': 1500, '185': 1625, '186': 1750, '187': 2000,
+      '174': 100, '175': 250, '176': 500, '177': 1000, '178': 2500, '179': 1000,
+    };
+    for (final entry in miniGameBases.entries) {
+      expected[entry.key] = (
+        reward: scaledMiniGameRewardLabel(entry.value),
+        task: null,
+      );
+    }
+
+    var changed = false;
+    for (var i = 0; i < _cachedAchievements.length; i++) {
+      final current = _cachedAchievements[i];
+      final want = expected[current.id];
+      if (want == null) continue;
+      final nextReward = want.reward;
+      final nextTask = want.task ?? current.task;
+      if (current.reward == nextReward && current.task == nextTask) continue;
+      _cachedAchievements[i] = current.copyWith(
+        reward: nextReward,
+        task: nextTask,
+      );
+      changed = true;
+    }
+    if (changed) {
+      await _saveToStorage();
+      debugLog('Migrated economy reward catalog strings');
+    }
   }
 
   Future<void> _addPoints(int pointsToAdd) async {

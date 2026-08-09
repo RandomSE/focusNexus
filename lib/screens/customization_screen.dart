@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,11 +7,15 @@ import 'package:focusNexus/app/app_navigation.dart';
 import 'package:focusNexus/app/app_route.dart';
 import 'package:focusNexus/models/classes/theme_bundle.dart';
 import 'package:focusNexus/providers/app_repositories_provider.dart';
+import 'package:focusNexus/providers/app_services_provider.dart';
 import 'package:focusNexus/providers/app_settings_provider.dart';
 import 'package:focusNexus/providers/customization_preview_provider.dart';
 import 'package:focusNexus/providers/points_balance_provider.dart';
+import 'package:focusNexus/services/ambient_section_playback.dart';
+import 'package:focusNexus/services/custom_affirmation_pack.dart';
 import 'package:focusNexus/settings/app_settings.dart';
 import 'package:focusNexus/utils/common_utils.dart';
+import 'package:focusNexus/utils/notifier.dart';
 import 'package:focusNexus/utils/screen_theme.dart';
 import 'package:focusNexus/utils/theme_styles.dart';
 
@@ -23,6 +29,93 @@ class CustomizationScreen extends ConsumerStatefulWidget {
 
 class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
   AppSettings get _settings => ref.read(appSettingsProvider.notifier).service;
+  bool _ambientEnabled = false;
+  bool _ambientLoaded = false;
+  bool _motivatorPackEnabled = false;
+  bool _affirmationPackEnabled = false;
+  bool _packsLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadAmbientEnabled();
+      _loadPacksEnabled();
+    });
+  }
+
+  Future<void> _loadAmbientEnabled() async {
+    final enabled =
+        await ref.read(appRepositoriesProvider).ambientSoundscapes.readEnabled();
+    if (!mounted) return;
+    setState(() {
+      _ambientEnabled = enabled;
+      _ambientLoaded = true;
+    });
+  }
+
+  Future<void> _loadPacksEnabled() async {
+    final repo = ref.read(appRepositoriesProvider).phrasePacks;
+    final motivator =
+        await repo.read(PhrasePackKind.dashboardMotivator);
+    final affirmation =
+        await repo.read(PhrasePackKind.dailyAffirmation);
+    if (!mounted) return;
+    setState(() {
+      _motivatorPackEnabled = motivator.enabled;
+      _affirmationPackEnabled = affirmation.enabled;
+      _packsLoaded = true;
+    });
+  }
+
+  Future<void> _setPackEnabled(
+    PhrasePackKind kind,
+    bool value,
+    TextStyle textStyle,
+  ) async {
+    final repo = ref.read(appRepositoriesProvider).phrasePacks;
+    final result = await repo.trySetEnabled(kind, value);
+    if (!mounted) return;
+    if (!result.ok) {
+      CommonUtils.showSnackBar(
+        context,
+        'Could not update pack.',
+        textStyle,
+        3500,
+        16,
+      );
+      return;
+    }
+    setState(() {
+      if (kind == PhrasePackKind.dashboardMotivator) {
+        _motivatorPackEnabled = result.data?.enabled ?? value;
+      } else {
+        _affirmationPackEnabled = result.data?.enabled ?? value;
+      }
+    });
+    if (kind == PhrasePackKind.dailyAffirmation) {
+      final settings = ref.read(appSettingsProvider).snapshot;
+      if (settings.dailyAffirmations) {
+        await GoalNotifier.refreshDailyAffirmationSchedules(
+          forceReschedule: true,
+        );
+      }
+    }
+  }
+
+  Future<void> _setAmbientEnabled(bool value) async {
+    final repo = ref.read(appRepositoriesProvider).ambientSoundscapes;
+    await repo.writeEnabled(value);
+    final sounds = ref.read(soundServiceProvider);
+    final coordinator = ref.read(ambientPlaybackCoordinatorProvider);
+    if (!value) {
+      await coordinator.stopAll(sounds);
+    } else {
+      await coordinator.resume(repo: repo, sounds: sounds);
+    }
+    if (!mounted) return;
+    setState(() => _ambientEnabled = value);
+  }
 
   TextStyle _textStyleFor(Color primary) => _settings.textStyle(
         fontSize: _settings.userFontSize,
@@ -351,6 +444,128 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
               children: [
                 Text(pointsLabel, style: textStyle),
                 const SizedBox(height: 12),
+                if (_ambientLoaded)
+                  CommonUtils.buildSwitchListTile(
+                    'Background music',
+                    textStyle,
+                    _ambientEnabled,
+                    (value) => unawaited(_setAmbientEnabled(value)),
+                    primary,
+                  ),
+                if (_ambientLoaded && !_ambientEnabled)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: CommonUtils.buildText(
+                      'Play calm ambient soundscapes while using the app. '
+                      'Turn on to unlock tracks, pick volume, and choose music '
+                      'for all sections or per section.',
+                      textStyle.copyWith(
+                        fontWeight: FontWeight.normal,
+                        fontSize: (textStyle.fontSize ?? 14) - 2,
+                      ),
+                    ),
+                  ),
+                if (_ambientLoaded && _ambientEnabled) ...[
+                  CommonUtils.buildListTile(
+                    title: 'Choose soundscapes',
+                    textStyle: textStyle,
+                    trailing: Icon(Icons.chevron_right, color: primary),
+                    onTap: () =>
+                        ref.pushRoute(context, AppRoute.backgroundMusic),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                if (_packsLoaded && !settings.motivatorsDisabled)
+                  CommonUtils.buildSwitchListTile(
+                    'Dashboard motivators pack',
+                    textStyle,
+                    _motivatorPackEnabled,
+                    (value) => unawaited(
+                      _setPackEnabled(
+                        PhrasePackKind.dashboardMotivator,
+                        value,
+                        textStyle,
+                      ),
+                    ),
+                    primary,
+                  ),
+                if (_packsLoaded &&
+                    !settings.motivatorsDisabled &&
+                    !_motivatorPackEnabled)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: CommonUtils.buildText(
+                      'Turn on to use your customized motivator queue on the '
+                      'dashboard. Built-in lines load free so you can edit them. '
+                      'Off restores pristine built-ins; your edits stay saved.',
+                      textStyle.copyWith(
+                        fontWeight: FontWeight.normal,
+                        fontSize: (textStyle.fontSize ?? 14) - 2,
+                      ),
+                    ),
+                  ),
+                if (_packsLoaded && !settings.motivatorsDisabled) ...[
+                  CommonUtils.buildListTile(
+                    title: 'Edit dashboard motivators',
+                    textStyle: textStyle,
+                    trailing: Icon(Icons.chevron_right, color: primary),
+                    onTap: () async {
+                      await ref.pushRoute(
+                        context,
+                        AppRoute.dashboardMotivatorPack,
+                      );
+                      if (!mounted) return;
+                      await _loadPacksEnabled();
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                if (_packsLoaded && settings.dailyAffirmations)
+                  CommonUtils.buildSwitchListTile(
+                    'Daily affirmations pack',
+                    textStyle,
+                    _affirmationPackEnabled,
+                    (value) => unawaited(
+                      _setPackEnabled(
+                        PhrasePackKind.dailyAffirmation,
+                        value,
+                        textStyle,
+                      ),
+                    ),
+                    primary,
+                  ),
+                if (_packsLoaded &&
+                    settings.dailyAffirmations &&
+                    !_affirmationPackEnabled)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: CommonUtils.buildText(
+                      'Turn on to use your customized affirmation queue for '
+                      'Daily Affirmation notifications. '
+                      'Built-in lines load free so you can edit them. '
+                      'Off restores pristine built-ins; your edits stay saved.',
+                      textStyle.copyWith(
+                        fontWeight: FontWeight.normal,
+                        fontSize: (textStyle.fontSize ?? 14) - 2,
+                      ),
+                    ),
+                  ),
+                if (_packsLoaded && settings.dailyAffirmations) ...[
+                  CommonUtils.buildListTile(
+                    title: 'Edit daily affirmations',
+                    textStyle: textStyle,
+                    trailing: Icon(Icons.chevron_right, color: primary),
+                    onTap: () async {
+                      await ref.pushRoute(
+                        context,
+                        AppRoute.dailyAffirmationPack,
+                      );
+                      if (!mounted) return;
+                      await _loadPacksEnabled();
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 CommonUtils.buildSwitchListTile(
                   'Customized colours',
                   textStyle,

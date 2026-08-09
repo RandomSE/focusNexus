@@ -18,6 +18,8 @@ import 'package:focusNexus/services/storage/storage_keys.dart';
 import 'package:focusNexus/settings/app_settings.dart';
 import 'package:focusNexus/goals/goal_notifications.dart';
 import 'package:focusNexus/goals/goals_mutation_plan.dart';
+import 'package:focusNexus/goals/pv_daily_momentum.dart';
+import 'package:focusNexus/repositories/progressive_visuals_points_repository.dart';
 import 'package:focusNexus/utils/goal_points.dart';
 import 'package:focusNexus/utils/notifier.dart';
 
@@ -29,12 +31,14 @@ class GoalsUseCase {
     required AchievementStreakService streaks,
     required AppSettings settings,
     required TimeWindowRepeatRepository repeatSeries,
+    ProgressiveVisualsPointsRepository? progressiveVisualsPoints,
     GoalNotifications? notifications,
     DateFormat? deadlineFormat,
   })  : _goals = goals,
         _points = points,
         _streaks = streaks,
         _settings = settings,
+        _pvPoints = progressiveVisualsPoints,
         _notifications = notifications ?? const GoalNotifierNotifications(),
         _repeats = repeatSeries,
         _timeWindow = GoalsTimeWindowService(
@@ -48,6 +52,7 @@ class GoalsUseCase {
   final PointsRepository _points;
   final AchievementStreakService _streaks;
   final AppSettings _settings;
+  final ProgressiveVisualsPointsRepository? _pvPoints;
   final GoalNotifications _notifications;
   final TimeWindowRepeatRepository _repeats;
   final GoalsTimeWindowService _timeWindow;
@@ -294,15 +299,20 @@ class GoalsUseCase {
     final clock = now ?? DateTime.now();
     if (!isActionWindowActive(candidate, clock)) return null;
 
-    final goal = active.removeAt(index).copyWith(
-      completedAt: deadlineFormat.format(clock),
-    );
-    final completed = [...completedSnapshot, goal];
     final todayCount = goalsCompletedTodayBefore + 1;
+    // Capture pre-daily-multiplier base before it's overwritten below; PV
+    // momentum qualification is evaluated on this, not the daily-boosted award.
+    final pvQualifies = PvDailyMomentum.qualifies(candidate.points);
     final pointsAwarded = GoalPoints.computeDailyCompletionReward(
-      goal.points,
+      candidate.points,
       todayCount,
     );
+    // Persist awarded amount on the completed goal so delete can claw back fully.
+    final goal = active.removeAt(index).copyWith(
+      completedAt: deadlineFormat.format(clock),
+      points: pointsAwarded,
+    );
+    final completed = [...completedSnapshot, goal];
 
     return GoalsCompletePlan(
       result: CompleteGoalResult(
@@ -315,6 +325,7 @@ class GoalsUseCase {
       goal: goal,
       pointsDelta: pointsAwarded,
       goalsCompletedTodayCount: todayCount,
+      pvMomentumQualifies: pvQualifies,
     );
   }
 
@@ -344,8 +355,31 @@ class GoalsUseCase {
         pointsDeltaToAdd: plan.pointsDelta,
         optimisticCacheCredit: optimisticCacheCredit,
       ),
+      _grantPvMomentumIfQualifying(plan.pvMomentumQualifies),
     ]);
     return _recordGoalCompleted(plan.goal);
+  }
+
+  /// Increments today's qualifying-completion counter and credits PV when a
+  /// threshold (10/20/30) is hit. No-op without a wired PV repository.
+  Future<void> _grantPvMomentumIfQualifying(bool qualifies) async {
+    if (!qualifies) return;
+    final pv = _pvPoints;
+    if (pv == null) return;
+    final today = DateFormat('dd MM yyyy').format(DateTime.now());
+    final stored = await _goals.readPvMomentumQualifyingTodayRaw();
+    final next = PvDailyMomentum.nextQualifyingCount(
+      stored: stored,
+      today: today,
+    );
+    await _goals.writePvMomentumQualifyingToday(
+      today: today,
+      count: next.count,
+    );
+    final grant = PvDailyMomentum.grantForQualifyingCount(next.count);
+    if (grant > 0) {
+      await pv.credit(grant);
+    }
   }
 
   /// Records create counters after goals were already persisted (time-window flow).
@@ -394,8 +428,13 @@ class GoalsUseCase {
 
   Future<void> removeCompletedGoal(int goalId) async {
     var completed = await _goals.readCompletedGoals();
-    completed.removeWhere((g) => g.goalId == goalId);
+    final index = completed.indexWhere((g) => g.goalId == goalId);
+    if (index < 0) return;
+    final removed = completed.removeAt(index);
     await _goals.writeCompletedGoals(completed);
+    if (removed.points > 0) {
+      await _points.clawback(removed.points);
+    }
   }
 
   /// Clears active goals. When [cancelRepeatSeries] is true, also deactivates
@@ -420,10 +459,15 @@ class GoalsUseCase {
   }
 
   Future<void> clearCompletedGoals() async {
-    while ((await _goals.readCompletedGoals()).isNotEmpty) {
-      final completed = await _goals.readCompletedGoals();
-      completed.removeAt(0);
-      await _goals.writeCompletedGoals(completed);
+    final completed = await _goals.readCompletedGoals();
+    if (completed.isEmpty) return;
+    var clawbackTotal = 0;
+    for (final goal in completed) {
+      clawbackTotal += goal.points;
+    }
+    await _goals.writeCompletedGoals(const []);
+    if (clawbackTotal > 0) {
+      await _points.clawback(clawbackTotal);
     }
   }
 

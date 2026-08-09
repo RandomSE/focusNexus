@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:focusNexus/repositories/app_repositories.dart';
 import 'package:focusNexus/repositories/points_repository.dart';
 import 'package:focusNexus/services/achievement_service.dart';
+import 'package:focusNexus/services/ambient_soundscape.dart';
 import 'package:focusNexus/services/storage/storage_keys.dart';
 
 import '../helpers/in_memory_key_value_storage.dart';
@@ -21,6 +22,37 @@ void main() {
 
     expect(storage.snapshot[StorageKeys.points], '50');
     expect(await repos.points.readBalance(), PointsRepository.defaultBalance);
+  });
+
+  test('wipeAllUserData clears ambient music prefs and PV points', () async {
+    final storage = InMemoryKeyValueStorage(
+      initial: {
+        StorageKeys.ambientEnabled: 'true',
+        StorageKeys.ambientGlobalTrackId: 'piano',
+        StorageKeys.ownedAmbientSounds: '["piano","running_water","white_noise"]',
+        StorageKeys.progressiveVisualsPoints: '12345',
+      },
+    );
+    final repos = AppRepositories(storage);
+    await repos.ambientSoundscapes.readEnabled();
+    await repos.progressiveVisualsPoints.readBalance();
+    expect(await repos.ambientSoundscapes.readEnabled(), isTrue);
+    expect(await repos.progressiveVisualsPoints.readBalance(), 12345);
+    expect(await repos.ambientSoundscapes.readOwnedIds(), contains('piano'));
+
+    await repos.wipeAllUserData();
+
+    expect(await repos.ambientSoundscapes.readEnabled(), isFalse);
+    expect(
+      await repos.ambientSoundscapes.readGlobalTrackId(),
+      AmbientSoundscapeCatalog.noneTrackId,
+    );
+    expect(
+      await repos.ambientSoundscapes.readOwnedIds(),
+      AmbientSoundscapeCatalog.freeTrackIds,
+    );
+    expect(await repos.progressiveVisualsPoints.readBalance(), 0);
+    expect(storage.snapshot[StorageKeys.progressiveVisualsPoints], '0');
   });
 
   test(

@@ -119,4 +119,66 @@ void main() {
       isTrue,
     );
   });
+
+  test('ambient channels unlock from ownedAmbientIds only', () {
+    expect(
+      isMusicChannelUnlocked(
+        channel: SoundChannel.ambientRunningWater,
+        garden: null,
+        progressiveVisualsEnabled: false,
+        miniGamesEnabled: false,
+        ownedAmbientIds: const {},
+      ),
+      isFalse,
+    );
+    expect(
+      isMusicChannelUnlocked(
+        channel: SoundChannel.ambientRunningWater,
+        garden: null,
+        progressiveVisualsEnabled: false,
+        miniGamesEnabled: false,
+        ownedAmbientIds: const {'running_water', 'white_noise'},
+      ),
+      isTrue,
+    );
+    expect(
+      isMusicChannelUnlocked(
+        channel: SoundChannel.ambientPiano,
+        garden: null,
+        progressiveVisualsEnabled: true,
+        miniGamesEnabled: true,
+        ownedAmbientIds: const {'running_water', 'white_noise'},
+      ),
+      isFalse,
+    );
+  });
+
+  test('living canopy maps to balance; finale prestige maps to peace/power', () {
+    expect(
+      cherryBlossomMusicForTree(
+        const CherryBlossomTreeState(
+          stageIndex: CherryBlossomStageCatalog.maxPlayableStage,
+        ).normalized(),
+      ),
+      SoundChannel.cherryBalanceMusic,
+    );
+    expect(
+      cherryBlossomMusicForTree(
+        const CherryBlossomTreeState(
+          stageIndex: CherryBlossomStageCatalog.finaleStage,
+          prestigePath: CherryBlossomPrestigePath.peace,
+        ).normalized(),
+      ),
+      SoundChannel.cherryPeaceMusic,
+    );
+    expect(
+      cherryBlossomMusicForTree(
+        const CherryBlossomTreeState(
+          stageIndex: CherryBlossomStageCatalog.finaleStage,
+          prestigePath: CherryBlossomPrestigePath.power,
+        ).normalized(),
+      ),
+      SoundChannel.cherryPowerMusic,
+    );
+  });
 }

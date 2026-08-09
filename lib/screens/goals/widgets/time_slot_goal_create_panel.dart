@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focusNexus/goals/builtin_goal_templates.dart';
+import 'package:focusNexus/goals/goal_points_labels.dart';
 import 'package:focusNexus/goals/goals_time_window_service.dart';
 import 'package:focusNexus/goals/repeat_rule.dart';
 import 'package:focusNexus/goals/time_window_points_label.dart';
@@ -121,6 +122,10 @@ class _TimeSlotGoalCreatePanelState extends ConsumerState<TimeSlotGoalCreatePane
       windowDuration: _duration,
     );
     final multiplierLabel = timeWindowMultiplierLabel(_duration);
+    final rewardLabel = timeWindowCreateRewardLabel(
+      storedPoints: previewPoints,
+      multiplierLabel: multiplierLabel,
+    );
 
     return Form(
       key: _formKey,
@@ -170,7 +175,7 @@ class _TimeSlotGoalCreatePanelState extends ConsumerState<TimeSlotGoalCreatePane
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Text(
-              'Reward: $previewPoints pts ($multiplierLabel)',
+              rewardLabel,
               style: bundle.textStyle.copyWith(fontWeight: FontWeight.w600),
             ),
           ),

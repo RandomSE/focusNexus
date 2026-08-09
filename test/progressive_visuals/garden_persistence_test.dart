@@ -154,5 +154,13 @@ void main() {
       expect(item.regrowthDiscountActive, isTrue);
       expect(roundtrip.freeFirstGrowthEverConsumed, isTrue);
     });
+
+    test('path bonsai with mutation migrates mutationUnlocked', () {
+      const json =
+          '{"decor":[{"id":"p1","themeId":"zenGarden","kind":"zen.peace_bonsai","stageIndex":4,"mutation":"invertedColors"}]}';
+      final item = GardenPersistence.decodeZenGarden(json, 0).decor.single;
+      expect(item.mutation, MutationKind.invertedColors);
+      expect(item.mutationUnlocked, isTrue);
+    });
   });
 }

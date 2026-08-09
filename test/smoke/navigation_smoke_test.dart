@@ -55,6 +55,8 @@ void main() {
 
     // Navigate Mini-games (not Progressive visuals): Zen garden persist schedules
     // a Riverpod zero-duration refresh timer that can outlive the test.
+    await tester.ensureVisible(find.text('Mini-games'));
+    await tester.pump();
     await tester.tap(find.text('Mini-games'));
     await pumpUntilFound(tester, find.text(FireflyJarConstants.title));
     expect(

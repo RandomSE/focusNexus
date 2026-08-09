@@ -6,9 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focusNexus/progressive_visuals/cherry_blossom_bonsai_ref.dart';
 import 'package:focusNexus/progressive_visuals/cherry_blossom_bonsai_tile.dart';
 import 'package:focusNexus/progressive_visuals/cherry_blossom_tree_engine.dart';
+import 'package:focusNexus/providers/app_repositories_provider.dart';
 import 'package:focusNexus/providers/app_services_provider.dart';
 import 'package:focusNexus/providers/points_balance_provider.dart';
 import 'package:focusNexus/providers/zen_garden_session_provider.dart';
+import 'package:focusNexus/services/ambient_section_playback.dart';
+import 'package:focusNexus/services/ambient_soundscape.dart';
 import 'package:focusNexus/services/sound_channel.dart';
 import 'package:focusNexus/services/sound_service.dart';
 
@@ -35,6 +38,7 @@ class BonsaiGardenScreen extends ConsumerStatefulWidget {
 class _BonsaiGardenScreenState extends ConsumerState<BonsaiGardenScreen> {
   bool _viewMode = false;
   SoundService? _sounds;
+  SoundChannel? _startedFeatureChannel;
 
   ZenGardenSession get _session => ref.read(zenGardenSessionProvider.notifier);
 
@@ -43,10 +47,29 @@ class _BonsaiGardenScreenState extends ConsumerState<BonsaiGardenScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      unawaited(
-        ref.read(soundServiceProvider).startMusic(SoundChannel.bonsaiMusic),
-      );
+      unawaited(_startBonsaiMusicIfAllowed());
     });
+  }
+
+  Future<void> _startBonsaiMusicIfAllowed() async {
+    final repo = ref.read(appRepositoriesProvider).ambientSoundscapes;
+    final suppress = await repo.shouldSuppressFeatureBgm(
+      AmbientAppSection.progressiveVisuals,
+    );
+    if (suppress) {
+      _startedFeatureChannel = null;
+      await ref.read(soundServiceProvider).stopMusic();
+      return;
+    }
+    final sounds = ref.read(soundServiceProvider);
+    final coordinator = ref.read(ambientPlaybackCoordinatorProvider);
+    final started = await startFeatureMusicOrAmbientFallback(
+      sounds: sounds,
+      repo: repo,
+      coordinator: coordinator,
+      featureChannel: SoundChannel.bonsaiMusic,
+    );
+    _startedFeatureChannel = started ? SoundChannel.bonsaiMusic : null;
   }
 
   @override
@@ -58,8 +81,9 @@ class _BonsaiGardenScreenState extends ConsumerState<BonsaiGardenScreen> {
   @override
   void dispose() {
     final sounds = _sounds;
-    if (sounds != null) {
-      unawaited(sounds.stopMusic());
+    final channel = _startedFeatureChannel;
+    if (sounds != null && channel != null) {
+      unawaited(sounds.stopMusicIfChannel(channel));
     }
     super.dispose();
   }

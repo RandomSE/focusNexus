@@ -18,6 +18,33 @@ void main() {
     expect(unlocked.cherryBlossomTreeUnlocked, isTrue);
   });
 
+  test('unlock via combined wallet + PV balance >= 10k', () {
+    const state = GardenState(
+      pointsBalance: 4000,
+      progressiveVisualsPointsBalance: 6000,
+    );
+    final unlocked = evaluateCherryBlossomUnlock(state);
+    expect(unlocked.cherryBlossomTreeUnlocked, isTrue);
+  });
+
+  test('does not unlock when combined balance and lifetime are below 10k', () {
+    const state = GardenState(
+      pointsBalance: 4000,
+      progressiveVisualsPointsBalance: 5000,
+      lifetimeZenPointsSpent: 9999,
+    );
+    final unlocked = evaluateCherryBlossomUnlock(state);
+    expect(unlocked.cherryBlossomTreeUnlocked, isFalse);
+  });
+
+  test('isCherryBlossomTreeUnlocked uses combined spendable balance', () {
+    const state = GardenState(
+      pointsBalance: 1000,
+      progressiveVisualsPointsBalance: 9000,
+    );
+    expect(isCherryBlossomTreeUnlocked(state), isTrue);
+  });
+
   test('stays unlocked after balance drops', () {
     const state = GardenState(
       pointsBalance: 100,

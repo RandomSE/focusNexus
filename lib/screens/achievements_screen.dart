@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:focusNexus/achievements/refresh_zen_after_achievement_claim.dart';
 import 'package:focusNexus/models/classes/achievement.dart';
 import 'package:focusNexus/models/classes/theme_bundle.dart';
 import 'package:focusNexus/providers/achievement_catalog_provider.dart';
@@ -12,36 +15,54 @@ import 'package:focusNexus/views/achievement_detail_view.dart';
 import 'package:focusNexus/widgets/settings_themed_builder.dart';
 import 'package:focusNexus/utils/theme_styles.dart';
 
-class AchievementScreen extends ConsumerWidget {
+class AchievementScreen extends ConsumerStatefulWidget {
   const AchievementScreen({super.key});
 
+  @override
+  ConsumerState<AchievementScreen> createState() => _AchievementScreenState();
+}
+
+class _AchievementScreenState extends ConsumerState<AchievementScreen> {
+  bool _claiming = false;
+
   Future<void> _claimAll(
-    WidgetRef ref,
     BuildContext context,
     ThemeBundle bundle,
     AchievementService service,
   ) async {
-    final result = await service.completeAllClaimable();
-    ref.read(achievementsListRefreshProvider.notifier).bump();
-    if (!context.mounted) return;
+    if (_claiming) return;
+    setState(() => _claiming = true);
     CommonUtils.showSnackBar(
       context,
-      result.claimedCount == 0
-          ? 'Nothing to claim.'
-          : 'Claimed ${result.claimedCount} achievements '
-              '(+${result.pointsGained} points)',
+      'Claiming ready achievements...',
       bundle.textStyle,
-      3000,
+      2500,
       16,
     );
+    try {
+      final result = await service.completeAllClaimable();
+      ref.read(achievementsListRefreshProvider.notifier).bump();
+      await refreshZenAfterAchievementClaim(ref);
+      if (!context.mounted) return;
+      CommonUtils.showSnackBar(
+        context,
+        result.claimedCount == 0
+            ? 'Nothing to claim.'
+            : 'Claimed ${result.claimedCount} achievements '
+                '(+${result.pointsGained} points)',
+        bundle.textStyle,
+        3500,
+        16,
+      );
+    } finally {
+      if (mounted) setState(() => _claiming = false);
+    }
   }
 
   Future<void> _openAchievement(
-    WidgetRef ref,
     BuildContext context,
     Achievement achievement,
     ThemeBundle bundle,
-    AchievementService service,
   ) async {
     final refreshList = await Navigator.push<bool>(
       context,
@@ -58,11 +79,12 @@ class AchievementScreen extends ConsumerWidget {
     );
     if (refreshList == true) {
       ref.read(achievementsListRefreshProvider.notifier).bump();
+      await refreshZenAfterAchievementClaim(ref);
     }
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final catalog = ref.watch(achievementCatalogProvider);
     final service = ref.watch(achievementServiceProvider);
 
@@ -83,7 +105,7 @@ class AchievementScreen extends ConsumerWidget {
                 ),
               ),
               backgroundColor: bundle.secondaryColor,
-              iconTheme: ThemeStyles.iconThemeFor( bundle.primaryColor),
+              iconTheme: ThemeStyles.iconThemeFor(bundle.primaryColor),
             ),
             backgroundColor: bundle.secondaryColor,
             body: Container(
@@ -93,16 +115,43 @@ class AchievementScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (hasClaimable) ...[
-                      CommonUtils.buildElevatedButton(
-                        'Claim all ready',
-                        bundle.primaryColor,
-                        Colors.deepPurple,
-                        bundle.textStyle,
-                        14,
-                        10,
-                        () => _claimAll(ref, context, bundle, service),
-                      ),
+                    if (hasClaimable || _claiming) ...[
+                      if (_claiming)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: bundle.primaryColor,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Flexible(
+                                child: Text(
+                                  'Claiming ready achievements...',
+                                  style: bundle.textStyle,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        CommonUtils.buildElevatedButton(
+                          'Claim all ready',
+                          bundle.primaryColor,
+                          Colors.deepPurple,
+                          bundle.textStyle,
+                          14,
+                          10,
+                          () => _claimAll(context, bundle, service),
+                        ),
                       const SizedBox(height: 12),
                     ],
                     Text(
@@ -112,7 +161,8 @@ class AchievementScreen extends ConsumerWidget {
                       ),
                     ),
                     ...catalog.inProgress.map((achievement) {
-                      final displayProgress = AchievementProgress.displayPercent(
+                      final displayProgress =
+                          AchievementProgress.displayPercent(
                         progress: achievement.progress,
                         isCompleted: achievement.isCompleted,
                       );
@@ -120,54 +170,50 @@ class AchievementScreen extends ConsumerWidget {
                       final buttonColor = readyToClaim
                           ? Colors.deepPurple
                           : bundle.secondaryColor;
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        child: CommonUtils.buildElevatedButton(
-                          achievement.title,
-                          bundle.primaryColor,
-                          buttonColor,
-                          bundle.textStyle,
-                          14,
-                          10,
-                          () => _openAchievement(
-                            ref,
-                            context,
-                            achievement,
-                            bundle,
-                            service,
-                          ),
-                          borderColor: readyToClaim
-                              ? Colors.deepPurple
-                              : bundle.primaryColor,
-                        ),
+                      return CommonUtils.buildElevatedButton(
+                        '${achievement.title} - '
+                        '${displayProgress.toStringAsFixed(0)}%',
+                        readyToClaim
+                            ? bundle.secondaryColor
+                            : bundle.primaryColor,
+                        buttonColor,
+                        bundle.textStyle,
+                        10,
+                        8,
+                        _claiming
+                            ? null
+                            : () => _openAchievement(
+                                  context,
+                                  achievement,
+                                  bundle,
+                                ),
+                        borderColor: readyToClaim
+                            ? Colors.deepPurpleAccent
+                            : bundle.primaryColor,
                       );
                     }),
+                    const SizedBox(height: 16),
                     Text(
                       'Completed achievements',
-                      style: bundle.textStyle.copyWith(
-                        color: Colors.deepPurple,
+                      style: bundle.textStyle,
+                    ),
+                    ...catalog.completed.map(
+                      (achievement) => CommonUtils.buildElevatedButton(
+                        achievement.title,
+                        bundle.primaryColor,
+                        bundle.secondaryColor,
+                        bundle.textStyle,
+                        10,
+                        8,
+                        _claiming
+                            ? null
+                            : () => _openAchievement(
+                                  context,
+                                  achievement,
+                                  bundle,
+                                ),
                       ),
                     ),
-                    ...catalog.completed.map((achievement) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        child: CommonUtils.buildElevatedButton(
-                          achievement.title,
-                          bundle.primaryColor,
-                          bundle.secondaryColor,
-                          bundle.textStyle,
-                          14,
-                          10,
-                          () => _openAchievement(
-                            ref,
-                            context,
-                            achievement,
-                            bundle,
-                            service,
-                          ),
-                        ),
-                      );
-                    }),
                   ],
                 ),
               ),

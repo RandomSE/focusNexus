@@ -6,6 +6,7 @@ import 'package:focusNexus/providers/goals_provider.dart';
 import 'package:focusNexus/providers/theme_bundle_provider.dart';
 import 'package:focusNexus/screens/goals/widgets/edit_repeat_series_dialog.dart';
 import 'package:focusNexus/utils/common_utils.dart';
+import 'package:focusNexus/widgets/section_title_actions.dart';
 
 class ActiveRepeatSeriesSection extends ConsumerStatefulWidget {
   const ActiveRepeatSeriesSection({
@@ -113,14 +114,10 @@ class _ActiveRepeatSeriesSectionState
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Active repeating goals',
-                    style: bundle.textStyle,
-                  ),
-                ),
+            SectionTitleActions(
+              title: 'Active repeating goals',
+              titleStyle: bundle.textStyle,
+              actions: [
                 if (series.isNotEmpty)
                   TextButton(
                     onPressed: _clearAllRepeating,

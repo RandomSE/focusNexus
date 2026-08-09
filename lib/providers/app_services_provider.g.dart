@@ -7,7 +7,7 @@ part of 'app_services_provider.dart';
 // **************************************************************************
 
 String _$achievementServiceHash() =>
-    r'30d493fd896a6ec7385ec4da0bb6b84745a088eb';
+    r'8fa037fd2328da1e3fb8236e13339bbc32b2c75c';
 
 /// Achievement facade with injected storage and points.
 ///
@@ -104,7 +104,7 @@ final achievementTrackingWiringProvider = Provider<void>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef AchievementTrackingWiringRef = ProviderRef<void>;
-String _$appServicesWiredHash() => r'fd6e64f85497d29132a7b026e2dc463e410c1305';
+String _$appServicesWiredHash() => r'2e3c23d3823e8c6f8fec9c318e079e41689f53ae';
 
 /// Ensures injected app services are constructed for this [ProviderScope].
 ///

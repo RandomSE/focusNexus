@@ -62,6 +62,12 @@ void main() {
         tester.state<ScrollableState>(scrollable).position.pixels;
     expect(pixelsAfterUp, greaterThan(300));
     expect(find.text('Scroll Goal 0'), findsOneWidget);
+    // Header is a non-pinned SliverToBoxAdapter; bring it back into view.
+    await tester.scrollUntilVisible(
+      find.text('Your goals'),
+      -200,
+      scrollable: scrollable,
+    );
     expect(find.text('Your goals'), findsOneWidget);
 
     await tester.fling(scrollable, const Offset(0, 2000), 3000);

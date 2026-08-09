@@ -39,4 +39,10 @@ void main() {
       expect(tinted.a, base.a);
     });
   });
+
+  group('rgbInvertColorFilter', () {
+    test('is a matrix ColorFilter usable by ColorFiltered', () {
+      expect(rgbInvertColorFilter, isA<ColorFilter>());
+    });
+  });
 }

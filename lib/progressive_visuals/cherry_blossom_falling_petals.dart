@@ -14,6 +14,7 @@ class CherryBlossomFallingPetals extends StatefulWidget {
     required this.stageIndex,
     this.animate = true,
     this.compact = false,
+    this.sizeMul = 1.0,
   });
 
   final Size size;
@@ -22,6 +23,9 @@ class CherryBlossomFallingPetals extends StatefulWidget {
 
   /// Bonsai pots: half petal radius so leaves match cell scale.
   final bool compact;
+
+  /// Extra scale vs bonsai-garden reference (zen placeables use cellWidth / 72).
+  final double sizeMul;
 
   /// Soft stage-tinted petal fills (tree art stays the hero).
   static Color colorForStage(int stageIndex) {
@@ -122,7 +126,7 @@ class _CherryBlossomFallingPetalsState extends State<CherryBlossomFallingPetals>
 
   void _spawnPetal() {
     final random = math.Random();
-    final radiusScale = widget.compact ? 0.5 : 1.0;
+    final radiusScale = (widget.compact ? 0.5 : 1.0) * widget.sizeMul;
     _petals.add(
       _Petal(
         x: random.nextDouble() * widget.size.width,

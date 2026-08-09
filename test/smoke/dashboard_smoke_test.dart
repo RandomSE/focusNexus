@@ -16,5 +16,6 @@ void main() {
     expect(find.text('Goals'), findsOneWidget);
     expect(find.text('Settings'), findsOneWidget);
     expect(find.text('Achievements'), findsOneWidget);
+    expect(find.text('Consistency'), findsWidgets);
   });
 }

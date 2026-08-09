@@ -352,6 +352,9 @@ void showZenGardenInventorySheet({
 
                                 stack.itemIds.contains(placingDecorInventoryId);
 
+                            final pathClaimLocked =
+                                isZenLockedBonsaiKind(d.kind);
+
                             final countLabel =
 
                                 stack.count > 1 ? ' ×${stack.count}' : '';
@@ -374,12 +377,11 @@ void showZenGardenInventorySheet({
 
                               title: '${meta?.label ?? d.kind}$countLabel',
 
-                              subtitle:
-
-                                  'Stage ${d.stageIndex + 1} · Sell: $sell pts each'
-
-                                  '${d.mutation != null ? ' · variant' : ''}',
-
+                              subtitle: pathClaimLocked
+                                  ? ('Fully formed · Achievement reward (locked)'
+                                      '${isZenPathClaimBonsaiKind(d.kind) && d.mutationUnlocked ? (d.mutation != null ? ' · inverted on' : ' · inverted off') : ''}')
+                                  : ('Stage ${d.stageIndex + 1} · Sell: $sell pts each'
+                                      '${d.mutation != null ? ' · variant' : ''}'),
                               titleStyle: textStyle,
 
                               subtitleStyle: subtitleStyle,
@@ -442,79 +444,81 @@ void showZenGardenInventorySheet({
 
                                   ),
 
-                                OutlinedButton(
+                                if (!pathClaimLocked)
 
-                                  onPressed: () {
+                                  OutlinedButton(
 
-                                    final itemId = stack.sellItemId;
+                                    onPressed: () {
 
-                                    onApplyInventoryOp(
+                                      final itemId = stack.sellItemId;
 
-                                      engine.sellDecorInventoryItem(
+                                      onApplyInventoryOp(
 
-                                        garden,
+                                        engine.sellDecorInventoryItem(
 
-                                        itemId,
+                                          garden,
 
-                                      ),
-
-                                      announce:
-
-                                          'Sold decoration for $sell points.',
-
-                                      pointsEarned: sell,
-
-                                    );
-
-                                    if (placingDecorInventoryId != null &&
-
-                                        stack.itemIds.contains(
-
-                                          placingDecorInventoryId,
-
-                                        )) {
-
-                                      final nextId =
-
-                                          nextDecorInventoryIdInStack(
-
-                                        garden.decorInventory,
-
-                                        stackKey,
-
-                                      );
-
-                                      onPatch(
-
-                                        (s) => s.copyWith(
-
-                                          placingDecorInventoryId: nextId,
-
-                                          clearPlacingDecorInventoryId:
-
-                                              nextId == null,
+                                          itemId,
 
                                         ),
 
+                                        announce:
+
+                                            'Sold decoration for $sell points.',
+
+                                        pointsEarned: sell,
+
                                       );
 
-                                    }
+                                      if (placingDecorInventoryId != null &&
 
-                                    refreshSheet();
+                                          stack.itemIds.contains(
 
-                                    if (garden.plantInventory.isEmpty &&
+                                            placingDecorInventoryId,
 
-                                        garden.decorInventory.isEmpty) {
+                                          )) {
 
-                                      Navigator.pop(sheetCtx);
+                                        final nextId =
 
-                                    }
+                                            nextDecorInventoryIdInStack(
 
-                                  },
+                                          garden.decorInventory,
 
-                                  child: const Text('Sell 1'),
+                                          stackKey,
 
-                                ),
+                                        );
+
+                                        onPatch(
+
+                                          (s) => s.copyWith(
+
+                                            placingDecorInventoryId: nextId,
+
+                                            clearPlacingDecorInventoryId:
+
+                                                nextId == null,
+
+                                          ),
+
+                                        );
+
+                                      }
+
+                                      refreshSheet();
+
+                                      if (garden.plantInventory.isEmpty &&
+
+                                          garden.decorInventory.isEmpty) {
+
+                                        Navigator.pop(sheetCtx);
+
+                                      }
+
+                                    },
+
+                                    child: const Text('Sell 1'),
+
+                                  ),
 
                               ],
 

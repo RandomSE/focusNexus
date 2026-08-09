@@ -6,6 +6,7 @@ import 'package:focusNexus/progressive_visuals/visual_theme_id.dart';
 import 'package:focusNexus/repositories/theme_repository.dart';
 import 'package:focusNexus/repositories/user_prefs_repository.dart';
 import 'package:focusNexus/rewards/reward_type_selection.dart';
+import 'package:focusNexus/screens/consistency_explorer_screen.dart';
 import 'package:focusNexus/services/storage/storage_keys.dart';
 import 'package:focusNexus/settings/app_settings.dart';
 
@@ -130,6 +131,47 @@ void main() {
       );
       expect(route, isA<SoundEffectsRoute>());
       expect(route.path, SoundEffectsRoute.routeName);
+    });
+
+    test('parses split phrase pack routes', () {
+      expect(
+        AppRoute.fromRouteSettings(
+          const RouteSettings(name: DashboardMotivatorPackRoute.routeName),
+        ),
+        isA<DashboardMotivatorPackRoute>(),
+      );
+      expect(
+        AppRoute.fromRouteSettings(
+          const RouteSettings(name: DailyAffirmationPackRoute.routeName),
+        ),
+        isA<DailyAffirmationPackRoute>(),
+      );
+      expect(
+        AppRoute.fromRouteSettings(
+          const RouteSettings(name: CustomAffirmationPackRoute.routeName),
+        ),
+        isA<CustomAffirmationPackRoute>(),
+      );
+    });
+
+    test('parses consistency explorer with args', () {
+      final route = AppRoute.fromRouteSettings(
+        RouteSettings(
+          name: ConsistencyExplorerRoute.routeName,
+          arguments: ConsistencyExplorerArgs(
+            year: 2025,
+            month: 7,
+            selectedDay: DateTime(2025, 7, 3),
+            useMockData: true,
+          ),
+        ),
+      );
+      expect(route, isA<ConsistencyExplorerRoute>());
+      final typed = route as ConsistencyExplorerRoute;
+      expect(typed.year, 2025);
+      expect(typed.month, 7);
+      expect(typed.useMockData, isTrue);
+      expect(typed.selectedDay, DateTime(2025, 7, 3));
     });
   });
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:focusNexus/progressive_visuals/cherry_blossom_falling_petals.dart';
+import 'package:focusNexus/progressive_visuals/cherry_blossom_bonsai_tile.dart';
 import 'package:focusNexus/progressive_visuals/cherry_blossom_multiply_blend.dart';
 import 'package:focusNexus/progressive_visuals/cherry_blossom_peace_petals.dart';
 import 'package:focusNexus/progressive_visuals/cherry_blossom_power_petals.dart';
@@ -214,8 +215,26 @@ void main() {
     final power = tester.widget<CherryBlossomPowerPetals>(
       find.byType(CherryBlossomPowerPetals),
     );
-    expect(peace.sizeMul, CherryBlossomPeacePetals.bonsaiSizeMul);
-    expect(power.sizeMul, CherryBlossomPowerPetals.bonsaiSizeMul);
+    expect(
+      peace.sizeMul,
+      closeTo(
+        CherryBlossomBonsaiTile.scaledBonsaiPetalMul(
+          cellWidth: peace.size.width,
+          bonsaiSizeMul: CherryBlossomPeacePetals.bonsaiSizeMul,
+        ),
+        0.0001,
+      ),
+    );
+    expect(
+      power.sizeMul,
+      closeTo(
+        CherryBlossomBonsaiTile.scaledBonsaiPetalMul(
+          cellWidth: power.size.width,
+          bonsaiSizeMul: CherryBlossomPowerPetals.bonsaiSizeMul,
+        ),
+        0.0001,
+      ),
+    );
     expect(peace.litePaint, isTrue);
     expect(power.litePaint, isTrue);
     expect(

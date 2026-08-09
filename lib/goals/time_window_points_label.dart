@@ -1,3 +1,4 @@
+import 'package:focusNexus/goals/goal_points_labels.dart';
 import 'package:focusNexus/goals/time_window_goal.dart';
 import 'package:focusNexus/models/classes/goal_set.dart';
 import 'package:focusNexus/utils/goal_points.dart';
@@ -37,10 +38,14 @@ int previewTimeWindowPoints({
 }
 
 /// Points line for list tiles and detail views, including multiplier context.
+///
+/// Daily completion award is applied at claim time and is not in [goal.points]
+/// until after complete (completed goals store the awarded total).
 String timeWindowGoalPointsLabel(GoalSet goal) {
   final duration = goalActionWindowDuration(goal);
   if (duration == null) {
-    return '${goal.points} pts';
+    return activeGoalPointsWithDailyPreview(goal.points);
   }
-  return '${goal.points} pts (${timeWindowMultiplierLabel(duration)})';
+  return '${goal.points} pts (${timeWindowMultiplierLabel(duration)}; '
+      '${firstOfDaySplitPreview(goal.points)})';
 }

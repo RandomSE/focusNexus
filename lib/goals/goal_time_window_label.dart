@@ -1,4 +1,5 @@
 import 'package:focusNexus/goals/goal_deadline_label.dart';
+import 'package:focusNexus/goals/goal_points_labels.dart';
 import 'package:focusNexus/goals/repeat_rule.dart';
 import 'package:focusNexus/goals/time_window_goal.dart';
 import 'package:focusNexus/goals/time_window_points_label.dart';
@@ -42,7 +43,13 @@ List<String> goalListSubtitleLines({
     final dateLabel = selectedStatusFilter == 'Completed'
         ? 'Completed ${goalCompletedLabel(goal.completedAt)}'
         : goalDeadlineLabel(goal.deadline);
-    lines.add('${goal.points} pts · $dateLabel');
+    if (selectedStatusFilter == 'Active') {
+      lines.add(
+        '${activeGoalPointsWithDailyPreview(goal.points)} · $dateLabel',
+      );
+    } else {
+      lines.add('${goal.points} pts · $dateLabel');
+    }
   }
 
   if (selectedStatusFilter == 'Active' && steps > 1) {

@@ -38,6 +38,8 @@ void main() {
       actionWindowEnd: DateTime(2026, 6, 21, 15).toIso8601String(),
     );
     expect(timeWindowGoalPointsLabel(goal), contains('2× strict slot'));
+    expect(timeWindowGoalPointsLabel(goal), contains('if first today'));
+    expect(timeWindowGoalPointsLabel(goal), contains('momentum'));
     expect(timeWindowGoalPointsLabel(goal), startsWith('${goal.points} pts'));
   });
 }

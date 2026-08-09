@@ -22,26 +22,17 @@ void main() {
       expect(DailyOpenRewardService.rewardForStreak(100), 350);
     });
 
-    test('parameterized softCapAlt 200 for A/B', () {
+    test('parameterized maxCap 200', () {
       expect(
-        DailyOpenRewardService.rewardForStreak(
-          16,
-          maxCap: DailyOpenRewardService.softCapAlt,
-        ),
+        DailyOpenRewardService.rewardForStreak(16, maxCap: 200),
         200,
       );
       expect(
-        DailyOpenRewardService.rewardForStreak(
-          31,
-          maxCap: DailyOpenRewardService.softCapAlt,
-        ),
+        DailyOpenRewardService.rewardForStreak(31, maxCap: 200),
         200,
       );
       expect(
-        DailyOpenRewardService.rewardForStreak(
-          10,
-          maxCap: DailyOpenRewardService.softCapAlt,
-        ),
+        DailyOpenRewardService.rewardForStreak(10, maxCap: 200),
         140,
       );
     });

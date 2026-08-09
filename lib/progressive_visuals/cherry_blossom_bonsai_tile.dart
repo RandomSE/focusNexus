@@ -22,6 +22,7 @@ class CherryBlossomBonsaiTile extends StatelessWidget {
     this.empty = false,
     this.countLabel,
     this.animateEffects = true,
+    this.showChrome = true,
   });
 
   final String? bonsaiKey;
@@ -30,6 +31,24 @@ class CherryBlossomBonsaiTile extends StatelessWidget {
   final bool empty;
   final String? countLabel;
   final bool animateEffects;
+
+  /// When false, omits pot border / ink (zen garden placeable embedding).
+  final bool showChrome;
+
+  /// Phone bonsai-grid cell width assumed when [CherryBlossomPeacePetals.bonsaiSizeMul]
+  /// / Power mul were tuned. Petal pixel size scales with cell width vs this ref
+  /// so zen placeables keep the same petal-to-tree proportion.
+  static const double petalScaleReferenceWidth = 72;
+
+  /// Scales bonsai petal mul by [cellWidth] / [petalScaleReferenceWidth].
+  static double scaledBonsaiPetalMul({
+    required double cellWidth,
+    required double bonsaiSizeMul,
+  }) {
+    if (cellWidth <= 0) return bonsaiSizeMul;
+    final scale = (cellWidth / petalScaleReferenceWidth).clamp(0.35, 2.5);
+    return bonsaiSizeMul * scale;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +62,19 @@ class CherryBlossomBonsaiTile extends StatelessWidget {
         final stage = ref?.stageIndex ?? 0;
         final fillsSlot =
             ref != null && CherryBlossomStageCatalog.bonsaiFillsSlot(stage);
+
+        final tree = empty || ref == null
+            ? const SizedBox.shrink()
+            : fillsSlot
+                ? _buildFullSlotTree(ref, cellSize)
+                : _buildGroundedTree(ref, cellSize);
+
+        if (!showChrome) {
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: tree,
+          );
+        }
 
         return Material(
           color: Colors.transparent,
@@ -61,11 +93,7 @@ class CherryBlossomBonsaiTile extends StatelessWidget {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(3),
-                child: empty || ref == null
-                    ? null
-                    : fillsSlot
-                        ? _buildFullSlotTree(ref, cellSize)
-                        : _buildGroundedTree(ref, cellSize),
+                child: tree,
               ),
             ),
           ),
@@ -102,14 +130,20 @@ class CherryBlossomBonsaiTile extends StatelessWidget {
             displayLevel: CherryBlossomStageSixLeaves.bonsaiPotConcurrent,
             maxConcurrent: CherryBlossomStageSixLeaves.bonsaiPotConcurrent,
             animate: animateEffects,
-            sizeScale: CherryBlossomStageSixLeaves.bonsaiSizeScale,
+            sizeScale: scaledBonsaiPetalMul(
+              cellWidth: cellSize.width,
+              bonsaiSizeMul: CherryBlossomStageSixLeaves.bonsaiSizeScale,
+            ),
           ),
         if (stage == CherryBlossomStageCatalog.finaleStage)
           switch (ref.prestigePath ?? CherryBlossomPrestigePath.peace) {
             CherryBlossomPrestigePath.peace => CherryBlossomPeacePetals(
                 size: cellSize,
                 animate: animateEffects,
-                sizeMul: CherryBlossomPeacePetals.bonsaiSizeMul,
+                sizeMul: scaledBonsaiPetalMul(
+                  cellWidth: cellSize.width,
+                  bonsaiSizeMul: CherryBlossomPeacePetals.bonsaiSizeMul,
+                ),
                 minConcurrent: CherryBlossomPeacePetals.bonsaiMinConcurrent,
                 maxConcurrent: CherryBlossomPeacePetals.bonsaiMaxConcurrent,
                 litePaint: true,
@@ -117,7 +151,10 @@ class CherryBlossomBonsaiTile extends StatelessWidget {
             CherryBlossomPrestigePath.power => CherryBlossomPowerPetals(
                 size: cellSize,
                 animate: animateEffects,
-                sizeMul: CherryBlossomPowerPetals.bonsaiSizeMul,
+                sizeMul: scaledBonsaiPetalMul(
+                  cellWidth: cellSize.width,
+                  bonsaiSizeMul: CherryBlossomPowerPetals.bonsaiSizeMul,
+                ),
                 minConcurrent: CherryBlossomPowerPetals.bonsaiMinConcurrent,
                 maxConcurrent: CherryBlossomPowerPetals.bonsaiMaxConcurrent,
                 litePaint: true,
@@ -183,6 +220,7 @@ class CherryBlossomBonsaiTile extends StatelessWidget {
             stageIndex: stage,
             animate: animateEffects,
             compact: true,
+            sizeMul: cellSize.width / petalScaleReferenceWidth,
           ),
         if (countLabel != null) _countBadge(),
       ],

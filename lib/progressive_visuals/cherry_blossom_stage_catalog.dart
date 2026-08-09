@@ -10,14 +10,17 @@ abstract final class CherryBlossomStageCatalog {
   static const int maxPlayableStage = 6;
   static const int finaleStage = 7;
 
+  /// Stage investment totals (FU-1 geometric 0-5; stage 6 kept at 1_000_000).
+  /// Series ~4x: 500, 2000, 8000, 32000, 128000, 512000, 1000000.
+  /// Stage sum 1,682,500; with first path switch 1,782,500.
   static const List<int> _stageTotals = [
     500,
-    2500,
-    12500,
-    50000,
-    100000,
-    500000,
-    2000000,
+    2000,
+    8000,
+    32000,
+    128000,
+    512000,
+    1000000,
   ];
 
   static const List<String> _stageNames = [
@@ -42,7 +45,7 @@ abstract final class CherryBlossomStageCatalog {
   static int grandTotalToMaxStage6() =>
       _stageTotals.fold<int>(0, (sum, total) => sum + total);
 
-  static const int pathSwitchCost = 500000;
+  static const int pathSwitchCost = 100000;
 
   static int maxGrowthStepsForStage(int stageIndex) {
     if (stageIndex == finaleStage) return 1;
