@@ -172,7 +172,7 @@ class SoundService {
   @visibleForTesting
   bool get isBreathBackgroundRequested => _breathBackgroundRequested;
 
-  @visibleForTesting
+  /// Whether ambient playback is currently requested (may be ducked under BGM).
   bool get isAmbientRequested => _ambientRequested;
 
   /// True while zen/cherry/bonsai/breath (or other feature) BGM is requested.

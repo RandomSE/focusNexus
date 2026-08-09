@@ -185,12 +185,6 @@ class _ZenGardenScreenState extends ConsumerState<ZenGardenScreen> {
     await _startZenMusicIfAllowed();
   }
 
-  int get _walletBalance {
-    final fromProvider = ref.watch(pointsBalanceProvider).valueOrNull;
-    if (fromProvider != null) return fromProvider;
-    return _garden.pointsBalance;
-  }
-
   void _showZenGardenHelp() {
     CommonUtils.showBasicAlertDialog(
       context,

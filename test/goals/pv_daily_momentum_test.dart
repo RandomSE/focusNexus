@@ -69,7 +69,7 @@ void main() {
       final yesterday = PvDailyMomentum.nextQualifyingCount(
         stored: null,
         today: '08 08 2026',
-      )..copyWith(count: 9);
+      );
       final stored = yesterday.copyWith(count: 9).toStorage();
 
       final today = PvDailyMomentum.nextQualifyingCount(
