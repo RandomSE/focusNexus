@@ -349,6 +349,38 @@ class GoalsTimeWindowService {
     return (series: updatedSeries, updatedGoal: updatedGoal);
   }
 
+  /// Updates a one-off (non-repeating) time-window goal instance.
+  Future<GoalSet?> updateTimeWindowGoal({
+    required GoalSet goal,
+    required DateTime windowEndAt,
+    required Duration windowDuration,
+    required DateTime now,
+  }) async {
+    if (goal.repeatSeriesId != 0 || !isTimeWindowGoal(goal)) return null;
+    if (windowDuration <= Duration.zero) return null;
+
+    final window = computeActionWindow(
+      endAt: windowEndAt,
+      duration: windowDuration,
+      now: now,
+    );
+    final updated = goal.copyWith(
+      actionWindowStart: formatGoalDateTime(window.start),
+      actionWindowEnd: formatGoalDateTime(window.end),
+      points: GoalPoints.calculateTimeWindowPoints(
+        complexity: goal.complexity,
+        effort: goal.effort,
+        motivation: goal.motivation,
+        time: goal.time.toString(),
+        steps: goal.steps.toString(),
+        windowDuration: window.duration,
+      ),
+    );
+    await _notifications.cancelForGoal(goal);
+    await _scheduleActionWindowNotifications(updated, window, now);
+    return updated;
+  }
+
   /// Deactivates all active repeat series (used when user confirms on clear-active).
   Future<void> deactivateAllActiveSeries() async {
     final active = await _repeats.readActive();

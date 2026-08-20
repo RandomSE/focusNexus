@@ -13,8 +13,16 @@ String _formatEffort(double effortAward) {
 
 String firstOfDaySplitPreview(int storedPoints) {
   final b = GoalPoints.previewFirstOfDayBreakdown(storedPoints);
-  return '~${b.total} if first today '
-      '(effort ${_formatEffort(b.effortAward)} + momentum ${b.momentumBonus})';
+  final effortText = _formatEffort(b.effortAward);
+  final preRound = b.effortAward + b.momentumBonus;
+  final preRoundText = _formatEffort(preRound);
+  final base =
+      '~${b.total} if first today (effort $effortText + momentum ${b.momentumBonus}';
+  // Wallet award rounds the sum to the nearest 5; show that when it matters.
+  if (preRound == b.total) {
+    return '$base)';
+  }
+  return '$base = $preRoundText, rounded to ${b.total})';
 }
 
 /// Active-goal points line: stored (pre-daily) plus first-of-day award preview.

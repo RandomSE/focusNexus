@@ -28,4 +28,24 @@ void main() {
       );
     });
   });
+
+  group('affirmationHorizonDaysFor', () {
+    test('iOS horizon is below 64 pending cap', () {
+      expect(
+        NotificationScheduleUtils.affirmationHorizonDaysFor(isIos: true),
+        NotificationScheduleUtils.iosAffirmationHorizonDays,
+      );
+      expect(
+        NotificationScheduleUtils.iosAffirmationHorizonDays,
+        lessThan(64),
+      );
+    });
+
+    test('non-iOS keeps 90-day horizon', () {
+      expect(
+        NotificationScheduleUtils.affirmationHorizonDaysFor(isIos: false),
+        90,
+      );
+    });
+  });
 }

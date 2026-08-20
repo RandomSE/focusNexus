@@ -59,12 +59,9 @@ Future<bool> showEditRepeatSeriesDialog({
                         endAt: endAt,
                         startAt: startAt,
                         duration: duration,
-                        fullDaysOnly: true,
                         onEndChanged: (v) =>
                             setLocalState(() => endAt = v),
-                        onStartChanged: (v) => setLocalState(
-                          () => duration = endAt.difference(v),
-                        ),
+                        onStartChanged: (_) {},
                         onDurationChanged: (v) =>
                             setLocalState(() => duration = v),
                       ),

@@ -7,6 +7,7 @@ import 'package:focusNexus/mini_games/firefly_jar/firefly_jar_achievements.dart'
 import 'package:focusNexus/mini_games/firefly_jar/firefly_jar_constants.dart';
 import 'package:focusNexus/mini_games/firefly_jar/firefly_jar_engine.dart';
 import 'package:focusNexus/mini_games/firefly_jar/firefly_jar_painter.dart';
+import 'package:focusNexus/mini_games/mini_game_round_complete_gate.dart';
 import 'package:focusNexus/mini_games/mini_game_round_config.dart';
 import 'package:focusNexus/providers/app_repositories_provider.dart';
 import 'package:focusNexus/providers/app_services_provider.dart';
@@ -35,6 +36,7 @@ class _FireflyJarPlayScreenState extends ConsumerState<FireflyJarPlayScreen>
   FireflyJarEngine? _engine;
   Duration? _lastElapsed;
   bool _scoreRecorded = false;
+  final _roundCompleteGate = MiniGameRoundCompleteGate();
 
   bool get _endless => widget.config.endless;
 
@@ -90,7 +92,7 @@ class _FireflyJarPlayScreenState extends ConsumerState<FireflyJarPlayScreen>
     final wasFinished = engine.isFinished;
     engine.update(dt);
     if (!wasFinished && engine.isFinished) {
-      _onRoundComplete();
+      _roundCompleteGate.ensure(_onRoundComplete);
     }
     if (mounted) setState(() {});
   }
@@ -126,7 +128,7 @@ class _FireflyJarPlayScreenState extends ConsumerState<FireflyJarPlayScreen>
     final engine = _engine;
     if (engine == null || engine.isFinished) return;
     engine.endRound();
-    await _onRoundComplete();
+    await _roundCompleteGate.ensure(_onRoundComplete);
   }
 
   void _onTapDown(TapDownDetails details) {
@@ -170,7 +172,8 @@ class _FireflyJarPlayScreenState extends ConsumerState<FireflyJarPlayScreen>
                   final size = Size(constraints.maxWidth, constraints.maxHeight);
                   _ensureEngine(size);
                   final engine = _engine!;
-                  void dismiss() {
+                  Future<void> dismiss() async {
+                    await _roundCompleteGate.ensure(_onRoundComplete);
                     if (context.mounted) Navigator.of(context).pop();
                   }
                   return Stack(
@@ -190,8 +193,8 @@ class _FireflyJarPlayScreenState extends ConsumerState<FireflyJarPlayScreen>
                         onBack: () async {
                           if (!engine.isFinished) {
                             engine.endRound();
-                            await _onRoundComplete();
                           }
+                          await _roundCompleteGate.ensure(_onRoundComplete);
                           if (context.mounted) {
                             Navigator.of(context).pop();
                           }

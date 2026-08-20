@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focusNexus/goals/builtin_goal_templates.dart';
 import 'package:focusNexus/goals/goals_time_window_service.dart';
 import 'package:focusNexus/goals/repeat_rule.dart';
+import 'package:focusNexus/goals/time_window_goal.dart';
 import 'package:focusNexus/models/classes/theme_bundle.dart';
 import 'package:focusNexus/providers/goals_provider.dart';
 import 'package:focusNexus/providers/goals_screen_ui_provider.dart';
@@ -44,8 +45,8 @@ class _TimeWindowBulkCreateWizardState
   int _step = 0;
   final _selected = <String>{};
   final _drafts = <_BulkDraft>[];
-  DateTime _sharedEnd = DateTime.now().add(const Duration(hours: 2));
-  Duration _sharedDuration = const Duration(hours: 1);
+  DateTime _sharedEnd = defaultTimeWindowEnd();
+  Duration _sharedDuration = defaultTimeWindowDuration;
   RepeatRule _sharedRepeat = RepeatRule.none;
 
   Map<String, Map<String, dynamic>> get _templates {

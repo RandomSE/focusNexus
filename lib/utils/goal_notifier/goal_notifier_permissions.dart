@@ -3,6 +3,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:focusNexus/services/storage/storage_keys.dart';
 import 'package:focusNexus/utils/debug_log.dart';
+import 'package:focusNexus/utils/notification_platform.dart';
 
 import '../theme_styles.dart';
 import 'goal_notifier_bindings.dart';
@@ -16,31 +17,42 @@ Future<bool> areNotificationsEnabledByFrequency() async {
   return ThemeStyles.notificationsEnabledForFrequency(frequency);
 }
 
-/// Request notification permission
+/// Request notification permission (platform-aware).
 Future<void> requestNotificationPermission() async {
-  final r = GoalNotifierRuntime.I;
-  // Request POST_NOTIFICATIONS (Android 13+)
-  final statusNotification = await Permission.notification.request();
+  if (NotificationPlatform.isIos) {
+    await _requestIosNotificationPermission();
+    return;
+  }
+  await _requestAndroidNotificationPermission();
+}
 
-  // Request SCHEDULE_EXACT_ALARM (Android 12+)
+Future<void> _requestAndroidNotificationPermission() async {
+  final r = GoalNotifierRuntime.I;
+  final statusNotification = await Permission.notification.request();
+  // Exact alarm is optional: denial only affects schedule precision.
   final statusExactAlarm = await Permission.scheduleExactAlarm.request();
 
-  // Check if any critical permission is denied
-  if (!statusNotification.isGranted || !statusExactAlarm.isGranted) {
+  if (!statusNotification.isGranted) {
     final status = await Permission.notification.status;
     final shouldShow =
         await Permission.notification.shouldShowRequestRationale;
     debugLog('Status: $status. Should show: $shouldShow');
-    debugLog('Critical notification permissions not granted.');
+    debugLog('Notification permission not granted.');
     if (shouldShow) {
-      return; // User denied notification - don't send request
+      return;
     } else {
-      await openNotificationSettings(); // User previously blocked notification popup, triggered again - Send to settings for request.
+      await openNotificationSettings();
       return;
     }
   }
 
-  // Check if notifications are enabled in system settings
+  if (!statusExactAlarm.isGranted) {
+    debugLog(
+      'Exact alarm permission not granted. Notifications enabled; '
+      'schedule mode will use inexact fallback.',
+    );
+  }
+
   final isAllowed =
       await r.plugin
           .resolvePlatformSpecificImplementation<
@@ -56,23 +68,66 @@ Future<void> requestNotificationPermission() async {
   }
 }
 
+Future<void> _requestIosNotificationPermission() async {
+  final r = GoalNotifierRuntime.I;
+  final statusNotification = await Permission.notification.request();
+  final iosPlugin =
+      r.plugin.resolvePlatformSpecificImplementation<
+        IOSFlutterLocalNotificationsPlugin
+      >();
+  final pluginGranted = await iosPlugin?.requestPermissions(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
+
+  final granted =
+      statusNotification.isGranted || (pluginGranted ?? false);
+  if (!granted) {
+    final shouldShow =
+        await Permission.notification.shouldShowRequestRationale;
+    debugLog(
+      'iOS notification permission not granted. shouldShow=$shouldShow',
+    );
+    if (!shouldShow) {
+      await openNotificationSettings();
+    }
+    return;
+  }
+  debugLog('iOS notifications enabled.');
+}
+
 bool get _runningInFlutterTest =>
     WidgetsBinding.instance.runtimeType.toString().contains('TestWidgets');
 
+/// Whether the user may enable local notifications (notification permission).
+/// Exact-alarm grant is not required; see [getScheduleMode].
 Future<bool> checkNotificationsPermissionsGranted() async {
   if (_runningInFlutterTest) {
     return false;
   }
   final statusNotification = await Permission.notification.status;
-  final statusExactAlarm = await Permission.scheduleExactAlarm.status;
-  if (statusNotification.isGranted && statusExactAlarm.isGranted) {
-    return true;
-  } else {
+  return statusNotification.isGranted;
+}
+
+/// Android exact-alarm status. Non-Android returns true (N/A).
+Future<bool> checkExactAlarmPermissionGranted() async {
+  if (_runningInFlutterTest) {
     return false;
   }
+  if (!NotificationPlatform.isAndroid) {
+    return true;
+  }
+  final status = await Permission.scheduleExactAlarm.status;
+  return status.isGranted;
 }
 
 Future<AndroidScheduleMode> getScheduleMode() async {
+  if (!NotificationPlatform.isAndroid) {
+    // iOS / other: exact-alarm modes are Android-only; plugin ignores on Darwin.
+    return AndroidScheduleMode.inexactAllowWhileIdle;
+  }
+
   final status = await Permission.scheduleExactAlarm.status;
 
   if (status.isGranted) {
@@ -89,6 +144,26 @@ Future<void> openNotificationSettings() async {
     await GoalNotifierRuntime.platform.invokeMethod('openNotificationSettings');
   } catch (e) {
     debugLog('Error opening notification settings: $e');
+    // Fallback for platforms without the native bridge.
+    try {
+      await openAppSettings();
+    } catch (fallbackError) {
+      debugLog('Fallback openAppSettings failed: $fallbackError');
+    }
+  }
+}
+
+/// Opens the system exact-alarm settings screen when available.
+Future<void> openExactAlarmSettings() async {
+  try {
+    await GoalNotifierRuntime.platform.invokeMethod('openExactAlarmSettings');
+  } catch (e) {
+    debugLog('Error opening exact alarm settings: $e');
+    try {
+      await openAppSettings();
+    } catch (fallbackError) {
+      debugLog('Fallback openAppSettings failed: $fallbackError');
+    }
   }
 }
 

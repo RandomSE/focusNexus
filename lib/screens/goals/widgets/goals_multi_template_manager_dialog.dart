@@ -167,6 +167,9 @@ class _GoalsMultiTemplateManagerDialogState
             Text(
               _validationMessage!,
               style: bundle.textStyle.copyWith(color: Colors.purple),
+              softWrap: true,
+              maxLines: 8,
+              overflow: TextOverflow.visible,
             ),
           ],
           const SizedBox(height: 12),

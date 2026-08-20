@@ -126,10 +126,9 @@ void main() {
       await tester.tap(find.text('+1h'));
       await tester.pump();
 
-      // Explicit start nudges intentionally recompute duration from the new
-      // start (this is the "adjust start" affordance, distinct from the
-      // duration-field / end-date bug this feature fixes).
-      expect(lastDuration, const Duration(hours: 1));
+      // Nudging start moves the ideal start but keeps the configured slot length.
+      expect(lastDuration, const Duration(hours: 2));
+      expect(startAt, endAt.subtract(const Duration(hours: 1)));
     },
   );
 }

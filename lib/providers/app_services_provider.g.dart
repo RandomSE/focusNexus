@@ -7,7 +7,7 @@ part of 'app_services_provider.dart';
 // **************************************************************************
 
 String _$achievementServiceHash() =>
-    r'8fa037fd2328da1e3fb8236e13339bbc32b2c75c';
+    r'bfd3a855e98b06502adb35415d6cdea2e54333eb';
 
 /// Achievement facade with injected storage and points.
 ///

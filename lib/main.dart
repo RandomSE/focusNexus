@@ -1,4 +1,7 @@
 // lib/main.dart
+import 'dart:async';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focusNexus/app/app_navigator.dart';
@@ -8,32 +11,49 @@ import 'package:focusNexus/goals/goals_notification_navigation.dart';
 import 'package:focusNexus/providers/app_settings_provider.dart';
 import 'package:focusNexus/services/ambient_section_playback.dart';
 import 'package:focusNexus/services/music_lifecycle_binder.dart';
+import 'package:focusNexus/utils/debug_log.dart';
 import 'package:focusNexus/utils/theme_styles.dart';
 import 'package:focusNexus/widgets/skeleton_loaders.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+void main() {
+  runZonedGuarded(() async {
+    // Bindings and runApp must share this zone (Flutter BindingBase.debugCheckZone).
+    WidgetsFlutterBinding.ensureInitialized();
 
-  final container = ProviderContainer();
-  await ensureAppReady(container);
+    FlutterError.onError = (details) {
+      debugLog('FlutterError: ${details.exceptionAsString()}');
+      FlutterError.presentError(details);
+    };
+    PlatformDispatcher.instance.onError = (error, stack) {
+      debugLog('Uncaught async error: $error\n$stack');
+      return true;
+    };
 
-  final initialRoute = AppRouteGuard.initialFor(
-    container.read(appSettingsProvider.notifier).service,
-  ).path;
+    final container = ProviderContainer();
+    // Gate-critical only (settings/route prefs). Achievements/audio/notifications
+    // continue in scheduleDeferredStartupWork after the first frame.
+    await ensureAppReady(container);
 
-  runApp(
-    UncontrolledProviderScope(
-      container: container,
-      child: FocusNexusApp(
-        initialRoute: initialRoute,
-        ambientRouteObserver: AmbientRouteObserver(container),
+    final initialRoute = AppRouteGuard.initialFor(
+      container.read(appSettingsProvider.notifier).service,
+    ).path;
+
+    runApp(
+      UncontrolledProviderScope(
+        container: container,
+        child: FocusNexusApp(
+          initialRoute: initialRoute,
+          ambientRouteObserver: AmbientRouteObserver(container),
+        ),
       ),
-    ),
-  );
+    );
 
-  WidgetsBinding.instance.addPostFrameCallback((_) async {
-    await scheduleDeferredStartupWork(container: container);
-    openGoalsFromPendingNotification();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await scheduleDeferredStartupWork(container: container);
+      openGoalsFromPendingNotification();
+    });
+  }, (error, stack) {
+    debugLog('Zone error: $error\n$stack');
   });
 }
 

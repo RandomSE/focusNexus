@@ -69,10 +69,12 @@ class _PhrasePackScreenState extends ConsumerState<PhrasePackScreen> {
   }
 
   void _syncAddPositionDefault() {
-    final last = PhraseQueuePositions.maxInsertPosition(
-      _pack.effectiveQueue.length,
+    final current = PhrasePackSelector.defaultInsertPosition1Based(
+      currentQueueLength: _pack.effectiveQueue.length,
+      mode: _pack.mode,
+      now: DateTime.now(),
     );
-    _addPositionController.text = '$last';
+    _addPositionController.text = '$current';
   }
 
   Future<void> _refreshAffirmationsIfNeeded() async {
@@ -153,7 +155,16 @@ class _PhrasePackScreenState extends ConsumerState<PhrasePackScreen> {
         ? PhraseQueuePositions.maxInsertPosition(queueLength)
         : PhraseQueuePositions.maxInsertPosition(queueLength - 1);
     final parsed = int.tryParse(raw.trim());
-    if (parsed == null) return max;
+    if (parsed == null) {
+      if (forInsert) {
+        return PhrasePackSelector.defaultInsertPosition1Based(
+          currentQueueLength: queueLength,
+          mode: _pack.mode,
+          now: DateTime.now(),
+        );
+      }
+      return max;
+    }
     return PhraseQueuePositions.clampInsert(
       parsed,
       forInsert ? queueLength : queueLength - 1,
@@ -274,7 +285,10 @@ class _PhrasePackScreenState extends ConsumerState<PhrasePackScreen> {
     await _repo.writeMode(_kind, mode);
     final pack = await _repo.read(_kind);
     if (!mounted) return;
-    setState(() => _pack = pack);
+    setState(() {
+      _pack = pack;
+      _syncAddPositionDefault();
+    });
     await _refreshAffirmationsIfNeeded();
   }
 
@@ -550,6 +564,11 @@ class _PhrasePackScreenState extends ConsumerState<PhrasePackScreen> {
         );
         final queue = _pack.effectiveQueue;
         final insertMax = PhraseQueuePositions.maxInsertPosition(queue.length);
+        final defaultPos = PhrasePackSelector.defaultInsertPosition1Based(
+          currentQueueLength: queue.length,
+          mode: _pack.mode,
+          now: DateTime.now(),
+        );
 
         return Scaffold(
           backgroundColor: secondary,
@@ -614,7 +633,7 @@ class _PhrasePackScreenState extends ConsumerState<PhrasePackScreen> {
                     CommonUtils.buildText(
                       'Queue has ${queue.length} message'
                       '${queue.length == 1 ? '' : 's'}. '
-                      'Positions 1-$insertMax (default last = $insertMax).',
+                      'Positions 1-$insertMax (default current = $defaultPos).',
                       textStyle.copyWith(
                         fontWeight: FontWeight.normal,
                         fontSize: (textStyle.fontSize ?? 14) - 2,

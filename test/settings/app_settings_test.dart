@@ -103,9 +103,27 @@ void main() {
       );
       expect(settings.registrationComplete, isTrue);
       expect(settings.onboardingCompleted, isFalse);
+      expect(settings.hasAcceptedCurrentEula, isTrue);
       expect(settings.notificationFrequency, 'High');
       expect(settings.notificationStyle, 'Vibrant');
       expect(settings.rewardTypes, ['Mini-games']);
+    });
+
+    test('clearEulaAcceptance clears acceptance used by applyDefaultPreferences', () async {
+      await settings.load();
+      await settings.acceptCurrentEula(
+        acceptedAt: DateTime.utc(2026, 8, 10, 12),
+      );
+      expect(settings.hasAcceptedCurrentEula, isTrue);
+      await settings.clearEulaAcceptance();
+      expect(settings.hasAcceptedCurrentEula, isFalse);
+      expect(settings.eulaAccepted, isFalse);
+      expect(settings.eulaAcceptedVersion, isEmpty);
+      await settings.acceptCurrentEula(
+        acceptedAt: DateTime.utc(2026, 8, 10, 12),
+      );
+      await settings.applyDefaultPreferences();
+      expect(settings.hasAcceptedCurrentEula, isFalse);
     });
 
     test('load maps legacy loggedIn to registrationComplete', () async {

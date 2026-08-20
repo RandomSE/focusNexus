@@ -66,6 +66,98 @@ void main() {
       );
     }
 
+    test('daily repeating one-hour slot keeps hour duration on series', () async {
+      final now = DateTime(2026, 8, 9, 11, 0);
+      const duration = Duration(hours: 1);
+      final end = DateTime(2026, 8, 9, 13, 0);
+      await useCase.createTimeWindowGoal(
+        input: CreateTimeWindowGoalInput(
+          title: 'Focus block',
+          category: 'Health',
+          complexity: 'Low',
+          effort: 'Low',
+          motivation: 'Low',
+          time: '10',
+          steps: '1',
+          windowEndAt: end,
+          windowDuration: duration,
+          repeatRule: const RepeatRule(
+            enabled: true,
+            unit: RepeatUnit.days,
+            interval: 1,
+          ),
+          goalId: 601,
+          seriesId: 9101,
+        ),
+        now: now,
+        activeSnapshot: const [],
+      );
+
+      final series = await repeats.readById(9101);
+      expect(series, isNotNull);
+      expect(series!.windowDuration, duration);
+
+      final start = parseGoalDateTime(
+        (await useCase.load(now: now)).active.single.actionWindowStart,
+      );
+      final activeEnd = parseGoalDateTime(
+        (await useCase.load(now: now)).active.single.actionWindowEnd,
+      );
+      expect(start, DateTime(2026, 8, 9, 12, 0));
+      expect(activeEnd, end);
+
+      final nextDay = DateTime(2026, 8, 10, 11, 30);
+      final spawned = await useCase.load(now: nextDay);
+      expect(spawned.active, isNotEmpty);
+      final nextStart = parseGoalDateTime(spawned.active.single.actionWindowStart);
+      final nextEnd = parseGoalDateTime(spawned.active.single.actionWindowEnd);
+      expect(nextEnd, DateTime(2026, 8, 10, 13, 0));
+      expect(nextStart, DateTime(2026, 8, 10, 12, 0));
+      expect(nextEnd!.difference(nextStart!), duration);
+    });
+
+    test('updateTimeWindowGoal changes slot for one-off goals', () async {
+      final now = DateTime(2026, 8, 10, 11, 0);
+      final end = DateTime(2026, 8, 10, 13, 0);
+      const duration = Duration(hours: 1);
+      await useCase.createTimeWindowGoal(
+        input: CreateTimeWindowGoalInput(
+          title: 'Focus block',
+          category: 'Health',
+          complexity: 'Low',
+          effort: 'Low',
+          motivation: 'Low',
+          time: '10',
+          steps: '1',
+          windowEndAt: end,
+          windowDuration: duration,
+          goalId: 701,
+        ),
+        now: now,
+        activeSnapshot: const [],
+      );
+
+      final newEnd = DateTime(2026, 8, 10, 16, 0);
+      const newDuration = Duration(hours: 2);
+      final updated = await useCase.updateTimeWindowGoal(
+        goalId: 701,
+        windowEndAt: newEnd,
+        windowDuration: newDuration,
+        now: now,
+        activeSnapshot: (await useCase.load(now: now)).active,
+      );
+
+      expect(updated, isNotNull);
+      expect(
+        parseGoalDateTime(updated!.actionWindowEnd),
+        newEnd,
+      );
+      expect(
+        parseGoalDateTime(updated.actionWindowStart),
+        DateTime(2026, 8, 10, 14, 0),
+      );
+    });
+
     test('createTimeWindowGoal persists active time-window goal', () async {
       final now = DateTime(2026, 6, 21, 9);
       final end = now.add(const Duration(hours: 2));

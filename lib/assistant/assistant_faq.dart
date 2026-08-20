@@ -173,16 +173,16 @@ const List<AssistantFaqSection> assistantFaqSections = [
       AssistantFaqEntry(
         id: 'general.assistant_vs_encouragement',
         question:
-            'What is the difference between the Assistant and AI Encouragement?',
+            'What is the difference between the Assistant and Goal encouragement?',
         answer:
             'This Assistant is an offline help guide inside the app - browse the FAQ or '
-            'ask how features work. AI Encouragement is a separate Settings toggle that '
+            'ask how features work. Goal encouragement is a separate Settings toggle that '
             'schedules optional local notification messages for demanding goals. Neither '
             'uses the internet.',
         keywords: [
           'assistant vs',
           'difference between assistant',
-          'assistant and ai encouragement',
+          'assistant and Goal encouragement',
           'this assistant vs',
         ],
       ),
@@ -473,12 +473,16 @@ const List<AssistantFaqSection> assistantFaqSections = [
       ),
       AssistantFaqEntry(
         id: 'settings.ai_encouragement',
-        question: 'What is AI Encouragement?',
+        question: 'What is Goal encouragement?',
         answer:
-            'AI Encouragement is separate from this Assistant. It sends optional local '
+            'Goal encouragement is separate from this Assistant. It sends optional local '
             'notification messages for demanding goals (early, midpoint, before deadline). '
             'Toggle it in Settings when notifications are enabled. No internet is used.',
-        keywords: ['ai encouragement', 'encouragement notification'],
+        keywords: [
+          'Goal encouragement',
+          'ai encouragement',
+          'encouragement notification',
+        ],
         negativeKeywords: [
           'assistant vs',
           'difference between assistant',
@@ -1107,7 +1111,7 @@ const List<String> assistantQuickReplies = [
   'What is a time-slot goal?',
   'How do I add a goal?',
   'How do I earn points?',
-  'What is AI Encouragement?',
+  'What is Goal encouragement?',
   'Data privacy policy',
   'How does the Zen garden work?',
 ];

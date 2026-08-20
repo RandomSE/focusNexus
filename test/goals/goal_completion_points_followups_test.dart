@@ -125,7 +125,7 @@ void main() {
       // 70*1.35+10 = 104.5 -> 105
       expect(
         activeGoalDetailPointsLabel(70),
-        'Points: 70 (~105 if first today (effort 94.5 + momentum 10))',
+        'Points: 70 (~105 if first today (effort 94.5 + momentum 10 = 104.5, rounded to 105))',
       );
     });
 
@@ -136,7 +136,7 @@ void main() {
           multiplierLabel: '2x strict slot',
         ),
         'Reward: 70 pts (2x strict slot); '
-        '~105 if first today (effort 94.5 + momentum 10)',
+        '~105 if first today (effort 94.5 + momentum 10 = 104.5, rounded to 105)',
       );
     });
 

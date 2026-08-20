@@ -10,5 +10,5 @@ part 'key_value_storage_provider.g.dart';
 /// All persisted app data uses this single secure KV backend today (no bulk/non-secret split).
 @Riverpod(keepAlive: true)
 KeyValueStorage keyValueStorage(Ref ref) {
-  return const FlutterSecureKeyValueStorage();
+  return FlutterSecureKeyValueStorage();
 }

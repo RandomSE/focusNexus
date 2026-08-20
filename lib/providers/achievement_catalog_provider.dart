@@ -25,7 +25,7 @@ AchievementCatalog achievementCatalog(Ref ref) {
   final all = service.all;
   return AchievementCatalog(
     inProgress: all
-        .where((a) => !a.isSecret)
+        .where((a) => !a.isSecret || a.progress >= 100)
         .where((a) => !a.isCompleted)
         .toList(),
     completed: all.where((a) => a.isCompleted).toList(),

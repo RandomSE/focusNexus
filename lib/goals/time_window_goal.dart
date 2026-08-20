@@ -14,6 +14,57 @@ const Duration repeatSpawnLookahead = Duration(hours: 24);
 const int actionWindowStartNotificationOffset = 200;
 const int actionWindowEndReminderNotificationOffset = 201;
 
+/// Default length for new time-slot goals.
+const Duration defaultTimeWindowDuration = Duration(hours: 1);
+
+/// Default window end for new slots: now plus [defaultTimeWindowDuration].
+DateTime defaultTimeWindowEnd([DateTime? now]) {
+  final clock = now ?? DateTime.now();
+  return clock.add(defaultTimeWindowDuration);
+}
+
+DateTime dateOnly(DateTime value) =>
+    DateTime(value.year, value.month, value.day);
+
+/// Bounds for picking a slot start date relative to the slot end.
+({DateTime firstDate, DateTime lastDate, DateTime initialDate})
+actionWindowStartDatePickerRange({
+  required DateTime startAt,
+  required DateTime endAt,
+}) {
+  final endDay = dateOnly(endAt);
+  final startDay = dateOnly(startAt);
+  final firstDate = endDay.subtract(const Duration(days: 365));
+  final lastDate = endDay;
+  var initial = startDay;
+  if (initial.isBefore(firstDate)) initial = firstDate;
+  if (initial.isAfter(lastDate)) initial = lastDate;
+  return (firstDate: firstDate, lastDate: lastDate, initialDate: initial);
+}
+
+/// When [start] is not strictly before [end], extend [end] by [fallbackDuration].
+DateTime resolveWindowEndAfterStart({
+  required DateTime start,
+  required DateTime end,
+  Duration fallbackDuration = defaultTimeWindowDuration,
+}) {
+  if (start.isBefore(end)) return end;
+  final duration = fallbackDuration > Duration.zero
+      ? fallbackDuration
+      : defaultTimeWindowDuration;
+  return start.add(duration);
+}
+
+/// Ideal edit values for a one-off time-window goal instance.
+({DateTime endAt, Duration duration}) timeWindowGoalEditWindow(GoalSet goal) {
+  final end = parseGoalDateTime(goal.actionWindowEnd) ?? defaultTimeWindowEnd();
+  final start = parseGoalDateTime(goal.actionWindowStart);
+  final span = start != null ? end.difference(start) : Duration.zero;
+  final duration =
+      span > Duration.zero ? span : defaultTimeWindowDuration;
+  return (endAt: end, duration: duration);
+}
+
 class ActionWindow {
   const ActionWindow({
     required this.start,
@@ -266,15 +317,19 @@ String repeatSeriesSlotLabel(GoalRepeatSeries series) {
   final activeEnd = activeGoal != null
       ? parseGoalDateTime(activeGoal.actionWindowEnd)
       : null;
-  final end = activeEnd ?? anchorEnd ?? DateTime.now().add(const Duration(hours: 2));
-  final activeStart = activeGoal != null
-      ? parseGoalDateTime(activeGoal.actionWindowStart)
-      : null;
-  final duration = activeStart != null && activeEnd != null
-      ? activeEnd.difference(activeStart)
-      : series.windowDuration;
+  final end = activeEnd ?? anchorEnd ?? defaultTimeWindowEnd();
+  final duration = series.windowDuration;
   if (duration <= Duration.zero) {
-    return (endAt: end, duration: series.windowDuration);
+    final activeStart = activeGoal != null
+        ? parseGoalDateTime(activeGoal.actionWindowStart)
+        : null;
+    if (activeStart != null && activeEnd != null) {
+      final inferred = activeEnd.difference(activeStart);
+      if (inferred > Duration.zero) {
+        return (endAt: end, duration: inferred);
+      }
+    }
+    return (endAt: end, duration: const Duration(hours: 1));
   }
   return (endAt: end, duration: duration);
 }

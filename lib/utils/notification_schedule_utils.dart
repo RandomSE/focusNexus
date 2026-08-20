@@ -1,3 +1,4 @@
+import 'package:focusNexus/utils/notification_platform.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 /// Parsing and planning helpers for local notification schedules.
@@ -5,8 +6,20 @@ abstract final class NotificationScheduleUtils {
   NotificationScheduleUtils._();
 
   static const String defaultAffirmationTime = '06:00';
-  static const int affirmationHorizonDays = 90;
+
+  /// Delegates to [NotificationPlatform.defaultAffirmationHorizonDays].
+  static const int affirmationHorizonDays =
+      NotificationPlatform.defaultAffirmationHorizonDays;
+
+  /// Delegates to [NotificationPlatform.iosAffirmationHorizonDays].
+  static const int iosAffirmationHorizonDays =
+      NotificationPlatform.iosAffirmationHorizonDays;
+
   static const int affirmationTopUpLeadDays = 14;
+
+  /// Platform-aware affirmation scheduling horizon (iOS is capped below 64 pending).
+  static int affirmationHorizonDaysFor({required bool isIos}) =>
+      NotificationPlatform.affirmationHorizonDays(isIosOverride: isIos);
 
   /// Day offsets (before deadline) for High-frequency daily goal reminders.
   ///

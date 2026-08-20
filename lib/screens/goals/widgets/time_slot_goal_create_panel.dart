@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focusNexus/goals/builtin_goal_templates.dart';
+import 'package:focusNexus/goals/goal_form_feedback.dart';
 import 'package:focusNexus/goals/goal_points_labels.dart';
 import 'package:focusNexus/goals/goals_time_window_service.dart';
 import 'package:focusNexus/goals/repeat_rule.dart';
+import 'package:focusNexus/goals/time_window_goal.dart';
 import 'package:focusNexus/goals/time_window_points_label.dart';
 import 'package:focusNexus/providers/goals_provider.dart';
 import 'package:focusNexus/providers/goals_screen_ui_provider.dart';
@@ -31,8 +33,8 @@ class TimeSlotGoalCreatePanel extends ConsumerStatefulWidget {
 class _TimeSlotGoalCreatePanelState extends ConsumerState<TimeSlotGoalCreatePanel> {
   final _formKey = GlobalKey<FormState>();
   final _title = TextEditingController();
-  DateTime _endAt = DateTime.now().add(const Duration(hours: 2));
-  Duration _duration = const Duration(hours: 1);
+  DateTime _endAt = defaultTimeWindowEnd();
+  Duration _duration = defaultTimeWindowDuration;
   DateTime get _startAt => _endAt.subtract(_duration);
   RepeatRule _repeat = RepeatRule.none;
   String _category = 'Health';
@@ -69,14 +71,35 @@ class _TimeSlotGoalCreatePanelState extends ConsumerState<TimeSlotGoalCreatePane
     _complexity = 'Low';
     _effort = 'Low';
     _motivation = 'Low';
-    _endAt = DateTime.now().add(const Duration(hours: 2));
-    _duration = const Duration(hours: 1);
+    _endAt = defaultTimeWindowEnd();
+    _duration = defaultTimeWindowDuration;
     _repeat = RepeatRule.none;
     setState(() {});
   }
 
   Future<void> _create() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      final bundle = ref.read(themeBundleProvider);
+      final message = GoalFormFeedback.formatMissingFieldsMessage(
+        GoalFormFeedback.collectTimeSlotGoalFieldIssues(
+          title: _title.text,
+          time: _time.text,
+          steps: _steps.text,
+        ),
+      );
+      if (message.isNotEmpty && mounted) {
+        CommonUtils.showSnackBar(
+          context,
+          message,
+          bundle.textStyle,
+          4500,
+          12,
+          backgroundColor: bundle.secondaryColor,
+          labelColor: bundle.primaryColor,
+        );
+      }
+      return;
+    }
     final now = DateTime.now();
     await ref.read(goalsProvider.notifier).createTimeWindowGoal(
       input: CreateTimeWindowGoalInput(
@@ -165,7 +188,6 @@ class _TimeSlotGoalCreatePanelState extends ConsumerState<TimeSlotGoalCreatePane
             endAt: _endAt,
             startAt: _startAt,
             duration: _duration,
-            fullDaysOnly: _repeat.enabled,
             onEndChanged: (v) => setState(() => _endAt = v),
             onStartChanged: (v) => setState(
               () => _duration = _endAt.difference(v),
@@ -182,14 +204,7 @@ class _TimeSlotGoalCreatePanelState extends ConsumerState<TimeSlotGoalCreatePane
           TimeWindowRepeatEditor(
             bundle: bundle,
             rule: _repeat,
-            onChanged: (r) => setState(() {
-              _repeat = r;
-              if (r.enabled && _duration.inDays < 1) {
-                _duration = const Duration(days: 1);
-              } else if (r.enabled && _duration.inHours % 24 != 0) {
-                _duration = Duration(days: _duration.inDays.clamp(1, 9999));
-              }
-            }),
+            onChanged: (r) => setState(() => _repeat = r),
           ),
           const SizedBox(height: 12),
           CommonUtils.buildElevatedButton(

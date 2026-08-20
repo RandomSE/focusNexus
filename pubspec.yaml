@@ -1,5 +1,5 @@
 name: focusNexus
-description: "AI productivity assistant for ADHD, memory, and prioritization"
+description: "Local productivity assistant for focus, memory, and prioritization"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -39,7 +39,7 @@ dependencies:
   permission_handler: ^11.0.0
   audioplayers: ^6.8.0
   confetti: ^0.7.0
-
+  url_launcher: ^6.3.1
 
 
 
@@ -61,10 +61,21 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.1
   build_runner: ^2.4.13
   freezed: ^2.5.7
   json_serializable: ^6.8.0
   riverpod_generator: ^2.6.1
+
+# Generates Android launcher / adaptive icons from assets/icon masters.
+# Re-run: dart run flutter_launcher_icons
+flutter_launcher_icons:
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  image_path: "assets/icon/app_icon_flat_512.png"
+  adaptive_icon_background: "assets/icon/adaptive_background.png"
+  adaptive_icon_foreground: "assets/icon/adaptive_foreground.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

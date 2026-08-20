@@ -55,5 +55,13 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Android release signing secrets (also listed in android/.gitignore)
+android/key.properties
+*.jks
+*.keystore
+
 # Reference, analysis, etc.
 ignore/
+
+# promotional recordings
+footage/

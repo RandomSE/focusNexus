@@ -1,6 +1,5 @@
 import 'package:focusNexus/repositories/points_repository.dart';
 import 'package:focusNexus/services/custom_affirmation_pack.dart';
-import 'package:focusNexus/services/phrase_queue_positions.dart';
 import 'package:focusNexus/services/storage/key_value_storage.dart';
 import 'package:focusNexus/services/storage/storage_keys.dart';
 
@@ -127,6 +126,7 @@ class PhrasePackRepository {
     PhrasePackKind kind,
     String rawText, {
     int? position1Based,
+    DateTime? clock,
   }) async {
     final text = PhrasePackRules.normalizeText(rawText);
     if (text == null) {
@@ -146,18 +146,23 @@ class PhrasePackRepository {
       );
     }
 
-    final now = DateTime.now().millisecondsSinceEpoch;
-    final id = PhrasePackRules.newMessageId(now);
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    final id = PhrasePackRules.newMessageId(nowMs);
     final current = await read(kind);
     final message = PhraseMessage(
       id: id,
       text: text,
-      createdAtMs: now,
-      updatedAtMs: now,
+      createdAtMs: nowMs,
+      updatedAtMs: nowMs,
       origin: PhraseOrigin.custom,
     );
     final queue = current.effectiveQueue;
-    final pos = position1Based ?? PhraseQueuePositions.maxInsertPosition(queue.length);
+    final pos = position1Based ??
+        PhrasePackSelector.defaultInsertPosition1Based(
+          currentQueueLength: queue.length,
+          mode: current.mode,
+          now: clock ?? DateTime.now(),
+        );
     final nextQueue = PhrasePackQueue.insertMessage(
       queue: queue,
       id: id,

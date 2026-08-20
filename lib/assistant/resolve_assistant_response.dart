@@ -30,7 +30,10 @@ const Map<String, String> assistantQueryAliases = {
   'open achievements': 'general.open_achievements',
   'open reward': 'general.open_reward',
   'assistant vs ai encouragement': 'general.assistant_vs_encouragement',
+  'assistant vs goal encouragement': 'general.assistant_vs_encouragement',
   'difference between assistant and ai encouragement':
+      'general.assistant_vs_encouragement',
+  'difference between assistant and goal encouragement':
       'general.assistant_vs_encouragement',
   'what does in slot now mean': 'general.in_slot_now',
   'active vs completed goals filter': 'goals.status_filters',

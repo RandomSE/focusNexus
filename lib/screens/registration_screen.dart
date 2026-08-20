@@ -1,12 +1,17 @@
 // lib/screens/registration_screen.dart
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focusNexus/app/app_navigation.dart';
 import 'package:focusNexus/app/app_route.dart';
 import 'package:focusNexus/providers/app_settings_provider.dart';
 import 'package:focusNexus/providers/registration_form_provider.dart';
+import 'package:focusNexus/settings/notification_preference_options.dart';
 import 'package:focusNexus/utils/common_utils.dart';
-import 'package:focusNexus/widgets/appearance_settings_section.dart';
+import 'package:focusNexus/widgets/appearance_settings_section.dart'
+    show AppearanceSettingsSection, controlTextStyle;
+import 'package:focusNexus/widgets/legal_links_section.dart';
 import 'package:focusNexus/widgets/reward_types_multi_select.dart';
 import 'package:focusNexus/widgets/settings_themed_builder.dart';
 import 'package:focusNexus/utils/theme_styles.dart';
@@ -20,26 +25,56 @@ class RegistrationScreen extends ConsumerStatefulWidget {
 
 class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
   final _formKey = GlobalKey<FormState>();
-
-  static const notificationFrequencies = [
-    'Low',
-    'Medium',
-    'High',
-    'No notifications',
-  ];
-  static const notificationStyles = ['Vibrant', 'Minimal', 'Animated'];
+  bool _busy = false;
 
   Future<void> _saveAndContinue() async {
+    if (_busy) return;
     final form = ref.read(registrationFormProvider);
-    if (form.rewardTypes.isEmpty) return;
-    final settings = ref.read(appSettingsProvider.notifier).service;
-    await settings.completeRegistration(
-      notificationFrequency: form.frequency!,
-      notificationStyle: form.notificationStyle ?? 'Vibrant',
-      rewardTypes: form.rewardTypes,
-    );
-    if (!mounted) return;
-    ref.resetToRoute(context, AppRoute.onboard);
+    if (!form.canContinue) return;
+    setState(() => _busy = true);
+    try {
+      final settings = ref.read(appSettingsProvider.notifier).service;
+      await settings.completeRegistration(
+        notificationFrequency: form.frequency!,
+        notificationStyle: form.notificationStyle ??
+            NotificationPreferenceOptions.defaultStyle,
+        rewardTypes: form.rewardTypes,
+        acceptEula: true,
+      );
+      if (!mounted) return;
+      ref.resetToRoute(context, AppRoute.onboard);
+    } catch (_) {
+      if (!mounted) return;
+      CommonUtils.showSnackBar(
+        context,
+        'Could not complete setup. Please try again.',
+        Theme.of(context).textTheme.bodyMedium ?? const TextStyle(),
+        4000,
+        16,
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  void _onContinuePressed(TextStyle labelStyle) {
+    if (_busy) return;
+    final form = ref.read(registrationFormProvider);
+    if (!form.canContinue) {
+      CommonUtils.showSnackBar(
+        context,
+        form.continueBlockedFeedbackMessage,
+        labelStyle.copyWith(fontWeight: FontWeight.normal),
+        4000,
+        16,
+      );
+      return;
+    }
+    if (_formKey.currentState!.validate()) {
+      unawaited(_saveAndContinue());
+    }
   }
 
   @override
@@ -52,6 +87,12 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
         final labelStyle = controlTextStyle(bundle.textStyle);
         final primaryColor = bundle.primaryColor;
         final secondaryColor = bundle.secondaryColor;
+        final linkStyle = labelStyle.copyWith(
+          fontWeight: FontWeight.bold,
+          decoration: TextDecoration.underline,
+          color: primaryColor,
+        );
+        final canTapContinue = form.canContinue && !_busy;
 
         return Theme(
           data: bundle.themeData,
@@ -60,7 +101,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
             appBar: AppBar(
               title: Text('Set up FocusNexus', style: labelStyle),
               backgroundColor: secondaryColor,
-              iconTheme: ThemeStyles.iconThemeFor( primaryColor),
+              iconTheme: ThemeStyles.iconThemeFor(primaryColor),
             ),
             body: Form(
               key: _formKey,
@@ -75,10 +116,13 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                   CommonUtils.buildDropdownButtonFormField(
                     'Notification Frequency',
                     form.frequency,
-                    notificationFrequencies,
+                    NotificationPreferenceOptions.frequencies,
                     labelStyle,
                     secondaryColor,
-                    (value) => formNotifier.setFrequency(value),
+                    (value) {
+                      if (_busy) return;
+                      formNotifier.setFrequency(value);
+                    },
                     validator: (value) =>
                         value == null ? 'Select frequency' : null,
                   ),
@@ -86,18 +130,66 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                     CommonUtils.buildDropdownButtonFormField(
                       'Notification Style',
                       form.notificationStyle,
-                      notificationStyles,
+                      NotificationPreferenceOptions.styles,
                       labelStyle,
                       secondaryColor,
-                      (value) => formNotifier.setNotificationStyle(value),
+                      (value) {
+                        if (_busy) return;
+                        formNotifier.setNotificationStyle(value);
+                      },
                     ),
                   RewardTypesMultiSelect(
                     selected: form.rewardTypes,
-                    onChanged: formNotifier.setRewardTypes,
+                    onChanged: (values) {
+                      if (_busy) return;
+                      formNotifier.setRewardTypes(values);
+                    },
                     textStyle: labelStyle,
                     activeColor: primaryColor,
                     title: 'Reward types',
                     subtitle: 'Choose one or more. At least one is required.',
+                  ),
+                  const SizedBox(height: 20),
+                  CheckboxListTile(
+                    value: form.eulaAccepted,
+                    activeColor: primaryColor,
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    title: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'I have read and agree to the End User License '
+                          'Agreement, Privacy Policy, and Intellectual Property notice:',
+                          style: labelStyle.copyWith(
+                            fontWeight: FontWeight.normal,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        LegalLinksSection.textLinks(
+                          linkStyle: linkStyle,
+                          includeEula: true,
+                        ),
+                      ],
+                    ),
+                    onChanged: _busy
+                        ? null
+                        : (value) =>
+                            formNotifier.setEulaAccepted(value ?? false),
+                  ),
+                  CheckboxListTile(
+                    value: form.ageConfirmed,
+                    activeColor: primaryColor,
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    title: Text(
+                      'I confirm I am 13 or older',
+                      style: labelStyle.copyWith(fontWeight: FontWeight.normal),
+                    ),
+                    onChanged: _busy
+                        ? null
+                        : (value) =>
+                            formNotifier.setAgeConfirmed(value ?? false),
                   ),
                   const SizedBox(height: 24),
                   if (!form.canContinue)
@@ -109,20 +201,19 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                       ),
                     ),
                   if (!form.canContinue) const SizedBox(height: 8),
-                  CommonUtils.buildElevatedButton(
-                    'Continue',
-                    primaryColor,
-                    secondaryColor,
-                    labelStyle,
-                    12,
-                    8,
-                    form.canContinue
-                        ? () async {
-                            if (_formKey.currentState!.validate()) {
-                              await _saveAndContinue();
-                            }
-                          }
-                        : null,
+                  Opacity(
+                    opacity: canTapContinue ? 1.0 : 0.55,
+                    child: CommonUtils.buildElevatedButton(
+                      'Continue',
+                      primaryColor,
+                      secondaryColor,
+                      labelStyle,
+                      12,
+                      8,
+                      canTapContinue
+                          ? () => _onContinuePressed(labelStyle)
+                          : null,
+                    ),
                   ),
                   const SizedBox(height: 24),
                   Text(

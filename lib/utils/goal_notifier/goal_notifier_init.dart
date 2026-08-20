@@ -4,6 +4,7 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:focusNexus/utils/debug_log.dart';
 
 import 'package:focusNexus/goals/goals_notification_navigation.dart';
+import 'package:focusNexus/utils/goal_notification_android.dart';
 import 'goal_notifier_bindings.dart';
 import 'goal_notifier_daily_affirmations.dart';
 import 'goal_notifier_permissions.dart';
@@ -35,10 +36,16 @@ Future<void> initialize() async {
   }
 
   const androidSettings = AndroidInitializationSettings(
-    '@mipmap/ic_launcher',
+    GoalNotificationAndroid.androidStatusBarIcon,
+  );
+  const darwinSettings = DarwinInitializationSettings(
+    requestAlertPermission: true,
+    requestBadgePermission: true,
+    requestSoundPermission: true,
   );
   const initializationSettings = InitializationSettings(
     android: androidSettings,
+    iOS: darwinSettings,
   );
   await r.plugin.initialize(
     initializationSettings,

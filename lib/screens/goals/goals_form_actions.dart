@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:focusNexus/goals/goal_form_feedback.dart';
 import 'package:focusNexus/models/classes/theme_bundle.dart';
 import 'package:focusNexus/providers/goals_provider.dart';
 import 'package:focusNexus/providers/goals_screen_ui_provider.dart';
@@ -58,7 +59,28 @@ class GoalsFormActions {
     if (stepsController.text == '') {
       stepsController.text = '1';
     }
-    if (!formKey.currentState!.validate()) return;
+    if (!formKey.currentState!.validate()) {
+      final message = GoalFormFeedback.formatMissingFieldsMessage(
+        GoalFormFeedback.collectNormalGoalFieldIssues(
+          title: titleController.text,
+          time: timeController.text,
+          steps: stepsController.text,
+          deadlineHours: deadlineController.text,
+        ),
+      );
+      if (message.isNotEmpty && context.mounted) {
+        CommonUtils.showSnackBar(
+          context,
+          message,
+          bundle.textStyle,
+          4500,
+          12,
+          backgroundColor: bundle.secondaryColor,
+          labelColor: bundle.primaryColor,
+        );
+      }
+      return;
+    }
 
     final hours = int.tryParse(deadlineController.text.trim()) ?? 0;
     final ui = getUiState();

@@ -42,6 +42,9 @@ mixin _$UserPrefsSnapshot {
   bool get pauseGoals => throw _privateConstructorUsedError;
   bool get registrationComplete => throw _privateConstructorUsedError;
   bool get onboardingCompleted => throw _privateConstructorUsedError;
+  bool get eulaAccepted => throw _privateConstructorUsedError;
+  String get eulaAcceptedVersion => throw _privateConstructorUsedError;
+  String get eulaAcceptedAt => throw _privateConstructorUsedError;
   bool get soundEnabled => throw _privateConstructorUsedError;
   double get soundVolume => throw _privateConstructorUsedError;
   String get dailyAffirmationsTime => throw _privateConstructorUsedError;
@@ -83,6 +86,9 @@ abstract class $UserPrefsSnapshotCopyWith<$Res> {
     bool pauseGoals,
     bool registrationComplete,
     bool onboardingCompleted,
+    bool eulaAccepted,
+    String eulaAcceptedVersion,
+    String eulaAcceptedAt,
     bool soundEnabled,
     double soundVolume,
     String dailyAffirmationsTime,
@@ -126,6 +132,9 @@ class _$UserPrefsSnapshotCopyWithImpl<$Res, $Val extends UserPrefsSnapshot>
     Object? pauseGoals = null,
     Object? registrationComplete = null,
     Object? onboardingCompleted = null,
+    Object? eulaAccepted = null,
+    Object? eulaAcceptedVersion = null,
+    Object? eulaAcceptedAt = null,
     Object? soundEnabled = null,
     Object? soundVolume = null,
     Object? dailyAffirmationsTime = null,
@@ -217,6 +226,18 @@ class _$UserPrefsSnapshotCopyWithImpl<$Res, $Val extends UserPrefsSnapshot>
                 ? _value.onboardingCompleted
                 : onboardingCompleted // ignore: cast_nullable_to_non_nullable
                       as bool,
+            eulaAccepted: null == eulaAccepted
+                ? _value.eulaAccepted
+                : eulaAccepted // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            eulaAcceptedVersion: null == eulaAcceptedVersion
+                ? _value.eulaAcceptedVersion
+                : eulaAcceptedVersion // ignore: cast_nullable_to_non_nullable
+                      as String,
+            eulaAcceptedAt: null == eulaAcceptedAt
+                ? _value.eulaAcceptedAt
+                : eulaAcceptedAt // ignore: cast_nullable_to_non_nullable
+                      as String,
             soundEnabled: null == soundEnabled
                 ? _value.soundEnabled
                 : soundEnabled // ignore: cast_nullable_to_non_nullable
@@ -270,6 +291,9 @@ abstract class _$$UserPrefsSnapshotImplCopyWith<$Res>
     bool pauseGoals,
     bool registrationComplete,
     bool onboardingCompleted,
+    bool eulaAccepted,
+    String eulaAcceptedVersion,
+    String eulaAcceptedAt,
     bool soundEnabled,
     double soundVolume,
     String dailyAffirmationsTime,
@@ -312,6 +336,9 @@ class __$$UserPrefsSnapshotImplCopyWithImpl<$Res>
     Object? pauseGoals = null,
     Object? registrationComplete = null,
     Object? onboardingCompleted = null,
+    Object? eulaAccepted = null,
+    Object? eulaAcceptedVersion = null,
+    Object? eulaAcceptedAt = null,
     Object? soundEnabled = null,
     Object? soundVolume = null,
     Object? dailyAffirmationsTime = null,
@@ -403,6 +430,18 @@ class __$$UserPrefsSnapshotImplCopyWithImpl<$Res>
             ? _value.onboardingCompleted
             : onboardingCompleted // ignore: cast_nullable_to_non_nullable
                   as bool,
+        eulaAccepted: null == eulaAccepted
+            ? _value.eulaAccepted
+            : eulaAccepted // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        eulaAcceptedVersion: null == eulaAcceptedVersion
+            ? _value.eulaAcceptedVersion
+            : eulaAcceptedVersion // ignore: cast_nullable_to_non_nullable
+                  as String,
+        eulaAcceptedAt: null == eulaAcceptedAt
+            ? _value.eulaAcceptedAt
+            : eulaAcceptedAt // ignore: cast_nullable_to_non_nullable
+                  as String,
         soundEnabled: null == soundEnabled
             ? _value.soundEnabled
             : soundEnabled // ignore: cast_nullable_to_non_nullable
@@ -449,6 +488,9 @@ class _$UserPrefsSnapshotImpl extends _UserPrefsSnapshot {
     this.pauseGoals = false,
     this.registrationComplete = false,
     this.onboardingCompleted = false,
+    this.eulaAccepted = false,
+    this.eulaAcceptedVersion = '',
+    this.eulaAcceptedAt = '',
     this.soundEnabled = true,
     this.soundVolume = 100.0,
     this.dailyAffirmationsTime = '06:00',
@@ -540,6 +582,15 @@ class _$UserPrefsSnapshotImpl extends _UserPrefsSnapshot {
   final bool onboardingCompleted;
   @override
   @JsonKey()
+  final bool eulaAccepted;
+  @override
+  @JsonKey()
+  final String eulaAcceptedVersion;
+  @override
+  @JsonKey()
+  final String eulaAcceptedAt;
+  @override
+  @JsonKey()
   final bool soundEnabled;
   @override
   @JsonKey()
@@ -553,7 +604,7 @@ class _$UserPrefsSnapshotImpl extends _UserPrefsSnapshot {
 
   @override
   String toString() {
-    return 'UserPrefsSnapshot(theme: $theme, fontSize: $fontSize, useDyslexiaFont: $useDyslexiaFont, highContrastMode: $highContrastMode, dailyAffirmations: $dailyAffirmations, motivatorsDisabled: $motivatorsDisabled, aiEncouragement: $aiEncouragement, openStreakReminders: $openStreakReminders, notificationFrequency: $notificationFrequency, notificationStyle: $notificationStyle, customizationEnabled: $customizationEnabled, useCustomColorPalette: $useCustomColorPalette, allowedColors: $allowedColors, customizedFont: $customizedFont, customizedPrimary: $customizedPrimary, customizedSecondary: $customizedSecondary, rewardTypes: $rewardTypes, skipToday: $skipToday, pauseGoals: $pauseGoals, registrationComplete: $registrationComplete, onboardingCompleted: $onboardingCompleted, soundEnabled: $soundEnabled, soundVolume: $soundVolume, dailyAffirmationsTime: $dailyAffirmationsTime, openStreakRemindersTime: $openStreakRemindersTime)';
+    return 'UserPrefsSnapshot(theme: $theme, fontSize: $fontSize, useDyslexiaFont: $useDyslexiaFont, highContrastMode: $highContrastMode, dailyAffirmations: $dailyAffirmations, motivatorsDisabled: $motivatorsDisabled, aiEncouragement: $aiEncouragement, openStreakReminders: $openStreakReminders, notificationFrequency: $notificationFrequency, notificationStyle: $notificationStyle, customizationEnabled: $customizationEnabled, useCustomColorPalette: $useCustomColorPalette, allowedColors: $allowedColors, customizedFont: $customizedFont, customizedPrimary: $customizedPrimary, customizedSecondary: $customizedSecondary, rewardTypes: $rewardTypes, skipToday: $skipToday, pauseGoals: $pauseGoals, registrationComplete: $registrationComplete, onboardingCompleted: $onboardingCompleted, eulaAccepted: $eulaAccepted, eulaAcceptedVersion: $eulaAcceptedVersion, eulaAcceptedAt: $eulaAcceptedAt, soundEnabled: $soundEnabled, soundVolume: $soundVolume, dailyAffirmationsTime: $dailyAffirmationsTime, openStreakRemindersTime: $openStreakRemindersTime)';
   }
 
   @override
@@ -606,6 +657,12 @@ class _$UserPrefsSnapshotImpl extends _UserPrefsSnapshot {
                 other.registrationComplete == registrationComplete) &&
             (identical(other.onboardingCompleted, onboardingCompleted) ||
                 other.onboardingCompleted == onboardingCompleted) &&
+            (identical(other.eulaAccepted, eulaAccepted) ||
+                other.eulaAccepted == eulaAccepted) &&
+            (identical(other.eulaAcceptedVersion, eulaAcceptedVersion) ||
+                other.eulaAcceptedVersion == eulaAcceptedVersion) &&
+            (identical(other.eulaAcceptedAt, eulaAcceptedAt) ||
+                other.eulaAcceptedAt == eulaAcceptedAt) &&
             (identical(other.soundEnabled, soundEnabled) ||
                 other.soundEnabled == soundEnabled) &&
             (identical(other.soundVolume, soundVolume) ||
@@ -643,6 +700,9 @@ class _$UserPrefsSnapshotImpl extends _UserPrefsSnapshot {
     pauseGoals,
     registrationComplete,
     onboardingCompleted,
+    eulaAccepted,
+    eulaAcceptedVersion,
+    eulaAcceptedAt,
     soundEnabled,
     soundVolume,
     dailyAffirmationsTime,
@@ -684,6 +744,9 @@ abstract class _UserPrefsSnapshot extends UserPrefsSnapshot {
     final bool pauseGoals,
     final bool registrationComplete,
     final bool onboardingCompleted,
+    final bool eulaAccepted,
+    final String eulaAcceptedVersion,
+    final String eulaAcceptedAt,
     final bool soundEnabled,
     final double soundVolume,
     final String dailyAffirmationsTime,
@@ -737,6 +800,12 @@ abstract class _UserPrefsSnapshot extends UserPrefsSnapshot {
   bool get registrationComplete;
   @override
   bool get onboardingCompleted;
+  @override
+  bool get eulaAccepted;
+  @override
+  String get eulaAcceptedVersion;
+  @override
+  String get eulaAcceptedAt;
   @override
   bool get soundEnabled;
   @override

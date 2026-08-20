@@ -1,26 +1,32 @@
+import 'package:focusNexus/settings/notification_preference_options.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'registration_form_provider.g.dart';
 
 class RegistrationFormState {
   const RegistrationFormState({
-    this.frequency = 'Medium',
-    this.notificationStyle = 'Vibrant',
+    this.frequency = NotificationPreferenceOptions.defaultFrequency,
+    this.notificationStyle = NotificationPreferenceOptions.defaultStyle,
     this.rewardTypes = const [],
+    this.eulaAccepted = false,
+    this.ageConfirmed = false,
   });
 
   final String? frequency;
   final String? notificationStyle;
   final List<String> rewardTypes;
+  final bool eulaAccepted;
+  final bool ageConfirmed;
 
   bool get requiresNotificationStyle =>
-      frequency != null && frequency != 'No notifications';
+      frequency != null &&
+      !NotificationPreferenceOptions.isDisabled(frequency);
 
-  /// Frequency + at least one reward type. Style is optional (defaults Vibrant).
+  /// Frequency + at least one reward type + EULA + 13+ affirmation.
   bool get canContinue {
     final hasFrequency = frequency != null;
     final hasReward = rewardTypes.isNotEmpty;
-    return hasFrequency && hasReward;
+    return hasFrequency && hasReward && eulaAccepted && ageConfirmed;
   }
 
   /// Dynamic blocker copy for missing required fields only.
@@ -32,17 +38,33 @@ class RegistrationFormState {
     if (rewardTypes.isEmpty) {
       missing.add('at least one reward type');
     }
+    if (!eulaAccepted) {
+      missing.add('EULA acceptance');
+    }
+    if (!ageConfirmed) {
+      missing.add('confirmation that you are 13 or older');
+    }
     if (missing.isEmpty) return '';
     if (missing.length == 1) {
       return '* Choose ${missing.single} to continue.';
     }
-    return '* Choose ${missing[0]} and ${missing[1]} to continue.';
+    if (missing.length == 2) {
+      return '* Choose ${missing[0]} and ${missing[1]} to continue.';
+    }
+    final head = missing.sublist(0, missing.length - 1).join(', ');
+    return '* Choose $head, and ${missing.last} to continue.';
   }
+
+  /// User-facing copy when Continue is pressed but [canContinue] is false.
+  String get continueBlockedFeedbackMessage =>
+      missingRequirementsMessage.replaceFirst(RegExp(r'^\* '), '');
 
   RegistrationFormState copyWith({
     String? frequency,
     String? notificationStyle,
     List<String>? rewardTypes,
+    bool? eulaAccepted,
+    bool? ageConfirmed,
     bool clearNotificationStyle = false,
     bool clearFrequency = false,
   }) {
@@ -52,6 +74,8 @@ class RegistrationFormState {
           ? null
           : (notificationStyle ?? this.notificationStyle),
       rewardTypes: rewardTypes ?? this.rewardTypes,
+      eulaAccepted: eulaAccepted ?? this.eulaAccepted,
+      ageConfirmed: ageConfirmed ?? this.ageConfirmed,
     );
   }
 }
@@ -62,7 +86,7 @@ class RegistrationForm extends _$RegistrationForm {
   RegistrationFormState build() => const RegistrationFormState();
 
   void setFrequency(String? value) {
-    final clearStyle = value == 'No notifications';
+    final clearStyle = NotificationPreferenceOptions.isDisabled(value);
     state = state.copyWith(
       frequency: value,
       clearFrequency: value == null,
@@ -76,5 +100,13 @@ class RegistrationForm extends _$RegistrationForm {
 
   void setRewardTypes(List<String> values) {
     state = state.copyWith(rewardTypes: values);
+  }
+
+  void setEulaAccepted(bool value) {
+    state = state.copyWith(eulaAccepted: value);
+  }
+
+  void setAgeConfirmed(bool value) {
+    state = state.copyWith(ageConfirmed: value);
   }
 }

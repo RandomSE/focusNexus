@@ -94,6 +94,9 @@ abstract final class StorageKeys {
   /// Last local calendar day (yyyy-MM-dd) that received a daily open grant.
   static const lastAppOpenGrantDate = 'lastAppOpenGrantDate';
 
+  /// Last local calendar day a debug dashboard points credit was used.
+  static const debugPointsCreditDate = 'debugPointsCreditDate';
+
   /// Consecutive local calendar days with at least one eligible open grant.
   static const consecutiveDaysAppOpened = 'consecutiveDaysAppOpened';
 
@@ -116,6 +119,15 @@ abstract final class StorageKeys {
   /// Legacy key; still read on load for upgrades from login-based builds.
   static const loggedIn = 'loggedIn';
   static const onboardingCompleted = 'onboardingCompleted';
+
+  /// Whether the user accepted the in-app EULA.
+  static const eulaAccepted = 'eulaAccepted';
+
+  /// Accepted EULA version string (must match [kLegalDocsVersion] for current grant).
+  static const eulaAcceptedVersion = 'eulaAcceptedVersion';
+
+  /// ISO-8601 timestamp when the current EULA version was accepted.
+  static const eulaAcceptedAt = 'eulaAcceptedAt';
   static const skipToday = 'skipToday';
   static const notificationStyle = 'notificationStyle';
   static const notificationFrequency = 'notificationFrequency';

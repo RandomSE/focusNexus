@@ -1,7 +1,8 @@
-package com.randomSE.FocusNexus.focusnexus
+package com.randomSE.FocusNexus.FocusNexus
 
 import android.content.Intent
-import android.os.Bundle
+import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -24,6 +25,20 @@ class MainActivity : FlutterActivity() {
                         putExtra(Settings.EXTRA_APP_PACKAGE, applicationContext.packageName)
                     }
                     startActivity(intent)
+                    result.success(null)
+                }
+                "openExactAlarmSettings" -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                            data = Uri.parse("package:${applicationContext.packageName}")
+                        }
+                        startActivity(intent)
+                    } else {
+                        val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                            putExtra(Settings.EXTRA_APP_PACKAGE, applicationContext.packageName)
+                        }
+                        startActivity(intent)
+                    }
                     result.success(null)
                 }
                 else -> {

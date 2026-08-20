@@ -127,18 +127,24 @@ class _TimeWindowWindowEditorState extends State<TimeWindowWindowEditor> {
       start.hour,
       start.minute,
     );
-    final clamped = clampActionWindowStart(
+    final requestedDuration = widget.duration > Duration.zero
+        ? widget.duration
+        : defaultTimeWindowDuration;
+    var end = resolveWindowEndAfterStart(
       start: ideal,
       end: widget.endAt,
+      fallbackDuration: requestedDuration,
+    );
+    if (!end.isAtSameMomentAs(widget.endAt)) {
+      widget.onEndChanged(end);
+    }
+    final clamped = clampActionWindowStart(
+      start: ideal,
+      end: end,
       now: now,
     );
     widget.onStartChanged(clamped);
-    // Duration follows the requested (ideal) start, not the now-clamped
-    // display start, so repeating series keep the intended HH:mm window.
-    final requested = widget.endAt.difference(ideal);
-    if (requested > Duration.zero) {
-      widget.onDurationChanged(requested);
-    }
+    widget.onDurationChanged(requestedDuration);
   }
 
   void _nudgeStart(Duration delta) {
@@ -200,12 +206,15 @@ class _TimeWindowWindowEditorState extends State<TimeWindowWindowEditor> {
   }
 
   Future<void> _pickStartDate() async {
-    final now = DateTime.now();
+    final range = actionWindowStartDatePickerRange(
+      startAt: widget.startAt,
+      endAt: widget.endAt,
+    );
     final date = await showDatePicker(
       context: context,
-      initialDate: widget.startAt,
-      firstDate: DateTime(now.year, now.month, now.day),
-      lastDate: widget.endAt,
+      initialDate: range.initialDate,
+      firstDate: range.firstDate,
+      lastDate: range.lastDate,
     );
     if (date == null || !mounted) return;
     _applyStart(_withDate(widget.startAt, date));
@@ -277,7 +286,7 @@ class _TimeWindowWindowEditorState extends State<TimeWindowWindowEditor> {
           Padding(
             padding: const EdgeInsets.only(left: 4, right: 4, bottom: 8),
             child: Text(
-              'Start is adjusted to now when the goal is created.',
+              'Start is adjusted to now when the slot begins in the past.',
               style: textStyle.copyWith(
                 fontSize: (textStyle.fontSize ?? 14) - 2,
                 fontStyle: FontStyle.italic,

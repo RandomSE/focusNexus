@@ -12,6 +12,8 @@ void main() {
     );
     await pumpUntilFound(tester, find.text('Settings'));
 
+    await tester.ensureVisible(find.text('Settings'));
+    await tester.pump();
     await tester.tap(find.text('Settings'));
     await pumpUntilFound(tester, find.text('Reward types'));
 

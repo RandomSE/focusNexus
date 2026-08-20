@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focusNexus/app/app_route.dart';
+import 'package:focusNexus/achievements/notify_achievement_progress.dart';
 import 'package:focusNexus/providers/app_repositories_provider.dart';
 import 'package:focusNexus/providers/app_services_provider.dart';
 import 'package:focusNexus/providers/app_settings_provider.dart';
@@ -95,7 +96,8 @@ class _MusicScreenState extends ConsumerState<MusicScreen> {
           if (!achievements.isInitialized) {
             await achievements.initialize();
           }
-          await achievements.recordBreathBackgroundFullListen();
+          final newlyReady = await achievements.recordBreathBackgroundFullListen();
+          notifyAchievementProgressUpdated(ref, newlyReady);
         },
       );
       return;

@@ -47,7 +47,7 @@ const List<String> assistantFaqRequiredUiStrings = [
   'Power tree',
   'Cherry stages 1-3',
   'Cherry Deep Twilight / Aurora',
-  'AI Encouragement',
+  'Goal encouragement',
   'Daily Affirmations',
   'Open streak reminders',
   'Color Shop',

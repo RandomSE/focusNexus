@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:focusNexus/goals/builtin_goal_templates.dart';
+import 'package:focusNexus/goals/goal_form_feedback.dart';
 import 'package:focusNexus/goals/goals_use_case.dart';
 import 'package:focusNexus/goals/template_group_cleanup.dart';
 import 'package:focusNexus/models/classes/theme_bundle.dart';
@@ -75,12 +76,22 @@ class GoalsTemplateController {
     await repos.templates.writeUserTemplates(templates ?? getUiState().userTemplates);
   }
 
-  Future<void> preSaveTemplate({
+  /// Returns a validation message when the form is invalid; null after a successful save.
+  Future<String?> preSaveTemplate({
     required GlobalKey<FormState> templateFormKey,
     required BuildContext context,
     required ThemeBundle bundle,
   }) async {
-    if (!templateFormKey.currentState!.validate()) return;
+    if (!templateFormKey.currentState!.validate()) {
+      return GoalFormFeedback.formatMissingFieldsMessage(
+        GoalFormFeedback.collectTemplateFieldIssues(
+          name: templateNameController.text,
+          time: templateTimeController.text,
+          steps: templateStepsController.text,
+          deadlineHours: templateDeadlineController.text,
+        ),
+      );
+    }
     if (templateStepsController.text.trim() == '') {
       templateStepsController.text = '1';
     }
@@ -108,14 +119,15 @@ class GoalsTemplateController {
     );
     await saveTemplates(updatedUserTemplates);
 
-    if (!isMounted()) return;
-    if (!context.mounted) return;
+    if (!isMounted()) return null;
+    if (!context.mounted) return null;
     CommonUtils.showDialogWidget(
       context,
       'Template "$name" saved.',
       bundle.textStyle,
       bundle.secondaryColor,
     );
+    return null;
   }
 
   Future<TemplateGroupCleanupResult> pruneTemplateGroups() async {

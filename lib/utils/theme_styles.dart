@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:focusNexus/settings/notification_preference_options.dart';
 import 'package:focusNexus/utils/user_prefs_codec.dart';
 
 /// Pure UI styling from preference inputs (no storage).
@@ -314,9 +315,6 @@ class ThemeStyles {
     );
   }
 
-  static bool notificationsEnabledForFrequency(String frequency) {
-    return frequency.isNotEmpty &&
-        frequency != 'No notifications' &&
-        (frequency == 'Low' || frequency == 'Medium' || frequency == 'High');
-  }
+  static bool notificationsEnabledForFrequency(String frequency) =>
+      NotificationPreferenceOptions.isEnabled(frequency);
 }

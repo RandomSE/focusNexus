@@ -58,6 +58,15 @@ class GoalNotifier {
   static Future<void> checkOpenStreakReminders() =>
       bindings.checkOpenStreakReminders();
 
+  static Future<void> applyFrequencyChange({
+    required String oldFrequency,
+    required String newFrequency,
+  }) =>
+      frequency.applyFrequencyChange(
+        oldFrequency: oldFrequency,
+        newFrequency: newFrequency,
+      );
+
   static Future<void> refreshSchedulesForFrequencyChange({
     required String oldFrequency,
     required String newFrequency,
@@ -247,6 +256,12 @@ class GoalNotifier {
 
   static Future<void> openNotificationSettings() =>
       permissions.openNotificationSettings();
+
+  static Future<void> openExactAlarmSettings() =>
+      permissions.openExactAlarmSettings();
+
+  static Future<bool> checkExactAlarmPermissionGranted() =>
+      permissions.checkExactAlarmPermissionGranted();
 
   static Future<String> getLocalTimezone() => permissions.getLocalTimezone();
 
