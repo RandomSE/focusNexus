@@ -70,6 +70,27 @@ void main() {
     expect(off.data!.messages.first.text, 'Edited built-in');
   });
 
+  test('tryAddMessage without position uses current playback slot', () async {
+    await repo.trySetEnabled(motivator, true);
+    final now = DateTime(2026, 8, 16);
+    final before = await repo.read(motivator);
+    final expectedPos = PhrasePackSelector.defaultInsertPosition1Based(
+      currentQueueLength: before.effectiveQueue.length,
+      mode: before.mode,
+      now: now,
+    );
+
+    final result = await repo.tryAddMessage(
+      motivator,
+      'Now playing',
+      clock: now,
+    );
+    expect(result.ok, isTrue);
+    final next = result.data!;
+    expect(next.queueIds[expectedPos - 1], next.messages.last.id);
+    expect(PhrasePackSelector.customCoreForDate(next, now), 'Now playing');
+  });
+
   test('tryAddMessage spends 100 and inserts at position', () async {
     await repo.ensureSeeded(motivator);
     final before = await repo.read(motivator);

@@ -368,17 +368,44 @@ abstract final class PhrasePackCodec {
 abstract final class PhrasePackSelector {
   PhrasePackSelector._();
 
+  /// 0-based playback index for [date] after a queue of [queueLength].
+  static int indexForDate({
+    required int queueLength,
+    required PhrasePlaybackMode mode,
+    required DateTime date,
+  }) {
+    if (queueLength <= 0) return 0;
+    if (mode == PhrasePlaybackMode.random) {
+      final day = DateTime(date.year, date.month, date.day);
+      final seed = Object.hash(day.year, day.month, day.day, queueLength);
+      return Random(seed).nextInt(queueLength);
+    }
+    return AdhdMotivatorPack.seedForDate(date) % queueLength;
+  }
+
+  /// 1-based add slot so today's refresh / next affirmation is the new line.
+  static int defaultInsertPosition1Based({
+    required int currentQueueLength,
+    required PhrasePlaybackMode mode,
+    required DateTime now,
+  }) {
+    return indexForDate(
+          queueLength: currentQueueLength + 1,
+          mode: mode,
+          date: now,
+        ) +
+        1;
+  }
+
   static String? customCoreForDate(PhrasePackData pack, DateTime date) {
     if (!pack.enabled) return null;
     final queue = pack.effectiveQueue;
     if (queue.isEmpty) return null;
-    if (pack.mode == PhrasePlaybackMode.random) {
-      final day = DateTime(date.year, date.month, date.day);
-      final seed = Object.hash(day.year, day.month, day.day, queue.length);
-      final id = queue[Random(seed).nextInt(queue.length)];
-      return pack.textById(id);
-    }
-    final index = AdhdMotivatorPack.seedForDate(date) % queue.length;
+    final index = indexForDate(
+      queueLength: queue.length,
+      mode: pack.mode,
+      date: date,
+    );
     return pack.textById(queue[index]);
   }
 
@@ -402,9 +429,11 @@ abstract final class PhrasePackSelector {
   }
 
   static int sequenceIndexForDate(PhrasePackData pack, DateTime date) {
-    final queue = pack.effectiveQueue;
-    if (queue.isEmpty) return 0;
-    return AdhdMotivatorPack.seedForDate(date) % queue.length;
+    return indexForDate(
+      queueLength: pack.effectiveQueue.length,
+      mode: PhrasePlaybackMode.sequence,
+      date: date,
+    );
   }
 
   static int nextRandomIndex({

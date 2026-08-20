@@ -75,6 +75,11 @@ class UserPrefsRepository {
           await readBool(StorageKeys.registrationComplete) ||
               await readBool(StorageKeys.loggedIn),
       onboardingCompleted: await readBool(StorageKeys.onboardingCompleted),
+      eulaAccepted: await readBool(StorageKeys.eulaAccepted),
+      eulaAcceptedVersion:
+          await _storage.read(key: StorageKeys.eulaAcceptedVersion) ?? '',
+      eulaAcceptedAt:
+          await _storage.read(key: StorageKeys.eulaAcceptedAt) ?? '',
       soundEnabled: soundEnabledRaw == null
           ? true
           : UserPrefsSnapshot.parseBool(soundEnabledRaw),

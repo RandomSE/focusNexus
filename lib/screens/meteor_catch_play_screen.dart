@@ -8,6 +8,7 @@ import 'package:focusNexus/achievements/notify_achievement_progress.dart';
 import 'package:focusNexus/models/classes/achievement.dart';
 import 'package:focusNexus/mini_games/meteor_catch/meteor_catch_achievements.dart';
 import 'package:focusNexus/mini_games/meteor_catch/meteor_catch_engine.dart';
+import 'package:focusNexus/mini_games/mini_game_round_complete_gate.dart';
 import 'package:focusNexus/mini_games/mini_game_round_config.dart';
 import 'package:focusNexus/providers/app_repositories_provider.dart';
 import 'package:focusNexus/providers/app_services_provider.dart';
@@ -441,6 +442,7 @@ class _MeteorCatchPlayScreenState extends ConsumerState<MeteorCatchPlayScreen>
   MeteorCatchEngine? _engine;
   Duration? _lastElapsed;
   bool _scoreRecorded = false;
+  final _roundCompleteGate = MiniGameRoundCompleteGate();
   int _heardCatchEvents = 0;
 
   bool get _endless => widget.config.endless;
@@ -501,7 +503,7 @@ class _MeteorCatchPlayScreenState extends ConsumerState<MeteorCatchPlayScreen>
     engine.update(dt);
     _pollCatchFeedback(engine);
     if (!wasFinished && engine.isFinished) {
-      _onRoundComplete();
+      _roundCompleteGate.ensure(_onRoundComplete);
     }
     if (mounted) setState(() {});
   }
@@ -538,7 +540,7 @@ class _MeteorCatchPlayScreenState extends ConsumerState<MeteorCatchPlayScreen>
     final engine = _engine;
     if (engine == null || engine.isFinished) return;
     engine.endRound();
-    await _onRoundComplete();
+    await _roundCompleteGate.ensure(_onRoundComplete);
   }
 
   void _onPanStart(DragStartDetails details) {
@@ -633,7 +635,8 @@ class _MeteorCatchPlayScreenState extends ConsumerState<MeteorCatchPlayScreen>
                   final size = Size(constraints.maxWidth, constraints.maxHeight);
                   _ensureEngine(size);
                   final engine = _engine!;
-                  void dismiss() {
+                  Future<void> dismiss() async {
+                    await _roundCompleteGate.ensure(_onRoundComplete);
                     if (context.mounted) Navigator.of(context).pop();
                   }
                   return Stack(
@@ -655,8 +658,8 @@ class _MeteorCatchPlayScreenState extends ConsumerState<MeteorCatchPlayScreen>
                         onBack: () async {
                           if (!engine.isFinished) {
                             engine.endRound();
-                            await _onRoundComplete();
                           }
+                          await _roundCompleteGate.ensure(_onRoundComplete);
                           if (context.mounted) {
                             Navigator.of(context).pop();
                           }

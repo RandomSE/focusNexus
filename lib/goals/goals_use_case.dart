@@ -648,6 +648,29 @@ class GoalsUseCase {
     return result.updatedGoal;
   }
 
+  Future<GoalSet?> updateTimeWindowGoal({
+    required int goalId,
+    required DateTime windowEndAt,
+    required Duration windowDuration,
+    required DateTime now,
+    List<GoalSet>? activeSnapshot,
+  }) async {
+    final active = activeSnapshot ?? await _goals.readActiveGoals();
+    final index = active.indexWhere((g) => g.goalId == goalId);
+    if (index < 0) return null;
+    final goal = active[index];
+    final updated = await _timeWindow.updateTimeWindowGoal(
+      goal: goal,
+      windowEndAt: windowEndAt,
+      windowDuration: windowDuration,
+      now: now,
+    );
+    if (updated == null) return null;
+    final nextActive = List<GoalSet>.from(active)..[index] = updated;
+    await _goals.writeActiveGoals(nextActive);
+    return updated;
+  }
+
   Future<GoalSet> createTimeWindowGoal({
     required CreateTimeWindowGoalInput input,
     required DateTime now,

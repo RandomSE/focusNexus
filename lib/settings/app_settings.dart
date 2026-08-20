@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:focusNexus/legal/legal_documents.dart';
 import 'package:focusNexus/repositories/theme_repository.dart';
 import 'package:focusNexus/utils/color_argb.dart';
 import 'package:focusNexus/repositories/user_prefs_repository.dart';
@@ -39,6 +40,15 @@ class AppSettings {
   bool get pauseGoals => _snapshot.pauseGoals;
   bool get registrationComplete => _snapshot.registrationComplete;
   bool get onboardingCompleted => _snapshot.onboardingCompleted;
+  bool get eulaAccepted => _snapshot.eulaAccepted;
+  String get eulaAcceptedVersion => _snapshot.eulaAcceptedVersion;
+  String get eulaAcceptedAt => _snapshot.eulaAcceptedAt;
+
+  /// True when the stored EULA acceptance matches [kLegalDocsVersion].
+  bool get hasAcceptedCurrentEula =>
+      _snapshot.eulaAccepted &&
+      _snapshot.eulaAcceptedVersion == kLegalDocsVersion;
+
   bool get soundEnabled => _snapshot.soundEnabled;
   double get soundVolume => _snapshot.soundVolume;
   bool get customizationEnabled => _snapshot.customizationEnabled;
@@ -204,16 +214,49 @@ class AppSettings {
     _apply(_snapshot.copyWith(registrationComplete: value));
   }
 
+  /// Persists EULA acceptance for the current [kLegalDocsVersion].
+  Future<void> acceptCurrentEula({DateTime? acceptedAt}) async {
+    final at = (acceptedAt ?? DateTime.now().toUtc()).toIso8601String();
+    await _prefs.writeBool(StorageKeys.eulaAccepted, true);
+    await _prefs.writeString(StorageKeys.eulaAcceptedVersion, kLegalDocsVersion);
+    await _prefs.writeString(StorageKeys.eulaAcceptedAt, at);
+    _apply(
+      _snapshot.copyWith(
+        eulaAccepted: true,
+        eulaAcceptedVersion: kLegalDocsVersion,
+        eulaAcceptedAt: at,
+      ),
+    );
+  }
+
+  /// Clears stored EULA acceptance (used by account wipe / default prefs).
+  Future<void> clearEulaAcceptance() async {
+    await _prefs.writeBool(StorageKeys.eulaAccepted, false);
+    await _prefs.writeString(StorageKeys.eulaAcceptedVersion, '');
+    await _prefs.writeString(StorageKeys.eulaAcceptedAt, '');
+    _apply(
+      _snapshot.copyWith(
+        eulaAccepted: false,
+        eulaAcceptedVersion: '',
+        eulaAcceptedAt: '',
+      ),
+    );
+  }
+
   /// Persists notification/reward choices from the setup form and marks registration done.
   Future<void> completeRegistration({
     required String notificationFrequency,
     required String notificationStyle,
     required List<String> rewardTypes,
+    bool acceptEula = true,
   }) async {
     await _prefs.writeString(StorageKeys.theme, 'light');
     await setNotificationFrequency(notificationFrequency);
     await setNotificationStyle(notificationStyle);
     await setRewardTypes(rewardTypes);
+    if (acceptEula) {
+      await acceptCurrentEula();
+    }
     await setRegistrationComplete(true);
     await setOnboardingCompleted(false);
   }
@@ -356,6 +399,7 @@ class AppSettings {
     await setPauseGoals(false);
     await setRegistrationComplete(false);
     await setOnboardingCompleted(false);
+    await clearEulaAcceptance();
     await setSoundEnabled(true);
     await setSoundVolume(100);
     await setCustomizationEnabled(false);

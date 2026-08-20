@@ -16,6 +16,7 @@ Future<void> showGoalsGoalDetailsDialog({
   required GoalSet goal,
   required bool isCompleted,
   RepeatRule? repeatRule,
+  Future<void> Function()? onEditTimeSlot,
 }) {
   final isTimeWindow = isTimeWindowGoal(goal);
   return showDialog<void>(
@@ -74,6 +75,14 @@ Future<void> showGoalsGoalDetailsDialog({
             ],
           ),
           actions: [
+            if (!isCompleted && isTimeWindow && goal.repeatSeriesId == 0)
+              TextButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  await onEditTimeSlot?.call();
+                },
+                child: Text('Edit slot', style: bundle.textStyle),
+              ),
             Container(
               color: bundle.secondaryColor,
               child: TextButton(

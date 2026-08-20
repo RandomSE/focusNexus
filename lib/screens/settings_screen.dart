@@ -6,20 +6,25 @@ import 'package:focusNexus/providers/achievements_list_refresh_provider.dart';
 import 'package:focusNexus/providers/app_repositories_provider.dart';
 import 'package:focusNexus/providers/app_services_provider.dart';
 import 'package:focusNexus/providers/app_settings_provider.dart';
-import 'package:focusNexus/models/classes/achievement_tracking_variables.dart';
 import 'package:focusNexus/providers/points_balance_provider.dart';
 import 'package:focusNexus/providers/screen_ui_providers.dart';
 import 'package:focusNexus/providers/zen_garden_session_provider.dart';
 import 'package:focusNexus/services/ambient_section_playback.dart';
+import 'package:focusNexus/settings/account_wipe_use_case.dart';
+import 'package:focusNexus/settings/notification_preference_options.dart';
+import 'package:focusNexus/settings/settings_notifications.dart';
 import 'package:focusNexus/utils/appearance_transition.dart';
 import 'package:focusNexus/utils/common_utils.dart';
 import 'package:focusNexus/utils/notifier.dart';
+import 'package:focusNexus/utils/notification_platform.dart';
 import 'package:focusNexus/utils/screen_semantics.dart';
 import 'package:focusNexus/utils/screen_theme.dart';
 import 'package:focusNexus/widgets/appearance_settings_section.dart';
 import 'package:focusNexus/widgets/deferred_screen.dart';
+import 'package:focusNexus/widgets/legal_links_section.dart';
 import 'package:focusNexus/widgets/reward_types_multi_select.dart';
 import 'package:focusNexus/widgets/settings_themed_builder.dart';
+import 'package:focusNexus/widgets/settings_time_picker.dart';
 import 'package:focusNexus/widgets/skeleton_loaders.dart';
 import 'package:focusNexus/widgets/sound_volume_control.dart';
 import 'package:focusNexus/utils/theme_styles.dart';
@@ -33,15 +38,8 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen>
     with WidgetsBindingObserver {
-  static const _notificationFrequencies = [
-    'Low',
-    'Medium',
-    'High',
-    'No notifications',
-  ];
-  static const _notificationStyles = ['Minimal', 'Vibrant', 'Animated'];
-
   Future<void>? _loadFuture;
+  bool _exactAlarmGranted = true;
 
   @override
   void initState() {
@@ -55,129 +53,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     super.dispose();
   }
 
+  Future<void> _refreshNotificationPermission() async {
+    final allowed = await GoalNotifier.checkNotificationsPermissionsGranted();
+    final exactAlarm =
+        await GoalNotifier.checkExactAlarmPermissionGranted();
+    if (!mounted) return;
+    ref.read(settingsNotificationsAllowedProvider.notifier).set(allowed);
+    setState(() => _exactAlarmGranted = exactAlarm);
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) async {
     if (state == AppLifecycleState.resumed) {
-      final allowed = await GoalNotifier.checkNotificationsPermissionsGranted();
-      if (!mounted) return;
-      ref.read(settingsNotificationsAllowedProvider.notifier).set(allowed);
+      await _refreshNotificationPermission();
     }
-  }
-
-  Future<void> _refreshNotificationPermission() async {
-    final allowed = await GoalNotifier.checkNotificationsPermissionsGranted();
-    if (!mounted) return;
-    ref.read(settingsNotificationsAllowedProvider.notifier).set(allowed);
   }
 
   Future<void> _load() async {
     await _refreshNotificationPermission();
   }
 
-  Future<void> setAndCheckDailyAffirmations(bool value) async {
-    final settings = ref.read(appSettingsProvider.notifier).service;
-    await settings.setDailyAffirmations(value);
-    if (value) {
-      await updateDailyAffirmations(settings.dailyAffirmationsTime);
-    } else {
-      await GoalNotifier.cancelDailyAffirmationsNotification();
-    }
-  }
-
-  Future<void> updateDailyAffirmations(String time) async {
-    await ref.read(appSettingsProvider.notifier).service.setDailyAffirmationsTime(time);
-    await GoalNotifier.startDailyAffirmations(time);
-  }
-
-  Future<void> setAndCheckOpenStreakReminders(bool value) async {
-    final settings = ref.read(appSettingsProvider.notifier).service;
-    await settings.setOpenStreakReminders(value);
-    if (value) {
-      await updateOpenStreakReminders(settings.openStreakRemindersTime);
-    } else {
-      await GoalNotifier.cancelOpenStreakReminder();
-    }
-  }
-
-  Future<void> updateOpenStreakReminders(String time) async {
-    await ref
-        .read(appSettingsProvider.notifier)
-        .service
-        .setOpenStreakRemindersTime(time);
-    await GoalNotifier.startOpenStreakReminder(time);
-  }
-
-  Future<void> updateNotificationFrequency(
-    String oldFrequency,
-    String newFrequency,
-  ) async {
-    final settings = ref.read(appSettingsProvider.notifier).service;
-    await settings.setNotificationFrequency(newFrequency);
-    if (oldFrequency == 'No notifications' &&
-        newFrequency != 'No notifications') {
-      await GoalNotifier.requestNotificationPermission();
-    }
-    if (oldFrequency != 'No notifications' &&
-        newFrequency == 'No notifications') {
-      await GoalNotifier.cancelAllGoalNotifications();
-    }
-    await GoalNotifier.refreshSchedulesForFrequencyChange(
-      oldFrequency: oldFrequency,
-      newFrequency: newFrequency,
-    );
-  }
-
   Future<void> _runAppearanceChange(Future<void> Function() apply) async {
     await runAppearanceChange(ref, apply);
-  }
-
-  Future<void> setPauseGoalsScreen(bool value) async {
-    await ref.read(appSettingsProvider.notifier).service.setPauseGoals(value);
-    if (value) {
-      await GoalNotifier.cancelAllGoalNotifications();
-    }
-  }
-
-  ThemeData buildTimePickerTheme(
-    Color primaryColor,
-    Color secondaryColor,
-    TextStyle textStyle,
-  ) {
-    return ThemeData(
-      timePickerTheme: TimePickerThemeData(
-        backgroundColor: secondaryColor,
-        dialBackgroundColor: secondaryColor,
-        dialHandColor: Colors.deepPurple,
-        dialTextColor: primaryColor,
-        entryModeIconColor: primaryColor,
-        hourMinuteColor: WidgetStateColor.resolveWith(
-          (states) =>
-              states.contains(WidgetState.selected)
-                  ? primaryColor
-                  : secondaryColor,
-        ),
-        hourMinuteTextColor: WidgetStateColor.resolveWith(
-          (states) =>
-              states.contains(WidgetState.selected)
-                  ? secondaryColor
-                  : primaryColor,
-        ),
-        dayPeriodColor: WidgetStateColor.resolveWith(
-          (states) =>
-              states.contains(WidgetState.selected)
-                  ? primaryColor
-                  : secondaryColor,
-        ),
-        dayPeriodTextColor: WidgetStateColor.resolveWith(
-          (states) =>
-              states.contains(WidgetState.selected)
-                  ? secondaryColor
-                  : primaryColor,
-        ),
-        helpTextStyle: textStyle,
-        hourMinuteTextStyle: textStyle,
-      ),
-    );
   }
 
   @override
@@ -185,6 +82,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     final settings = ref.watch(appSettingsProvider.notifier).service;
     final notificationsAllowed = ref.watch(settingsNotificationsAllowedProvider);
     final isDeletingAccount = ref.watch(settingsDeletingAccountProvider);
+    final showNotificationControls =
+        SettingsNotifications.showsNotificationControls(
+      settings.notificationFrequency,
+    );
 
     return SettingsThemedBuilder(
       builder: (context, bundle) {
@@ -210,21 +111,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                 Theme(
                   data: bundle.themeData,
                   child: Scaffold(
-                  appBar: AppBar(
-                    title: Text(
-                      'Settings',
-                      style: TextStyle(
-                        backgroundColor: secondaryColor,
-                        color: primaryColor,
+                    appBar: AppBar(
+                      title: Text(
+                        'Settings',
+                        style: TextStyle(
+                          backgroundColor: secondaryColor,
+                          color: primaryColor,
+                        ),
                       ),
+                      backgroundColor: secondaryColor,
+                      iconTheme: ThemeStyles.iconThemeFor(primaryColor),
                     ),
                     backgroundColor: secondaryColor,
-                    iconTheme: ThemeStyles.iconThemeFor( primaryColor),
-                  ),
-                  backgroundColor: secondaryColor,
-                  body: ListView(
-                    padding: const EdgeInsets.all(16.0),
-                    children: [
+                    body: ListView(
+                      padding: const EdgeInsets.all(16.0),
+                      children: [
                         const SizedBox(height: 8),
                         ScreenSemantics.sectionHeader('Appearance', textStyle),
                         AppearanceSettingsSection(
@@ -259,24 +160,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                         CommonUtils.buildDropdownButtonFormField(
                           'Notification Frequency',
                           settings.notificationFrequency,
-                          _notificationFrequencies,
+                          NotificationPreferenceOptions.frequencies,
                           textStyle,
                           secondaryColor,
-                          (val) => updateNotificationFrequency(
-                            settings.notificationFrequency,
-                            val ?? 'Medium',
+                          (val) => SettingsNotifications.updateFrequency(
+                            settings,
+                            oldFrequency: settings.notificationFrequency,
+                            newFrequency:
+                                val ??
+                                NotificationPreferenceOptions.defaultFrequency,
                           ),
                         ),
-                        if (settings.notificationFrequency !=
-                            'No notifications')
+                        if (showNotificationControls)
                           CommonUtils.buildDropdownButtonFormField(
                             'Notification Style',
                             settings.notificationStyle,
-                            _notificationStyles,
+                            NotificationPreferenceOptions.styles,
                             textStyle,
                             secondaryColor,
                             (val) => settings.setNotificationStyle(
-                              val ?? 'Minimal',
+                              val ?? NotificationPreferenceOptions.styleMinimal,
                             ),
                           )
                         else
@@ -285,16 +188,45 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                             textStyle,
                           ),
                         const Divider(),
-                        ScreenSemantics.sectionHeader('Accessibility', textStyle),
-                        CommonUtils.buildSwitchListTile(
-                          'Dark mode',
+                        ScreenSemantics.sectionHeader(
+                          'Accessibility',
                           textStyle,
-                          settings.snapshot.isDark,
-                          (val) => _runAppearanceChange(
-                            () => settings.setUserTheme(val ? 'dark' : 'light'),
-                          ),
-                          primaryColor,
                         ),
+                        if (settings.usesCustomizedColours)
+                          CommonUtils.buildElevatedButton(
+                            'Change customized colours',
+                            primaryColor,
+                            secondaryColor,
+                            textStyle,
+                            0,
+                            0,
+                            () => ref.pushRoute(
+                              context,
+                              AppRoute.customization,
+                            ),
+                          )
+                        else ...[
+                          CommonUtils.buildSwitchListTile(
+                            'Dark mode',
+                            textStyle,
+                            settings.snapshot.isDark,
+                            (val) => _runAppearanceChange(
+                              () => settings.setUserTheme(
+                                val ? 'dark' : 'light',
+                              ),
+                            ),
+                            primaryColor,
+                          ),
+                          CommonUtils.buildSwitchListTile(
+                            'High Contrast Mode',
+                            textStyle,
+                            settings.highContrastMode,
+                            (val) => _runAppearanceChange(
+                              () => settings.setHighContrastMode(val),
+                            ),
+                            primaryColor,
+                          ),
+                        ],
                         CommonUtils.buildSwitchListTile(
                           'Dyslexia-friendly Font',
                           textStyle,
@@ -305,23 +237,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                           primaryColor,
                         ),
                         CommonUtils.buildSwitchListTile(
-                          'High Contrast Mode',
-                          textStyle,
-                          settings.highContrastMode,
-                          (val) => _runAppearanceChange(
-                            () => settings.setHighContrastMode(val),
-                          ),
-                          primaryColor,
-                        ),
-                        CommonUtils.buildSwitchListTile(
                           'Hide motivational phrases',
                           textStyle,
                           settings.motivatorsDisabled,
                           (val) => settings.setMotivatorsDisabled(val),
                           primaryColor,
                         ),
-                        if (settings.notificationFrequency !=
-                            'No notifications') ...[
+                        if (showNotificationControls) ...[
                           const Divider(),
                           ScreenSemantics.sectionHeader(
                             'Notification settings',
@@ -331,7 +253,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                             'Daily Affirmations',
                             textStyle,
                             settings.dailyAffirmations,
-                            setAndCheckDailyAffirmations,
+                            (val) => SettingsNotifications.setDailyAffirmations(
+                              settings,
+                              val,
+                            ),
                             primaryColor,
                           ),
                           if (settings.dailyAffirmations) ...[
@@ -348,28 +273,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                                     4,
                                     0,
                                     () async {
-                                      final selected = await showTimePicker(
-                                        context: context,
-                                        initialTime: TimeOfDay.now(),
-                                        initialEntryMode:
-                                            TimePickerEntryMode.dial,
-                                        builder:
-                                            (context, child) => Theme(
-                                              data: buildTimePickerTheme(
-                                                primaryColor,
-                                                secondaryColor,
-                                                textStyle,
-                                              ),
-                                              child: child!,
-                                            ),
+                                      final formatted =
+                                          await SettingsTimePicker.pickHHmm(
+                                        context,
+                                        primaryColor: primaryColor,
+                                        secondaryColor: secondaryColor,
+                                        textStyle: textStyle,
                                       );
-                                      if (selected != null) {
-                                        final formatted =
-                                            '${selected.hour.toString().padLeft(2, '0')}:${selected.minute.toString().padLeft(2, '0')}';
-                                        await updateDailyAffirmations(
-                                          formatted,
-                                        );
-                                      }
+                                      if (formatted == null) return;
+                                      await SettingsNotifications
+                                          .setDailyAffirmationsTime(
+                                        settings,
+                                        formatted,
+                                      );
                                     },
                                   ),
                                 ),
@@ -381,7 +297,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                             'Open streak reminders',
                             textStyle,
                             settings.openStreakReminders,
-                            setAndCheckOpenStreakReminders,
+                            (val) =>
+                                SettingsNotifications.setOpenStreakReminders(
+                              settings,
+                              val,
+                            ),
                             primaryColor,
                           ),
                           if (settings.openStreakReminders) ...[
@@ -398,28 +318,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                                     4,
                                     0,
                                     () async {
-                                      final selected = await showTimePicker(
-                                        context: context,
-                                        initialTime: TimeOfDay.now(),
-                                        initialEntryMode:
-                                            TimePickerEntryMode.dial,
-                                        builder:
-                                            (context, child) => Theme(
-                                              data: buildTimePickerTheme(
-                                                primaryColor,
-                                                secondaryColor,
-                                                textStyle,
-                                              ),
-                                              child: child!,
-                                            ),
+                                      final formatted =
+                                          await SettingsTimePicker.pickHHmm(
+                                        context,
+                                        primaryColor: primaryColor,
+                                        secondaryColor: secondaryColor,
+                                        textStyle: textStyle,
                                       );
-                                      if (selected != null) {
-                                        final formatted =
-                                            '${selected.hour.toString().padLeft(2, '0')}:${selected.minute.toString().padLeft(2, '0')}';
-                                        await updateOpenStreakReminders(
-                                          formatted,
-                                        );
-                                      }
+                                      if (formatted == null) return;
+                                      await SettingsNotifications
+                                          .setOpenStreakRemindersTime(
+                                        settings,
+                                        formatted,
+                                      );
                                     },
                                   ),
                                 ),
@@ -428,7 +339,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                             ),
                           ],
                           CommonUtils.buildSwitchListTile(
-                            'AI Encouragement',
+                            'Goal encouragement',
                             textStyle,
                             settings.aiEncouragement,
                             settings.setAiEncouragement,
@@ -439,20 +350,36 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                               'Would you like to enable notifications?',
                               textStyle,
                               notificationsAllowed,
-                              (val) async {
-                                await GoalNotifier.requestNotificationPermission();
-                                final allowed =
-                                    await GoalNotifier.checkNotificationsPermissionsGranted();
-                                if (!mounted) return;
-                                ref
-                                    .read(
-                                      settingsNotificationsAllowedProvider
-                                          .notifier,
-                                    )
-                                    .set(allowed);
+                              (_) async {
+                                await GoalNotifier.openNotificationSettings();
+                                await _refreshNotificationPermission();
                               },
                               primaryColor,
                             ),
+                          if (notificationsAllowed &&
+                              NotificationPlatform.isAndroid &&
+                              !_exactAlarmGranted) ...[
+                            ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(
+                                NotificationPlatform.exactAlarmDeniedUserMessage,
+                                style: textStyle.copyWith(
+                                  fontWeight: FontWeight.normal,
+                                ),
+                              ),
+                              subtitle: Text(
+                                'Open exact alarm settings',
+                                style: textStyle.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: primaryColor,
+                                ),
+                              ),
+                              onTap: () async {
+                                await GoalNotifier.openExactAlarmSettings();
+                                await _refreshNotificationPermission();
+                              },
+                            ),
+                          ],
                         ],
                         if (settings.hasProgressiveVisualsReward) ...[
                           const Divider(),
@@ -474,12 +401,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                           ),
                         ],
                         const Divider(),
-                        ScreenSemantics.sectionHeader('Goals & sound', textStyle),
+                        ScreenSemantics.sectionHeader(
+                          'Goals & sound',
+                          textStyle,
+                        ),
                         CommonUtils.buildSwitchListTile(
                           'Pause Goals',
                           textStyle,
                           settings.pauseGoals,
-                          setPauseGoalsScreen,
+                          (val) => SettingsNotifications.setPauseGoals(
+                            settings,
+                            val,
+                          ),
                           primaryColor,
                         ),
                         CommonUtils.buildSwitchListTile(
@@ -505,6 +438,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                           ),
                         ],
                         const Divider(),
+                        ScreenSemantics.sectionHeader('Legal', textStyle),
+                        if (!settings.hasAcceptedCurrentEula)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Text(
+                              'Please review and accept the updated End User '
+                              'License Agreement to keep using FocusNexus.',
+                              style: textStyle.copyWith(
+                                fontWeight: FontWeight.normal,
+                              ),
+                            ),
+                          ),
+                        LegalLinksSection.buttons(
+                          primaryColor: primaryColor,
+                          secondaryColor: secondaryColor,
+                          textStyle: textStyle,
+                        ),
+                        const Divider(),
                         ScreenSemantics.sectionHeader('Account', textStyle),
                         CommonUtils.buildElevatedButton(
                           'Clear preferences and delete account',
@@ -516,53 +467,53 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                           isDeletingAccount
                               ? null
                               : () => _confirmAndDeleteAccount(
-                                context,
-                                primaryColor,
-                                secondaryColor,
-                                textStyle,
-                              ),
+                                    context,
+                                    primaryColor,
+                                    secondaryColor,
+                                    textStyle,
+                                  ),
                         ),
                       ],
-                  ),
-                ),
-              ),
-              if (isDeletingAccount)
-                ModalBarrier(
-                  color: Colors.black.withValues(alpha: 0.45),
-                  dismissible: false,
-                ),
-              if (isDeletingAccount)
-                Center(
-                  child: Material(
-                    color: secondaryColor,
-                    borderRadius: BorderRadius.circular(12),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 28,
-                        vertical: 24,
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Deleting account…',
-                            style: textStyle,
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 20),
-                          SizedBox(
-                            width: 28,
-                            height: 28,
-                            child: CircularProgressIndicator(
-                              color: primaryColor,
-                              strokeWidth: 2.5,
-                            ),
-                          ),
-                        ],
-                      ),
                     ),
                   ),
                 ),
+                if (isDeletingAccount)
+                  ModalBarrier(
+                    color: Colors.black.withValues(alpha: 0.45),
+                    dismissible: false,
+                  ),
+                if (isDeletingAccount)
+                  Center(
+                    child: Material(
+                      color: secondaryColor,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 28,
+                          vertical: 24,
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Deleting account…',
+                              style: textStyle,
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 20),
+                            SizedBox(
+                              width: 28,
+                              height: 28,
+                              child: CircularProgressIndicator(
+                                color: primaryColor,
+                                strokeWidth: 2.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -642,24 +593,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
 
     ref.read(settingsDeletingAccountProvider.notifier).set(true);
     try {
-      // Clear keepAlive garden first so dispose cannot re-save onto wiped disk
-      // and so cherry flags are not re-flipped from a stale unlocked tree.
-      ref.read(zenGardenSessionProvider.notifier).resetForAccountWipe();
-      final repos = ref.read(appRepositoriesProvider);
-      final sounds = ref.read(soundServiceProvider);
-      final ambientCoordinator = ref.read(ambientPlaybackCoordinatorProvider);
-      await ambientCoordinator.stopAll(sounds);
-      await sounds.stopMusic();
-      sounds.invalidatePlaybackCache();
-      await repos.wipeAllUserData();
-      final achievements = ref.read(achievementServiceProvider);
-      await achievements.clearAll();
-      await AchievementTrackingVariables().reset();
-      await achievements.initialize();
-      ref.read(achievementsListRefreshProvider.notifier).bump();
-      ref.invalidate(pointsBalanceProvider);
-      await GoalNotifier.purgeAllScheduledNotifications();
-      await settings.applyDefaultPreferences();
+      final wipe = AccountWipeUseCase(
+        repos: ref.read(appRepositoriesProvider),
+        settings: settings,
+        achievements: ref.read(achievementServiceProvider),
+        sounds: ref.read(soundServiceProvider),
+        ambientCoordinator: ref.read(ambientPlaybackCoordinatorProvider),
+        resetZenGardenSession: () async {
+          ref.read(zenGardenSessionProvider.notifier).resetForAccountWipe();
+        },
+        bumpAchievementsList: () {
+          ref.read(achievementsListRefreshProvider.notifier).bump();
+        },
+        invalidatePointsBalance: () {
+          ref.invalidate(pointsBalanceProvider);
+        },
+      );
+      await wipe.execute();
       if (!context.mounted) return;
       ref.resetToRoute(context, AppRoute.auth);
     } finally {

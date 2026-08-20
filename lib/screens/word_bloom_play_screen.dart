@@ -10,6 +10,7 @@ import 'package:focusNexus/mini_games/word_bloom/word_bloom_achievements.dart';
 import 'package:focusNexus/mini_games/word_bloom/word_bloom_constants.dart';
 import 'package:focusNexus/mini_games/word_bloom/word_bloom_engine.dart';
 import 'package:focusNexus/mini_games/word_bloom/word_bloom_painter.dart';
+import 'package:focusNexus/mini_games/mini_game_round_complete_gate.dart';
 import 'package:focusNexus/providers/app_repositories_provider.dart';
 import 'package:focusNexus/providers/app_services_provider.dart';
 import 'package:focusNexus/widgets/mini_game_end_overlay.dart';
@@ -44,6 +45,7 @@ class _WordBloomPlayScreenState extends ConsumerState<WordBloomPlayScreen>
   bool _ownsEngine = false;
   Duration? _lastElapsed;
   bool _scoreRecorded = false;
+  final _roundCompleteGate = MiniGameRoundCompleteGate();
   int _heardCollectEvents = 0;
   int _heardWordCollectedEvents = 0;
 
@@ -137,7 +139,7 @@ class _WordBloomPlayScreenState extends ConsumerState<WordBloomPlayScreen>
     engine.update(dt);
     _pollCollectFeedback(engine);
     if (!wasFinished && engine.isFinished) {
-      _onRoundComplete();
+      _roundCompleteGate.ensure(_onRoundComplete);
     }
     if (engine.isFinished && _ticker.isActive) {
       _ticker.stop();
@@ -188,7 +190,7 @@ class _WordBloomPlayScreenState extends ConsumerState<WordBloomPlayScreen>
     final engine = _engine;
     if (engine == null || engine.isFinished) return;
     engine.endRound();
-    await _onRoundComplete();
+    await _roundCompleteGate.ensure(_onRoundComplete);
   }
 
   void _onTapDown(TapDownDetails details) {
@@ -218,8 +220,8 @@ class _WordBloomPlayScreenState extends ConsumerState<WordBloomPlayScreen>
           onBack: () async {
             if (!engine.isFinished) {
               engine.endRound();
-              await _onRoundComplete();
             }
+            await _roundCompleteGate.ensure(_onRoundComplete);
             if (mounted) {
               Navigator.of(context).pop();
             }
@@ -281,7 +283,8 @@ class _WordBloomPlayScreenState extends ConsumerState<WordBloomPlayScreen>
                   _ensureEngine(size);
                   _syncLetterLayoutFromBundle(bundle.textStyle);
                   final engine = _engine!;
-                  void dismiss() {
+                  Future<void> dismiss() async {
+                    await _roundCompleteGate.ensure(_onRoundComplete);
                     if (context.mounted) Navigator.of(context).pop();
                   }
                   return Stack(

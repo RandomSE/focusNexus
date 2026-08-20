@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:focusNexus/app/app_routes.dart';
 import 'package:focusNexus/bootstrap/app_bootstrap.dart';
+import 'package:focusNexus/legal/legal_documents.dart';
 import 'package:focusNexus/main.dart';
 import 'package:focusNexus/providers/app_repositories_provider.dart';
 import 'package:focusNexus/providers/app_services_provider.dart'; // goalNotifierWiringProvider
@@ -49,12 +50,11 @@ Future<ProviderContainer> createTestContainer({
   );
   if (bootstrap) {
     await ensureAppReady(container);
-    if (initializeNotifications) {
-      scheduleDeferredStartupWork(
-        container: container,
-        initializeNotifications: true,
-      );
-    }
+    await scheduleDeferredStartupWork(
+      container: container,
+      initializeNotifications: initializeNotifications,
+      warmAmbient: false,
+    );
   }
   return container;
 }
@@ -111,6 +111,9 @@ InMemoryKeyValueStorage onboardedTestStorage() {
     initial: {
       StorageKeys.registrationComplete: 'true',
       StorageKeys.onboardingCompleted: 'true',
+      StorageKeys.eulaAccepted: 'true',
+      StorageKeys.eulaAcceptedVersion: kLegalDocsVersion,
+      StorageKeys.eulaAcceptedAt: '2026-08-10T00:00:00.000Z',
       StorageKeys.theme: 'light',
       StorageKeys.rewardTypes: '["Mini-games"]',
     },
@@ -123,6 +126,9 @@ InMemoryKeyValueStorage registrationTestStorage() {
     initial: {
       StorageKeys.registrationComplete: 'true',
       StorageKeys.onboardingCompleted: 'false',
+      StorageKeys.eulaAccepted: 'true',
+      StorageKeys.eulaAcceptedVersion: kLegalDocsVersion,
+      StorageKeys.eulaAcceptedAt: '2026-08-10T00:00:00.000Z',
     },
   );
 }

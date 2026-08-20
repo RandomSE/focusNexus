@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:focusNexus/app/app_routes.dart';
 
@@ -17,6 +18,9 @@ void main() {
 
     expect(find.text('Notification Frequency'), findsOneWidget);
     expect(find.text('Reward types'), findsOneWidget);
+    expect(find.text('I confirm I am 13 or older'), findsOneWidget);
+    await tester.drag(find.byType(ListView).first, const Offset(0, -500));
+    await tester.pumpAndSettle();
     expect(find.text('Continue'), findsOneWidget);
   });
 }

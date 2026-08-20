@@ -6,7 +6,7 @@ import 'package:focusNexus/providers/goals_screen_ui_provider.dart';
 import 'package:focusNexus/providers/theme_bundle_provider.dart';
 import 'package:focusNexus/utils/common_utils.dart';
 
-class GoalsTemplateManagerDialog extends ConsumerWidget {
+class GoalsTemplateManagerDialog extends ConsumerStatefulWidget {
   const GoalsTemplateManagerDialog({
     super.key,
     required this.dialogContext,
@@ -33,7 +33,10 @@ class GoalsTemplateManagerDialog extends ConsumerWidget {
   final List<String> categories;
   final List<String> levels;
   final Map<String, Map<String, dynamic>> templateDetails;
-  final Future<void> Function(GlobalKey<FormState> templateFormKey) onSaveTemplate;
+
+  /// Returns a user-facing validation message when save is blocked; null on success.
+  final Future<String?> Function(GlobalKey<FormState> templateFormKey)
+      onSaveTemplate;
   final void Function(BuildContext dialogContext) onDismiss;
   final Future<void> Function(String name) onDeleteUserTemplate;
   final void Function(String name, Map<String, dynamic> data) onTemplateSelected;
@@ -48,7 +51,7 @@ class GoalsTemplateManagerDialog extends ConsumerWidget {
     required List<String> categories,
     required List<String> levels,
     required Map<String, Map<String, dynamic>> templateDetails,
-    required Future<void> Function(GlobalKey<FormState> templateFormKey)
+    required Future<String?> Function(GlobalKey<FormState> templateFormKey)
         onSaveTemplate,
     required void Function(BuildContext dialogContext) onDismiss,
     required Future<void> Function(String name) onDeleteUserTemplate,
@@ -76,12 +79,27 @@ class GoalsTemplateManagerDialog extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<GoalsTemplateManagerDialog> createState() =>
+      _GoalsTemplateManagerDialogState();
+}
+
+class _GoalsTemplateManagerDialogState
+    extends ConsumerState<GoalsTemplateManagerDialog> {
+  String? _validationMessage;
+
+  Future<void> _onSavePressed() async {
+    final message = await widget.onSaveTemplate(widget.templateFormKey);
+    if (!mounted) return;
+    setState(() => _validationMessage = message);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final bundle = ref.watch(themeBundleProvider);
     final ui = ref.watch(goalsScreenUiProvider);
     final uiNotifier = ref.read(goalsScreenUiProvider.notifier);
     final allTemplateNames = [
-      ...templateDetails.keys,
+      ...widget.templateDetails.keys,
       ...ui.userTemplates.keys,
     ];
     var minutesRequired = 0;
@@ -95,12 +113,12 @@ class GoalsTemplateManagerDialog extends ConsumerWidget {
         context: context,
         children: [
           Form(
-            key: templateFormKey,
+            key: widget.templateFormKey,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 CommonUtils.buildTextFormField(
-                  templateNameController,
+                  widget.templateNameController,
                   'Template Name (required)',
                   bundle.textStyle,
                   bundle.secondaryColor,
@@ -115,53 +133,53 @@ class GoalsTemplateManagerDialog extends ConsumerWidget {
                 CommonUtils.buildDropdownButtonFormField(
                   'Category',
                   ui.templateDialogCategory,
-                  categories,
+                  widget.categories,
                   bundle.textStyle,
                   bundle.secondaryColor,
                   (v) => uiNotifier.update(
                     (state) => state.copyWith(
-                      templateDialogCategory: v ?? categories.first,
+                      templateDialogCategory: v ?? widget.categories.first,
                     ),
                   ),
                 ),
                 CommonUtils.buildDropdownButtonFormField(
                   'Complexity',
                   ui.templateDialogComplexity,
-                  levels,
+                  widget.levels,
                   bundle.textStyle,
                   bundle.secondaryColor,
                   (v) => uiNotifier.update(
                     (state) => state.copyWith(
-                      templateDialogComplexity: v ?? levels.first,
+                      templateDialogComplexity: v ?? widget.levels.first,
                     ),
                   ),
                 ),
                 CommonUtils.buildDropdownButtonFormField(
                   'Effort',
                   ui.templateDialogEffort,
-                  levels,
+                  widget.levels,
                   bundle.textStyle,
                   bundle.secondaryColor,
                   (v) => uiNotifier.update(
                     (state) => state.copyWith(
-                      templateDialogEffort: v ?? levels.first,
+                      templateDialogEffort: v ?? widget.levels.first,
                     ),
                   ),
                 ),
                 CommonUtils.buildDropdownButtonFormField(
                   'Motivation',
                   ui.templateDialogMotivation,
-                  levels,
+                  widget.levels,
                   bundle.textStyle,
                   bundle.secondaryColor,
                   (v) => uiNotifier.update(
                     (state) => state.copyWith(
-                      templateDialogMotivation: v ?? levels.first,
+                      templateDialogMotivation: v ?? widget.levels.first,
                     ),
                   ),
                 ),
                 CommonUtils.buildTextFormField(
-                  templateTimeController,
+                  widget.templateTimeController,
                   'Time (minutes, required)',
                   bundle.textStyle,
                   bundle.secondaryColor,
@@ -175,7 +193,7 @@ class GoalsTemplateManagerDialog extends ConsumerWidget {
                   keyboardType: TextInputType.number,
                 ),
                 CommonUtils.buildTextFormField(
-                  templateDeadlineController,
+                  widget.templateDeadlineController,
                   'Hours to complete (optional)',
                   bundle.textStyle,
                   bundle.secondaryColor,
@@ -197,13 +215,23 @@ class GoalsTemplateManagerDialog extends ConsumerWidget {
                   keyboardType: TextInputType.number,
                 ),
                 CommonUtils.buildTextFormField(
-                  templateStepsController,
+                  widget.templateStepsController,
                   'Steps (Required)',
                   bundle.textStyle,
                   bundle.secondaryColor,
                   true,
                   GoalFieldValidators.steps,
                 ),
+                if (_validationMessage != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    _validationMessage!,
+                    style: bundle.textStyle.copyWith(color: Colors.purple),
+                    softWrap: true,
+                    maxLines: 8,
+                    overflow: TextOverflow.visible,
+                  ),
+                ],
                 CommonUtils.buildElevatedButton(
                   'Save Template',
                   bundle.primaryColor,
@@ -211,7 +239,7 @@ class GoalsTemplateManagerDialog extends ConsumerWidget {
                   bundle.textStyle,
                   14,
                   10,
-                  () => onSaveTemplate(templateFormKey),
+                  _onSavePressed,
                   borderColor: bundle.accentColor,
                 ),
                 const Divider(),
@@ -223,13 +251,14 @@ class GoalsTemplateManagerDialog extends ConsumerWidget {
                     trailing: ui.userTemplates.containsKey(name)
                         ? IconButton(
                             icon: const Icon(Icons.delete),
-                            onPressed: () => onDeleteUserTemplate(name),
+                            onPressed: () => widget.onDeleteUserTemplate(name),
                           )
                         : null,
                     onTap: () {
-                      final templateData =
-                          templateDetails[name] ?? ui.userTemplates[name]!;
-                      onTemplateSelected(name, templateData);
+                      final templateData = widget.templateDetails[name] ??
+                          ui.userTemplates[name]!;
+                      setState(() => _validationMessage = null);
+                      widget.onTemplateSelected(name, templateData);
                     },
                   ),
                 ),
@@ -240,7 +269,7 @@ class GoalsTemplateManagerDialog extends ConsumerWidget {
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
-              onPressed: () => onDismiss(dialogContext),
+              onPressed: () => widget.onDismiss(widget.dialogContext),
               child: Text('Close', style: bundle.textStyle),
             ),
           ),

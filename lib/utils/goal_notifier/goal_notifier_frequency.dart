@@ -1,11 +1,35 @@
 import 'package:focusNexus/services/storage/storage_keys.dart';
+import 'package:focusNexus/settings/notification_preference_options.dart';
 import 'package:focusNexus/utils/debug_log.dart';
 
-import '../theme_styles.dart';
 import 'goal_notifier_bindings.dart';
+import 'goal_notifier_cancellation.dart';
 import 'goal_notifier_daily_affirmations.dart';
 import 'goal_notifier_open_streak_reminder.dart';
+import 'goal_notifier_permissions.dart';
 import 'goal_notifier_runtime.dart';
+
+/// Applies permission / cancel side effects, then restores schedules on re-enable.
+Future<void> applyFrequencyChange({
+  required String oldFrequency,
+  required String newFrequency,
+}) async {
+  final normalizedOld = oldFrequency.trim();
+  final normalizedNew = newFrequency.trim();
+  final wasEnabled = NotificationPreferenceOptions.isEnabled(normalizedOld);
+  final isEnabled = NotificationPreferenceOptions.isEnabled(normalizedNew);
+
+  if (!wasEnabled && isEnabled) {
+    await requestNotificationPermission();
+  }
+  if (wasEnabled && !isEnabled) {
+    await cancelAllGoalNotifications();
+  }
+  await refreshSchedulesForFrequencyChange(
+    oldFrequency: normalizedOld,
+    newFrequency: normalizedNew,
+  );
+}
 
 /// Re-applies schedules affected by a frequency transition.
 ///
@@ -18,12 +42,8 @@ Future<void> refreshSchedulesForFrequencyChange({
   final r = GoalNotifierRuntime.I;
   final normalizedOld = oldFrequency.trim();
   final normalizedNew = newFrequency.trim();
-  final wasEnabled = ThemeStyles.notificationsEnabledForFrequency(
-    normalizedOld,
-  );
-  final isEnabled = ThemeStyles.notificationsEnabledForFrequency(
-    normalizedNew,
-  );
+  final wasEnabled = NotificationPreferenceOptions.isEnabled(normalizedOld);
+  final isEnabled = NotificationPreferenceOptions.isEnabled(normalizedNew);
   if (wasEnabled || !isEnabled) {
     return;
   }

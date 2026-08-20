@@ -263,21 +263,21 @@ class CommonUtils {
     bool dense = false,
     int titleMaxLines = 1,
   }) {
-    final dyslexia = usesOpenDyslexic(textStyle);
+    final expandedLabel = needsExpandedLabelLayout(textStyle);
     return Material(
       color: Colors.transparent,
       child: SwitchListTile(
-      dense: dyslexia ? false : dense,
+      dense: expandedLabel ? false : dense,
       contentPadding:
-          dyslexia
+          expandedLabel
               ? EdgeInsets.symmetric(vertical: (textStyle.fontSize ?? 14) * 0.2)
               : (dense ? EdgeInsets.zero : null),
       title: Text(
         text,
         style: textStyle,
-        maxLines: dyslexia ? 4 : titleMaxLines,
+        maxLines: expandedLabel ? 4 : titleMaxLines,
         softWrap: true,
-        overflow: dyslexia ? TextOverflow.visible : TextOverflow.ellipsis,
+        overflow: expandedLabel ? TextOverflow.visible : TextOverflow.ellipsis,
       ),
       value: value,
       onChanged: onChanged,
@@ -296,7 +296,7 @@ class CommonUtils {
     Widget? trailing,
     VoidCallback? onTap,
   }) {
-    final dyslexia = usesOpenDyslexic(textStyle);
+    final expandedLabel = needsExpandedLabelLayout(textStyle);
     final size = textStyle.fontSize ?? 14;
     return outlinedFormRow(
       ListTile(
@@ -307,15 +307,15 @@ class CommonUtils {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         contentPadding: EdgeInsets.symmetric(
           horizontal: 16,
-          vertical: dyslexia ? size * 0.15 : 0,
+          vertical: expandedLabel ? size * 0.15 : 0,
         ),
-        minVerticalPadding: dyslexia ? size * 0.35 : 12,
+        minVerticalPadding: expandedLabel ? size * 0.35 : 12,
         title: Text(
           title,
           style: textStyle,
-          maxLines: dyslexia ? 3 : 1,
+          maxLines: expandedLabel ? 3 : 1,
           softWrap: true,
-          overflow: dyslexia ? TextOverflow.visible : TextOverflow.ellipsis,
+          overflow: expandedLabel ? TextOverflow.visible : TextOverflow.ellipsis,
         ),
         trailing: trailing,
         onTap: onTap,
@@ -332,7 +332,7 @@ class CommonUtils {
     required Color checkColor,
     required ValueChanged<bool?>? onChanged,
   }) {
-    final dyslexia = usesOpenDyslexic(textStyle);
+    final expandedLabel = needsExpandedLabelLayout(textStyle);
     return outlinedFormRow(
       CheckboxListTile(
         contentPadding: EdgeInsets.zero,
@@ -340,9 +340,9 @@ class CommonUtils {
         title: Text(
           title,
           style: textStyle,
-          maxLines: dyslexia ? 4 : 1,
+          maxLines: expandedLabel ? 4 : 1,
           softWrap: true,
-          overflow: dyslexia ? TextOverflow.visible : TextOverflow.ellipsis,
+          overflow: expandedLabel ? TextOverflow.visible : TextOverflow.ellipsis,
         ),
         value: value,
         activeColor: activeColor,
@@ -529,10 +529,17 @@ class CommonUtils {
     Color? labelColor,
   }) {
     final resolvedLabel = labelColor ?? textStyle.color;
+    final expanded = needsExpandedLabelLayout(textStyle);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         backgroundColor: backgroundColor,
-        content: Text(text, style: textStyle.copyWith(color: resolvedLabel)),
+        content: Text(
+          text,
+          style: textStyle.copyWith(color: resolvedLabel),
+          softWrap: true,
+          maxLines: expanded ? 8 : 4,
+          overflow: TextOverflow.visible,
+        ),
         duration: Duration(milliseconds: durationMilliseconds),
         behavior: SnackBarBehavior.floating,
         margin: EdgeInsets.all(margin.toDouble()),

@@ -12,6 +12,7 @@ import 'package:focusNexus/providers/achievements_list_refresh_provider.dart';
 import 'package:focusNexus/providers/app_settings_provider.dart';
 import 'package:focusNexus/goals/dashboard_goals_label.dart';
 import 'package:focusNexus/goals/time_window_goal.dart';
+import 'package:focusNexus/legal/legal_documents.dart';
 import 'package:focusNexus/motivators/adhd_motivator_pack.dart';
 import 'package:focusNexus/providers/goals_provider.dart';
 import 'package:focusNexus/providers/points_balance_provider.dart';
@@ -22,10 +23,12 @@ import 'package:focusNexus/services/daily_open_reward_service.dart';
 import 'package:focusNexus/services/storage/storage_keys.dart';
 import 'package:focusNexus/utils/common_utils.dart';
 import 'package:focusNexus/utils/debug_log.dart';
+import 'package:focusNexus/utils/external_url_launcher.dart';
 import 'package:focusNexus/utils/notifier.dart';
 import 'package:focusNexus/utils/screen_semantics.dart';
 import 'package:focusNexus/widgets/dashboard_motivator_banner.dart';
 import 'package:focusNexus/widgets/dashboard_consistency_section.dart';
+import 'package:focusNexus/widgets/debug_points_credit_panel.dart';
 import 'package:focusNexus/widgets/settings_themed_builder.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -159,7 +162,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget build(BuildContext context) {
     final pointsAsync = ref.watch(pointsBalanceProvider);
     final settings = ref.watch(appSettingsProvider).snapshot;
-    final repos = ref.read(appRepositoriesProvider);
     final activeGoals = ref.watch(goalsProvider).activeGoals;
     final goalsInSlotNow = activeGoals
         .where((g) => isActionWindowActive(g, DateTime.now()))
@@ -225,19 +227,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       },
                     ),
                   ],
-                  if (kDebugMode) ...[
-                    const SizedBox(height: 16),
-                    CommonUtils.buildCenteredButton(
-                      context,
-                      'Test: Set points to 10000000',
-                      () async {
-                        await repos.points.writeBalance(10000000);
-                      },
-                      bundle.textStyle,
-                      bundle.secondaryColor,
-                      borderColor: bundle.primaryColor,
-                    ),
-                  ],
+                  if (kDebugMode) const DebugPointsCreditPanel(),
                   const SizedBox(height: 16),
                   DashboardConsistencySection(bundle: bundle),
                   const SizedBox(height: 24),
@@ -307,6 +297,45 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     bundle.secondaryColor,
                     borderColor: bundle.primaryColor,
                     semanticsHint: 'Opens app assistant',
+                  ),
+                  const SizedBox(height: 16),
+                  Center(
+                    child: OutlinedButton(
+                      onPressed: () async {
+                        final opened =
+                            await openExternalUrl(kLegalContactDiscordUrl);
+                        if (!opened && context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Could not open Discord. Visit $kLegalContactDiscordUrl',
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(kDiscordBrandBlueValue),
+                        side: const BorderSide(
+                          color: Color(kDiscordBrandBlueValue),
+                          width: 1.5,
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: Text(
+                        'Join Discord',
+                        style: bundle.textStyle.copyWith(
+                          color: const Color(kDiscordBrandBlueValue),
+                          fontWeight: FontWeight.w600,
+                          fontSize: (bundle.textStyle.fontSize ?? 14) * 0.9,
+                        ),
+                      ),
+                    ),
                   ),
                 ],
                 ),

@@ -1,10 +1,12 @@
 // lib/screens/auth_start_screen.dart
 import 'package:flutter/material.dart';
-import 'registration_screen.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:focusNexus/app/app_navigation.dart';
+import 'package:focusNexus/app/app_route.dart';
 import '../utils/common_utils.dart';
 
 /// Fixed light welcome styling - independent of persisted user theme.
-class AuthStartScreen extends StatelessWidget {
+class AuthStartScreen extends ConsumerWidget {
   const AuthStartScreen({super.key});
 
   static const Color _scaffoldColor = Color(0xFFF2EFE6);
@@ -43,7 +45,7 @@ class AuthStartScreen extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final textStyle = _textStyle();
     final bodyStyle = _textStyle(weight: FontWeight.normal);
 
@@ -76,12 +78,7 @@ class AuthStartScreen extends StatelessWidget {
                   0,
                   0,
                   () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const RegistrationScreen(),
-                      ),
-                    );
+                    ref.pushReplacementRoute(context, AppRoute.registration);
                   },
                 ),
               ],

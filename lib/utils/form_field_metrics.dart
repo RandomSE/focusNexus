@@ -3,6 +3,17 @@ import 'package:flutter/material.dart';
 /// Whether [style] uses the bundled OpenDyslexic family.
 bool usesOpenDyslexic(TextStyle style) => style.fontFamily == 'OpenDyslexic';
 
+/// Font size at or above which list/switch titles wrap instead of ellipsizing.
+/// Aligns with [controlTextStyle] cap (18) so large accessibility sizes stay
+/// readable without shrinking the user's chosen font size.
+const double kExpandedLabelFontSizeThreshold = 18.0;
+
+/// Whether a list/switch title should use multi-line layout (dyslexia or large
+/// user font size).
+bool needsExpandedLabelLayout(TextStyle style) =>
+    usesOpenDyslexic(style) ||
+    _fontSize(style) >= kExpandedLabelFontSizeThreshold;
+
 double _fontSize(TextStyle style) => style.fontSize ?? 14.0;
 
 double _lineHeight(TextStyle style) => style.height ?? 1.2;
@@ -83,6 +94,7 @@ InputDecoration formInputDecoration({
   bool isDropdown = false,
 }) {
   final dyslexia = usesOpenDyslexic(textStyle);
+  final expanded = needsExpandedLabelLayout(textStyle);
   final minHeight = isDropdown && dyslexia
       ? dropdownButtonClosedHeight(textStyle)
       : formFieldMinHeight(textStyle);
@@ -98,6 +110,12 @@ InputDecoration formInputDecoration({
     border: const OutlineInputBorder(),
     filled: filled,
     fillColor: fillColor,
+    // Default errorMaxLines is 1 (ellipsis); long validators must wrap.
+    errorMaxLines: expanded ? 6 : 4,
+    errorStyle: textStyle.copyWith(
+      color: const Color(0xFFB00020),
+      fontWeight: FontWeight.normal,
+    ),
   );
 }
 

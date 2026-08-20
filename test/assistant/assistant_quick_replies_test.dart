@@ -54,7 +54,7 @@ void main() {
     expect(find.text('How do I add a goal?'), findsOneWidget);
     expect(find.text('What is a time-slot goal?'), findsOneWidget);
     expect(find.text('How do I earn points?'), findsOneWidget);
-    expect(find.text('What is AI Encouragement?'), findsOneWidget);
+    expect(find.text('What is Goal encouragement?'), findsOneWidget);
     expect(find.textContaining('What is a time\n'), findsNothing);
     expect(tester.takeException(), isNull);
   });

@@ -10,6 +10,7 @@ abstract final class AppRoutes {
   AppRoutes._();
 
   static const auth = AuthRoute.routeName;
+  static const registration = RegistrationRoute.routeName;
   static const onboard = OnboardRoute.routeName;
   static const dashboard = DashboardRoute.routeName;
   static const settings = SettingsRoute.routeName;

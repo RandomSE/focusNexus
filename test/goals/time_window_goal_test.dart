@@ -265,7 +265,7 @@ void main() {
   });
 
   group('repeatSeriesEditWindow', () {
-    test('prefers active goal window over series anchor', () {
+    test('prefers active goal end but keeps series windowDuration', () {
       final series = GoalRepeatSeries(
         seriesId: 1,
         repeatRule: RepeatRule.none,
@@ -289,7 +289,77 @@ void main() {
       );
       final window = repeatSeriesEditWindow(series: series, activeGoal: active);
       expect(window.endAt, DateTime(2026, 6, 22, 18, 50));
-      expect(window.duration, const Duration(hours: 2));
+      expect(window.duration, const Duration(hours: 1));
+    });
+
+    test('does not shrink duration when active start was clamped to now', () {
+      final series = GoalRepeatSeries(
+        seriesId: 2,
+        repeatRule: const RepeatRule(
+          enabled: true,
+          unit: RepeatUnit.days,
+          interval: 1,
+        ),
+        windowDuration: const Duration(hours: 1),
+        anchorEndAt: DateTime(2026, 8, 9, 13, 0).toIso8601String(),
+        title: 'Focus block',
+        category: 'Health',
+        complexity: 'Low',
+        effort: 'Low',
+        motivation: 'Low',
+        time: 10,
+        steps: 1,
+      );
+      final active = GoalSet(
+        goalId: 10,
+        title: 'Focus block',
+        repeatSeriesId: 2,
+        goalKind: GoalKind.timeWindow,
+        actionWindowStart: DateTime(2026, 8, 9, 14, 10).toIso8601String(),
+        actionWindowEnd: DateTime(2026, 8, 9, 15, 0).toIso8601String(),
+      );
+      final window = repeatSeriesEditWindow(series: series, activeGoal: active);
+      expect(window.duration, const Duration(hours: 1));
+      expect(
+        window.endAt.subtract(window.duration),
+        DateTime(2026, 8, 9, 14, 0),
+      );
+    });
+  });
+
+  group('actionWindowStartDatePickerRange', () {
+    test('keeps lastDate on or after firstDate when end is before today', () {
+      final end = DateTime(2026, 8, 9, 13, 0);
+      final start = DateTime(2026, 8, 9, 12, 0);
+      final range = actionWindowStartDatePickerRange(
+        startAt: start,
+        endAt: end,
+      );
+      expect(range.lastDate.isBefore(range.firstDate), isFalse);
+      expect(range.initialDate, DateTime(2026, 8, 9));
+    });
+  });
+
+  group('resolveWindowEndAfterStart', () {
+    test('extends end by fallback duration when start is not before end', () {
+      final start = DateTime(2026, 8, 10, 14, 0);
+      final end = DateTime(2026, 8, 10, 13, 0);
+      final resolved = resolveWindowEndAfterStart(
+        start: start,
+        end: end,
+        fallbackDuration: const Duration(hours: 1),
+      );
+      expect(resolved, DateTime(2026, 8, 10, 15, 0));
+    });
+  });
+
+  group('defaultTimeWindowEnd', () {
+    test('defaults to now plus one hour', () {
+      final now = DateTime(2026, 8, 10, 12, 30);
+      expect(
+        defaultTimeWindowEnd(now),
+        DateTime(2026, 8, 10, 13, 30),
+      );
     });
   });
 

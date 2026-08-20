@@ -20,4 +20,24 @@ void main() {
       expect(GoalNotificationAndroid.collapsedPreview('   '), '');
     });
   });
+
+  group('GoalNotificationAndroid status-bar icon', () {
+    test('uses ic_notification drawable name', () {
+      expect(
+        GoalNotificationAndroid.androidStatusBarIcon,
+        'ic_notification',
+      );
+    });
+
+    test('androidDetails wires the status-bar icon', () {
+      final details = GoalNotificationAndroid.androidDetails(
+        channelId: 'channel',
+        channelName: 'Channel',
+        channelDescription: 'desc',
+        title: 'Title',
+        fullBody: 'Body text',
+      );
+      expect(details.icon, GoalNotificationAndroid.androidStatusBarIcon);
+    });
+  });
 }

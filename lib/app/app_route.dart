@@ -6,11 +6,15 @@ import 'package:focusNexus/providers/app_settings_provider.dart';
 import 'package:focusNexus/rewards/reward_type_selection.dart';
 import 'package:focusNexus/screens/achievements_screen.dart';
 import 'package:focusNexus/screens/ai_chat_screen.dart';
+import 'package:focusNexus/legal/legal_documents.dart';
 import 'package:focusNexus/screens/auth_start_screen.dart';
+import 'package:focusNexus/screens/registration_screen.dart';
 import 'package:focusNexus/screens/consistency_explorer_screen.dart';
 import 'package:focusNexus/screens/background_music_screen.dart';
 import 'package:focusNexus/screens/custom_affirmation_pack_screen.dart';
 import 'package:focusNexus/screens/customization_screen.dart';
+import 'package:focusNexus/screens/eula_accept_screen.dart';
+import 'package:focusNexus/screens/legal_document_screen.dart';
 import 'package:focusNexus/services/custom_affirmation_pack.dart';
 import 'package:focusNexus/screens/dashboard_screen.dart';
 import 'package:focusNexus/screens/goals/time_window_bulk_create_wizard.dart';
@@ -69,7 +73,9 @@ sealed class AppRoute {
   Object? get navigationArguments => null;
 
   static const auth = AuthRoute();
+  static const registration = RegistrationRoute();
   static const onboard = OnboardRoute();
+  static const eulaAccept = EulaAcceptRoute();
   static const dashboard = DashboardRoute();
   static const settings = SettingsRoute();
   static const soundEffects = SoundEffectsRoute();
@@ -92,7 +98,12 @@ sealed class AppRoute {
   static AppRoute fromRouteSettings(RouteSettings settings) {
     return switch (settings.name) {
       AuthRoute.routeName => auth,
+      RegistrationRoute.routeName => registration,
       OnboardRoute.routeName => onboard,
+      EulaAcceptRoute.routeName => eulaAccept,
+      LegalDocumentRoute.routeName => LegalDocumentRoute.fromArguments(
+        settings.arguments,
+      ),
       DashboardRoute.routeName => dashboard,
       SettingsRoute.routeName => AppRoute.settings,
       SoundEffectsRoute.routeName => soundEffects,
@@ -138,11 +149,44 @@ final class AuthRoute extends AppRoute {
   String get path => routeName;
 }
 
+final class RegistrationRoute extends AppRoute {
+  const RegistrationRoute();
+  static const routeName = 'registration';
+  @override
+  String get path => routeName;
+}
+
 final class OnboardRoute extends AppRoute {
   const OnboardRoute();
   static const routeName = 'onboard';
   @override
   String get path => routeName;
+}
+
+final class EulaAcceptRoute extends AppRoute {
+  const EulaAcceptRoute();
+  static const routeName = 'eula_accept';
+  @override
+  String get path => routeName;
+}
+
+final class LegalDocumentRoute extends AppRoute {
+  const LegalDocumentRoute(this.documentId);
+
+  final LegalDocumentId documentId;
+
+  static const routeName = 'legal_document';
+
+  factory LegalDocumentRoute.fromArguments(Object? arguments) {
+    final id = LegalDocumentIdX.tryParse(arguments) ?? LegalDocumentId.eula;
+    return LegalDocumentRoute(id);
+  }
+
+  @override
+  String get path => routeName;
+
+  @override
+  Object? get navigationArguments => documentId.name;
 }
 
 final class DashboardRoute extends AppRoute {
@@ -412,18 +456,22 @@ final class UnknownRoute extends AppRoute {
   String get path => requestedPath ?? 'unknown';
 }
 
-/// Onboarding / registration guards applied before building a route.
+/// Onboarding / registration / EULA guards applied before building a route.
 abstract final class AppRouteGuard {
   static AppRoute initialFor(AppSettings settings) {
-    if (settings.onboardingCompleted) return AppRoute.dashboard;
-    if (settings.registrationComplete) return AppRoute.onboard;
-    return AppRoute.auth;
+    if (!settings.registrationComplete) return AppRoute.auth;
+    if (!settings.hasAcceptedCurrentEula) return AppRoute.eulaAccept;
+    if (!settings.onboardingCompleted) return AppRoute.onboard;
+    return AppRoute.dashboard;
   }
 
   static AppRoute guard(AppRoute requested, AppSettings settings) {
     return switch (requested) {
       AuthRoute() => _guardAuth(settings),
+      RegistrationRoute() => _guardRegistration(settings),
       OnboardRoute() => _guardOnboard(settings),
+      EulaAcceptRoute() => _guardEulaAccept(settings),
+      LegalDocumentRoute() => requested,
       UnknownRoute() => requested,
       _ when !_canAccessMainApp(settings) => initialFor(settings),
       _ => requested,
@@ -431,18 +479,31 @@ abstract final class AppRouteGuard {
   }
 
   static AppRoute _guardAuth(AppSettings settings) {
-    if (settings.onboardingCompleted) return AppRoute.dashboard;
-    if (settings.registrationComplete) return AppRoute.onboard;
-    return AppRoute.auth;
+    if (!settings.registrationComplete) return AppRoute.auth;
+    return initialFor(settings);
+  }
+
+  static AppRoute _guardRegistration(AppSettings settings) {
+    if (!settings.registrationComplete) return AppRoute.registration;
+    return initialFor(settings);
   }
 
   static AppRoute _guardOnboard(AppSettings settings) {
-    if (settings.onboardingCompleted) return AppRoute.dashboard;
     if (!settings.registrationComplete) return AppRoute.auth;
+    if (!settings.hasAcceptedCurrentEula) return AppRoute.eulaAccept;
+    if (settings.onboardingCompleted) return AppRoute.dashboard;
     return AppRoute.onboard;
   }
 
+  static AppRoute _guardEulaAccept(AppSettings settings) {
+    if (!settings.registrationComplete) return AppRoute.auth;
+    if (settings.hasAcceptedCurrentEula) return initialFor(settings);
+    return AppRoute.eulaAccept;
+  }
+
   static bool _canAccessMainApp(AppSettings settings) =>
+      settings.registrationComplete &&
+      settings.hasAcceptedCurrentEula &&
       settings.onboardingCompleted;
 }
 
@@ -452,8 +513,18 @@ abstract final class AppRouteRegistry {
     return {
       AuthRoute.routeName: (_) =>
           const _GuardedRouteScreen(route: AppRoute.auth),
+      RegistrationRoute.routeName: (_) =>
+          const _GuardedRouteScreen(route: AppRoute.registration),
       OnboardRoute.routeName: (_) =>
           const _GuardedRouteScreen(route: AppRoute.onboard),
+      EulaAcceptRoute.routeName: (_) =>
+          const _GuardedRouteScreen(route: AppRoute.eulaAccept),
+      LegalDocumentRoute.routeName: (context) {
+        final requested = AppRoute.fromRouteSettings(
+          ModalRoute.of(context)!.settings,
+        );
+        return _GuardedRouteScreen(route: requested);
+      },
       DashboardRoute.routeName: (_) =>
           const _GuardedRouteScreen(route: AppRoute.dashboard),
       SettingsRoute.routeName: (_) =>
@@ -528,7 +599,12 @@ abstract final class AppRouteRegistry {
   static Widget build(BuildContext context, AppRoute route) {
     return switch (route) {
       AuthRoute() => const AuthStartScreen(),
+      RegistrationRoute() => const RegistrationScreen(),
       OnboardRoute() => const OnboardingScreen(),
+      EulaAcceptRoute() => const EulaAcceptScreen(),
+      LegalDocumentRoute(:final documentId) => LegalDocumentScreen(
+        documentId: documentId,
+      ),
       DashboardRoute() => const DashboardScreen(),
       SettingsRoute() => const SettingsScreen(),
       SoundEffectsRoute() => const SoundEffectsScreen(),

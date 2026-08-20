@@ -3,6 +3,7 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:focusNexus/utils/debug_log.dart';
 
 import '../goal_notification_android.dart';
+import '../notification_platform.dart';
 import 'goal_notifier_ids.dart';
 import 'goal_notifier_runtime.dart';
 
@@ -127,6 +128,10 @@ Future<void> scheduleSummaryNotification(
   String title,
   String body,
 ) async {
+  if (!NotificationPlatform.supportsGroupSummaryNotifications) {
+    debugLog('Skipping Android group summary on non-Android platform.');
+    return;
+  }
   final r = GoalNotifierRuntime.I;
   setNow();
   if (!triggerTime.isAfter(r.now)) {
@@ -169,6 +174,10 @@ Future<void> scheduleRepeatingGoalSummaryNotification(
   String title,
   String body,
 ) async {
+  if (!NotificationPlatform.supportsGroupSummaryNotifications) {
+    debugLog('Skipping repeating Android group summary on non-Android platform.');
+    return;
+  }
   final r = GoalNotifierRuntime.I;
   setNow();
   if (!triggerTime.isAfter(r.now)) {

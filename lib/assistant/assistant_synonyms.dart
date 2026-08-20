@@ -3,7 +3,7 @@ const Map<String, List<String>> assistantTokenSynonyms = {
   'settings': ['preferences', 'configure'],
   'points': ['balance', 'score'],
   'assistant': ['help', 'guide'],
-  'encouragement': ['ai encouragement'],
+  'encouragement': ['ai encouragement', 'goal encouragement'],
   'slot': ['time slot', 'window'],
   'privacy': ['data policy', 'data use'],
   'reward': ['rewards'],

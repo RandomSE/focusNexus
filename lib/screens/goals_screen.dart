@@ -21,6 +21,7 @@ import 'package:focusNexus/providers/theme_bundle_provider.dart';
 import 'package:focusNexus/screens/goals/goals_achievement_toast.dart';
 import 'package:focusNexus/screens/goals/goals_form_actions.dart';
 import 'package:focusNexus/screens/goals/goals_goal_details_dialog.dart';
+import 'package:focusNexus/screens/goals/widgets/edit_time_window_goal_dialog.dart';
 import 'package:focusNexus/screens/goals/goals_highlight_scroll.dart';
 import 'package:focusNexus/screens/goals/goals_template_controller.dart';
 import 'package:focusNexus/screens/goals/widgets/goals_confetti_overlay.dart';
@@ -225,6 +226,13 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
       goal: goal,
       isCompleted: isCompleted,
       repeatRule: repeatRule,
+      onEditTimeSlot: isCompleted || goal.repeatSeriesId != 0
+          ? null
+          : () => showEditTimeWindowGoalDialog(
+                context: context,
+                ref: ref,
+                goal: goal,
+              ),
     );
   }
 

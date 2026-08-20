@@ -41,7 +41,7 @@ class AchievementService {
        _cachedAchievements = List.of(cachedAchievements ?? []);
 
   /// Live catalog size after full seed (F5). Kept in sync with initialize catalog.
-  static const numOfAchievements = 181;
+  static const numOfAchievements = 184;
 
   final KeyValueStorage _storage;
   final AchievementRepository _repository;
@@ -52,6 +52,7 @@ class AchievementService {
 
   List<Achievement> _cachedAchievements;
   bool _initialized = false;
+  Future<void>? _initializeFuture;
   Map<String, List<String>> _achievementIdsByVariable = {};
 
   /// Test-only: count of [updateProgress] invocations.
@@ -65,6 +66,7 @@ class AchievementService {
   @visibleForTesting
   void resetInitializedForTesting() {
     _initialized = false;
+    _initializeFuture = null;
   }
 
   late List<int> achievementRepetitions;
@@ -90,7 +92,7 @@ class AchievementService {
     '117',
   ];
 
-  List<int> fireflyDurationRepetitions = [100, 150, 200, 250];
+  List<int> fireflyDurationRepetitions = [50, 75, 100, 125, 150, 175, 200];
   static const int fireflyEndlessRepetition = 500;
   List<int> stoneBalanceHeightRepetitions = [25, 35, 40, 50, 60];
   static const int stoneBalanceEndlessRepetition = 500;
@@ -128,6 +130,11 @@ class AchievementService {
   /// Initialize cache from storage (idempotent - safe to call once at startup).
   Future<void> initialize() async {
     if (_initialized) return;
+    _initializeFuture ??= _initializeOnce();
+    await _initializeFuture;
+  }
+
+  Future<void> _initializeOnce() async {
     await setInitializationPrerequisites();
     _buildAchievementIdsByVariable();
     final stored = await _repository.loadAll();
@@ -170,7 +177,7 @@ class AchievementService {
   Future<List<Achievement>> updateProgressForTrackingKeys(
     Set<String> trackingKeys,
   ) async {
-    if (!_initialized) {
+    if (!_initialized && _initializeFuture == null) {
       await initialize();
     }
     final ids = <String>{};
@@ -403,7 +410,7 @@ class AchievementService {
       [148]: StorageKeys.cherryBlossomPeacePathFlag,
       [149]: StorageKeys.cherryBlossomPowerPathFlag,
       [114, 115, 116, 117]: StorageKeys.consecutiveDaysAppOpened,
-      [118, 119, 120, 121]: StorageKeys.fireflyJarBestDuration,
+      [118, 119, 120, 121, 188, 189, 190]: StorageKeys.fireflyJarBestDuration,
       [122]: StorageKeys.fireflyJarBestEndless,
       [123, 124, 125, 126, 127]: StorageKeys.stoneBalanceBestHeight,
       [128]: StorageKeys.stoneBalanceBestEndless,
@@ -433,6 +440,21 @@ class AchievementService {
       _cachedAchievements.add(achievement);
       await _saveToStorage();
     }
+  }
+
+  /// Inserts [achievement] after [afterId] so [achievementRepetitions] indices stay aligned.
+  Future<void> _insertAchievementAfterId(
+    String afterId,
+    Achievement achievement,
+  ) async {
+    if (_cachedAchievements.any((a) => a.id == achievement.id)) return;
+    final insertAt = _cachedAchievements.indexWhere((a) => a.id == afterId);
+    if (insertAt == -1) {
+      await addAchievement(achievement);
+      return;
+    }
+    _cachedAchievements.insert(insertAt + 1, achievement);
+    await _saveToStorage();
   }
 
   /// Inserts after Sakura Gate / Eternal Bloom so repetition indices stay aligned.
@@ -842,48 +864,42 @@ class AchievementService {
   }
 
   Future<void> _addFireflyJarAchievements() async {
-    await addAchievement(
-      const Achievement(
-        id: '118',
-        title: 'Firefly Swarm I',
-        reward: '40 points',
-        task: 'Catch 100 fireflies in one Duration round of Firefly Jar',
+    const durationDefs = [
+      (id: '118', roman: 'I', catchCount: 50, reward: '40 points'),
+      (id: '119', roman: 'II', catchCount: 75, reward: '40 points'),
+      (id: '120', roman: 'III', catchCount: 100, reward: '40 points'),
+      (id: '121', roman: 'IV', catchCount: 125, reward: '100 points'),
+      (id: '188', roman: 'V', catchCount: 150, reward: '100 points'),
+      (id: '189', roman: 'VI', catchCount: 175, reward: '200 points'),
+      (id: '190', roman: 'VII', catchCount: 200, reward: '200 points'),
+    ];
+    for (final definition in durationDefs) {
+      final achievement = Achievement(
+        id: definition.id,
+        title: 'Firefly Swarm ${definition.roman}',
+        reward: definition.reward,
+        task:
+            'Catch ${definition.catchCount} fireflies in one Duration round of Firefly Jar',
         isSecret: false,
-      ),
-    );
-    await addAchievement(
-      const Achievement(
-        id: '119',
-        title: 'Firefly Swarm II',
-        reward: '100 points',
-        task: 'Catch 150 fireflies in one Duration round of Firefly Jar',
-        isSecret: false,
-      ),
-    );
-    await addAchievement(
-      const Achievement(
-        id: '120',
-        title: 'Firefly Swarm III',
-        reward: '200 points',
-        task: 'Catch 200 fireflies in one Duration round of Firefly Jar',
-        isSecret: false,
-      ),
-    );
-    await addAchievement(
-      const Achievement(
-        id: '121',
-        title: 'Firefly Swarm IV',
-        reward: '400 points',
-        task: 'Catch 250 fireflies in one Duration round of Firefly Jar',
-        isSecret: false,
-      ),
-    );
+      );
+      if (definition.id == '188' ||
+          definition.id == '189' ||
+          definition.id == '190') {
+        final anchor = switch (definition.id) {
+          '188' => '121',
+          '189' => '188',
+          _ => '189',
+        };
+        await _insertAchievementAfterId(anchor, achievement);
+      } else {
+        await addAchievement(achievement);
+      }
+    }
     await addAchievement(
       const Achievement(
         id: '122',
         title: 'Endless Lantern',
-        // 2026-08 rebalance: wallet reduced with PV added (achievement_pv_rewards.dart).
-        reward: '400 points',
+        reward: '500 points',
         task: 'Catch 500 fireflies in one Endless round of Firefly Jar',
         isSecret: false,
       ),
@@ -891,14 +907,25 @@ class AchievementService {
   }
 
   Future<void> _ensureFireflyJarAchievements() async {
-    if (_cachedAchievements.any((a) => a.id == '118')) return;
+    const durationIds = {'118', '119', '120', '121', '188', '189', '190'};
+    final missingDurationIds = durationIds
+        .where((id) => !_cachedAchievements.any((a) => a.id == id))
+        .toSet();
+    final hasEndless = _cachedAchievements.any((a) => a.id == '122');
+    if (missingDurationIds.isEmpty && hasEndless) return;
 
-    await bulkSetAchievementVariablesInStorage([
+    await _ensureAchievementTrackingDefaults([
       StorageKeys.fireflyJarBestDuration,
       StorageKeys.fireflyJarBestEndless,
     ]);
     await _addFireflyJarAchievements();
     _buildAchievementIdsByVariable();
+    if (missingDurationIds.isNotEmpty || !hasEndless) {
+      await updateProgressForTrackingKeys({
+        StorageKeys.fireflyJarBestDuration,
+        StorageKeys.fireflyJarBestEndless,
+      });
+    }
   }
 
   Future<void> _addStoneBalanceAchievements() async {
@@ -1715,6 +1742,17 @@ class AchievementService {
     }
   }
 
+  /// Seeds tracking keys at 0 only when absent (upgrade-safe; keeps best scores).
+  Future<void> _ensureAchievementTrackingDefaults(
+    Iterable<String> variables,
+  ) async {
+    for (final variable in variables) {
+      final existing = await _storage.read(key: variable);
+      if (existing != null) continue;
+      await _storage.write(key: variable, value: '0');
+    }
+  }
+
   Future<void> markCompleted(String id) async {
     final index = _cachedAchievements.indexWhere((a) => a.id == id);
     if (index != -1 && !_cachedAchievements[index].isCompleted) {
@@ -1934,12 +1972,11 @@ class AchievementService {
       '117': (reward: '3500 points', task: null),
     };
 
-    // Mini-game ×0.4 ceil (ids 118-129, 131-140, 150-187; skip 130 Patient One).
-    // 2026-08 rebalance: endless tiers 122/135/140/155/161/167/179 -> 400,
-    // 128/187 -> 800, 185 -> 650 / 186 -> 700 (mono under 187); PV added via
-    // achievement_pv_rewards.dart. Other duration/streak ladders untouched.
+    // Mini-game x0.4 ceil (ids 118-129, 131-140, 150-187, 188-190; skip 130).
+    // Firefly 122 endless -> 500 wallet (base 1250); duration ladder 118-190.
     final miniGameBases = <String, int>{
-      '118': 100, '119': 250, '120': 500, '121': 1000, '122': 1000,
+      '118': 100, '119': 100, '120': 100, '121': 250,
+      '188': 250, '189': 500, '190': 500, '122': 1250,
       '123': 100, '124': 250, '125': 500, '126': 1000, '127': 2500,
       '128': 2000, '129': 250,
       '131': 100, '132': 250, '133': 500, '134': 1000, '135': 1000,
@@ -1957,6 +1994,22 @@ class AchievementService {
         reward: scaledMiniGameRewardLabel(entry.value),
         task: null,
       );
+    }
+
+    const fireflyTaskById = {
+      '118': 'Catch 50 fireflies in one Duration round of Firefly Jar',
+      '119': 'Catch 75 fireflies in one Duration round of Firefly Jar',
+      '120': 'Catch 100 fireflies in one Duration round of Firefly Jar',
+      '121': 'Catch 125 fireflies in one Duration round of Firefly Jar',
+      '188': 'Catch 150 fireflies in one Duration round of Firefly Jar',
+      '189': 'Catch 175 fireflies in one Duration round of Firefly Jar',
+      '190': 'Catch 200 fireflies in one Duration round of Firefly Jar',
+      '122': 'Catch 500 fireflies in one Endless round of Firefly Jar',
+    };
+    for (final entry in fireflyTaskById.entries) {
+      final current = expected[entry.key];
+      if (current == null) continue;
+      expected[entry.key] = (reward: current.reward, task: entry.value);
     }
 
     var changed = false;
@@ -1997,6 +2050,7 @@ class AchievementService {
   Future<void> clearAll() async {
     _cachedAchievements = [];
     _initialized = false;
+    _initializeFuture = null;
     await _repository.clear();
   }
 

@@ -9,6 +9,7 @@ import 'package:focusNexus/mini_games/breath_pacer/breath_pacer_achievements.dar
 import 'package:focusNexus/mini_games/breath_pacer/breath_pacer_constants.dart';
 import 'package:focusNexus/mini_games/breath_pacer/breath_pacer_engine.dart';
 import 'package:focusNexus/mini_games/breath_pacer/breath_pacer_painter.dart';
+import 'package:focusNexus/mini_games/mini_game_round_complete_gate.dart';
 import 'package:focusNexus/mini_games/mini_game_round_config.dart';
 import 'package:focusNexus/providers/app_repositories_provider.dart';
 import 'package:focusNexus/providers/app_services_provider.dart';
@@ -47,6 +48,7 @@ class _BreathPacerPlayScreenState extends ConsumerState<BreathPacerPlayScreen>
   BreathPacerEngine? _engine;
   Duration? _lastElapsed;
   bool _scoreRecorded = false;
+  final _roundCompleteGate = MiniGameRoundCompleteGate();
   bool _bgmStarted = false;
   SoundService? _sounds;
 
@@ -119,7 +121,7 @@ class _BreathPacerPlayScreenState extends ConsumerState<BreathPacerPlayScreen>
     final wasFinished = engine.isFinished;
     engine.update(dt);
     if (!wasFinished && engine.isFinished) {
-      _onRoundComplete();
+      _roundCompleteGate.ensure(_onRoundComplete);
     }
     if (engine.isFinished && engine.endExpandT >= 1 && _ticker.isActive) {
       _ticker.stop();
@@ -155,7 +157,7 @@ class _BreathPacerPlayScreenState extends ConsumerState<BreathPacerPlayScreen>
     final engine = _engine;
     if (engine == null || engine.isFinished) return;
     engine.endRound();
-    await _onRoundComplete();
+    await _roundCompleteGate.ensure(_onRoundComplete);
   }
 
   Future<void> _onTap() async {
@@ -169,10 +171,9 @@ class _BreathPacerPlayScreenState extends ConsumerState<BreathPacerPlayScreen>
     final engine = _engine;
     if (engine != null && !engine.isFinished) {
       engine.endRound();
-      await _onRoundComplete();
-    } else {
-      await _sounds?.stopBreathBackground();
     }
+    await _roundCompleteGate.ensure(_onRoundComplete);
+    await _sounds?.stopBreathBackground();
     if (mounted) Navigator.of(context).pop();
   }
 
@@ -199,7 +200,9 @@ class _BreathPacerPlayScreenState extends ConsumerState<BreathPacerPlayScreen>
                   final timerLabel = _endless
                       ? '${engine.elapsedSeconds.floor()}s'
                       : '${engine.remainingSeconds}s';
-                  void dismiss() {
+                  Future<void> dismiss() async {
+                    await _roundCompleteGate.ensure(_onRoundComplete);
+                    await _sounds?.stopBreathBackground();
                     if (context.mounted) Navigator.of(context).pop();
                   }
 

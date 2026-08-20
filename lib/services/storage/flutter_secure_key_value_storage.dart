@@ -3,8 +3,22 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'key_value_storage.dart';
 
 /// Production [KeyValueStorage] using [FlutterSecureStorage].
+///
+/// Android uses EncryptedSharedPreferences. iOS Keychain items are limited to
+/// this device after first unlock. Cloud backup of app data is disabled in the
+/// Android manifest where configured; uninstall/clear-data still wipes local
+/// FocusNexus preferences (no import/export in this build).
 class FlutterSecureKeyValueStorage implements KeyValueStorage {
-  const FlutterSecureKeyValueStorage([this._delegate = const FlutterSecureStorage()]);
+  FlutterSecureKeyValueStorage([FlutterSecureStorage? delegate])
+      : _delegate = delegate ??
+            const FlutterSecureStorage(
+              aOptions: AndroidOptions(
+                encryptedSharedPreferences: true,
+              ),
+              iOptions: IOSOptions(
+                accessibility: KeychainAccessibility.first_unlock_this_device,
+              ),
+            );
 
   final FlutterSecureStorage _delegate;
 

@@ -215,7 +215,8 @@ void main() {
 
     test('mini-game firefly rewards use x0.4 ceil', () {
       expect(service.getById('118')!.reward, '40 points');
-      expect(service.getById('122')!.reward, '400 points');
+      expect(service.getById('190')!.reward, '200 points');
+      expect(service.getById('122')!.reward, '500 points');
     });
 
     test('persisted stale rewards migrate on initialize', () async {

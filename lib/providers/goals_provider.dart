@@ -260,6 +260,28 @@ class GoalsView extends _$GoalsView {
     return updated;
   }
 
+  Future<GoalSet?> updateTimeWindowGoal({
+    required int goalId,
+    required DateTime windowEndAt,
+    required Duration windowDuration,
+    required DateTime now,
+  }) async {
+    final updated = await _useCase.updateTimeWindowGoal(
+      goalId: goalId,
+      windowEndAt: windowEndAt,
+      windowDuration: windowDuration,
+      now: now,
+      activeSnapshot: state.activeGoals,
+    );
+    if (updated == null) return null;
+    state = state.copyWith(
+      activeGoals: state.activeGoals
+          .map((g) => g.goalId == goalId ? updated : g)
+          .toList(),
+    );
+    return updated;
+  }
+
   Future<GoalSet> createTimeWindowGoal({
     required CreateTimeWindowGoalInput input,
     required DateTime now,

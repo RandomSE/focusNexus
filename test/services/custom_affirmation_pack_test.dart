@@ -235,6 +235,77 @@ void main() {
       expect(['Alpha', 'Beta', 'Gamma'], contains(a));
     });
 
+    test('default insert slot is what sequence playback picks after add', () {
+      final pack = _pack(queue: ['a', 'b', 'c']);
+      final now = DateTime(2026, 8, 16);
+      final pos = PhrasePackSelector.defaultInsertPosition1Based(
+        currentQueueLength: pack.effectiveQueue.length,
+        mode: PhrasePlaybackMode.sequence,
+        now: now,
+      );
+      final nextQueue = PhrasePackQueue.insertMessage(
+        queue: pack.effectiveQueue,
+        id: 'new',
+        position1Based: pos,
+      );
+      final next = pack.copyWith(
+        messages: [
+          ...pack.messages,
+          const PhraseMessage(
+            id: 'new',
+            text: 'Fresh',
+            createdAtMs: 9,
+            updatedAtMs: 9,
+          ),
+        ],
+        queueIds: nextQueue,
+      );
+      expect(PhrasePackSelector.customCoreForDate(next, now), 'Fresh');
+      expect(
+        nextQueue[PhrasePackSelector.sequenceIndexForDate(next, now)],
+        'new',
+      );
+    });
+
+    test('default insert slot is what random playback picks after add', () {
+      final pack = _pack(mode: PhrasePlaybackMode.random, queue: ['a', 'b']);
+      final now = DateTime(2026, 3, 3);
+      final pos = PhrasePackSelector.defaultInsertPosition1Based(
+        currentQueueLength: pack.effectiveQueue.length,
+        mode: PhrasePlaybackMode.random,
+        now: now,
+      );
+      final nextQueue = PhrasePackQueue.insertMessage(
+        queue: pack.effectiveQueue,
+        id: 'new',
+        position1Based: pos,
+      );
+      final next = pack.copyWith(
+        messages: [
+          ...pack.messages,
+          const PhraseMessage(
+            id: 'new',
+            text: 'Fresh random',
+            createdAtMs: 9,
+            updatedAtMs: 9,
+          ),
+        ],
+        queueIds: nextQueue,
+      );
+      expect(PhrasePackSelector.customCoreForDate(next, now), 'Fresh random');
+    });
+
+    test('default insert slot is 1 when the queue is empty', () {
+      expect(
+        PhrasePackSelector.defaultInsertPosition1Based(
+          currentQueueLength: 0,
+          mode: PhrasePlaybackMode.sequence,
+          now: DateTime(2026, 8, 16),
+        ),
+        1,
+      );
+    });
+
     test('nextRandomMessageIndex prefers a different index', () {
       final next = PhrasePackSelector.nextRandomMessageIndex(
         messageCount: 3,

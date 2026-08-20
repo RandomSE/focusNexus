@@ -8,6 +8,7 @@ bool _looksLikeAchievementLookup(String normalized) {
     'what are achievement',
     'how do mini',
     'what is ai encouragement',
+    'what is goal encouragement',
   ];
   if (faqExclusions.any(normalized.contains)) return false;
 

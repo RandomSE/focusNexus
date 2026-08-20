@@ -59,10 +59,9 @@ const _goldenCases = <({String query, String expectedId})>[
     query: 'What are open streak reminders?',
     expectedId: 'settings.open_streak_reminders',
   ),
-  (query: 'What is AI Encouragement?', expectedId: 'settings.ai_encouragement'),
-  (query: 'What is AI encouragement?', expectedId: 'settings.ai_encouragement'),
+  (query: 'What is Goal encouragement?', expectedId: 'settings.ai_encouragement'),
   (
-    query: 'Difference between assistant and AI encouragement',
+    query: 'Difference between assistant and Goal encouragement',
     expectedId: 'general.assistant_vs_encouragement',
   ),
   (query: 'Pause goals notifications', expectedId: 'settings.pause_goals'),
@@ -196,8 +195,8 @@ void main() {
   });
 
   group('matcher edge cases', () {
-    test('AI encouragement is not confused with assistant contrast entry', () {
-      final resolution = resolveAssistantQuery('What is AI Encouragement?');
+    test('Goal encouragement is not confused with assistant contrast entry', () {
+      final resolution = resolveAssistantQuery('What is Goal encouragement?');
       expect(resolution.entryId, 'settings.ai_encouragement');
       expect(resolution.text.toLowerCase(), contains('notification'));
       expect(resolution.text.toLowerCase(), isNot(contains('chatgpt')));

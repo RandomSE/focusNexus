@@ -7,6 +7,7 @@ import 'package:timezone/timezone.dart' as tz;
 
 import 'package:focusNexus/services/storage/key_value_storage.dart';
 
+import '../notification_platform.dart';
 import '../notification_schedule_utils.dart';
 
 class GoalNotifierRuntime {
@@ -42,7 +43,9 @@ class GoalNotifierRuntime {
   /// Single next-day open-streak reminder (above affirmation band).
   static const openStreakReminderNotificationId = 600000;
   int get dailyAffirmationsHorizonDays =>
-      NotificationScheduleUtils.affirmationHorizonDays;
+      NotificationScheduleUtils.affirmationHorizonDaysFor(
+        isIos: NotificationPlatform.isIos,
+      );
   bool aiEncouragement = false;
   bool dailyAffirmations = false;
   bool openStreakReminders = false;

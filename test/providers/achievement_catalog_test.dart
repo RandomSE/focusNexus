@@ -24,7 +24,7 @@ void main() {
     expect(service.updateProgressInvocationCount, 0);
   });
 
-  test('scheduleDeferredStartupWork does not recompute achievements', () async {
+  test('scheduleDeferredStartupWork refreshes category progress only', () async {
     final container = await createTestContainer(
       storage: InMemoryKeyValueStorage(),
       bootstrap: false,
@@ -40,8 +40,11 @@ void main() {
     await scheduleDeferredStartupWork(
       container: container,
       initializeNotifications: false,
+      warmAmbient: false,
     );
 
-    expect(service.updateProgressInvocationCount, 0);
+    // Six category tracking keys (100-105), not a full-catalog recompute.
+    expect(service.updateProgressInvocationCount, 6);
+    expect(service.isInitialized, isTrue);
   });
 }

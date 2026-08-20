@@ -8,6 +8,7 @@ import 'package:focusNexus/mini_games/rain_catcher/rain_catcher_achievements.dar
 import 'package:focusNexus/mini_games/rain_catcher/rain_catcher_constants.dart';
 import 'package:focusNexus/mini_games/rain_catcher/rain_catcher_engine.dart';
 import 'package:focusNexus/mini_games/rain_catcher/rain_catcher_painter.dart';
+import 'package:focusNexus/mini_games/mini_game_round_complete_gate.dart';
 import 'package:focusNexus/providers/app_repositories_provider.dart';
 import 'package:focusNexus/providers/app_services_provider.dart';
 import 'package:focusNexus/providers/mini_game_catalog_provider.dart';
@@ -40,6 +41,7 @@ class _RainCatcherPlayScreenState extends ConsumerState<RainCatcherPlayScreen>
   RainCatcherEngine? _engine;
   Duration? _lastElapsed;
   bool _scoreRecorded = false;
+  final _roundCompleteGate = MiniGameRoundCompleteGate();
 
   bool get _endless => widget.config.endless;
 
@@ -96,7 +98,7 @@ class _RainCatcherPlayScreenState extends ConsumerState<RainCatcherPlayScreen>
     engine.update(dt);
     _handleEngineEvents(engine);
     if (!wasFinished && engine.isFinished) {
-      _onRoundComplete();
+      _roundCompleteGate.ensure(_onRoundComplete);
     }
     if (mounted) setState(() {});
   }
@@ -146,7 +148,7 @@ class _RainCatcherPlayScreenState extends ConsumerState<RainCatcherPlayScreen>
     final engine = _engine;
     if (engine == null || engine.isFinished) return;
     engine.endRound();
-    await _onRoundComplete();
+    await _roundCompleteGate.ensure(_onRoundComplete);
   }
 
   void _onDragUpdate(DragUpdateDetails details) {
@@ -181,7 +183,8 @@ class _RainCatcherPlayScreenState extends ConsumerState<RainCatcherPlayScreen>
                   );
                   _ensureEngine(size);
                   final engine = _engine!;
-                  void dismiss() {
+                  Future<void> dismiss() async {
+                    await _roundCompleteGate.ensure(_onRoundComplete);
                     if (context.mounted) Navigator.of(context).pop();
                   }
                   return Stack(
@@ -202,8 +205,8 @@ class _RainCatcherPlayScreenState extends ConsumerState<RainCatcherPlayScreen>
                         onBack: () async {
                           if (!engine.isFinished) {
                             engine.endRound();
-                            await _onRoundComplete();
                           }
+                          await _roundCompleteGate.ensure(_onRoundComplete);
                           if (context.mounted) {
                             Navigator.of(context).pop();
                           }
