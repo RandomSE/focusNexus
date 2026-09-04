@@ -71,6 +71,7 @@ class UserPrefsRepository {
       pauseGoals: _parseTriStateBool(
         await _storage.read(key: StorageKeys.pauseGoals),
       ),
+      username: await _storage.read(key: StorageKeys.username) ?? '',
       registrationComplete:
           await readBool(StorageKeys.registrationComplete) ||
               await readBool(StorageKeys.loggedIn),

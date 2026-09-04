@@ -40,6 +40,9 @@ mixin _$UserPrefsSnapshot {
   List<String> get rewardTypes => throw _privateConstructorUsedError;
   bool get skipToday => throw _privateConstructorUsedError;
   bool get pauseGoals => throw _privateConstructorUsedError;
+
+  /// Optional username from registration. Empty when omitted.
+  String get username => throw _privateConstructorUsedError;
   bool get registrationComplete => throw _privateConstructorUsedError;
   bool get onboardingCompleted => throw _privateConstructorUsedError;
   bool get eulaAccepted => throw _privateConstructorUsedError;
@@ -84,6 +87,7 @@ abstract class $UserPrefsSnapshotCopyWith<$Res> {
     List<String> rewardTypes,
     bool skipToday,
     bool pauseGoals,
+    String username,
     bool registrationComplete,
     bool onboardingCompleted,
     bool eulaAccepted,
@@ -130,6 +134,7 @@ class _$UserPrefsSnapshotCopyWithImpl<$Res, $Val extends UserPrefsSnapshot>
     Object? rewardTypes = null,
     Object? skipToday = null,
     Object? pauseGoals = null,
+    Object? username = null,
     Object? registrationComplete = null,
     Object? onboardingCompleted = null,
     Object? eulaAccepted = null,
@@ -218,6 +223,10 @@ class _$UserPrefsSnapshotCopyWithImpl<$Res, $Val extends UserPrefsSnapshot>
                 ? _value.pauseGoals
                 : pauseGoals // ignore: cast_nullable_to_non_nullable
                       as bool,
+            username: null == username
+                ? _value.username
+                : username // ignore: cast_nullable_to_non_nullable
+                      as String,
             registrationComplete: null == registrationComplete
                 ? _value.registrationComplete
                 : registrationComplete // ignore: cast_nullable_to_non_nullable
@@ -289,6 +298,7 @@ abstract class _$$UserPrefsSnapshotImplCopyWith<$Res>
     List<String> rewardTypes,
     bool skipToday,
     bool pauseGoals,
+    String username,
     bool registrationComplete,
     bool onboardingCompleted,
     bool eulaAccepted,
@@ -334,6 +344,7 @@ class __$$UserPrefsSnapshotImplCopyWithImpl<$Res>
     Object? rewardTypes = null,
     Object? skipToday = null,
     Object? pauseGoals = null,
+    Object? username = null,
     Object? registrationComplete = null,
     Object? onboardingCompleted = null,
     Object? eulaAccepted = null,
@@ -422,6 +433,10 @@ class __$$UserPrefsSnapshotImplCopyWithImpl<$Res>
             ? _value.pauseGoals
             : pauseGoals // ignore: cast_nullable_to_non_nullable
                   as bool,
+        username: null == username
+            ? _value.username
+            : username // ignore: cast_nullable_to_non_nullable
+                  as String,
         registrationComplete: null == registrationComplete
             ? _value.registrationComplete
             : registrationComplete // ignore: cast_nullable_to_non_nullable
@@ -486,6 +501,7 @@ class _$UserPrefsSnapshotImpl extends _UserPrefsSnapshot {
     final List<String> rewardTypes = const <String>['Mini-games'],
     this.skipToday = false,
     this.pauseGoals = false,
+    this.username = '',
     this.registrationComplete = false,
     this.onboardingCompleted = false,
     this.eulaAccepted = false,
@@ -574,6 +590,11 @@ class _$UserPrefsSnapshotImpl extends _UserPrefsSnapshot {
   @override
   @JsonKey()
   final bool pauseGoals;
+
+  /// Optional username from registration. Empty when omitted.
+  @override
+  @JsonKey()
+  final String username;
   @override
   @JsonKey()
   final bool registrationComplete;
@@ -604,7 +625,7 @@ class _$UserPrefsSnapshotImpl extends _UserPrefsSnapshot {
 
   @override
   String toString() {
-    return 'UserPrefsSnapshot(theme: $theme, fontSize: $fontSize, useDyslexiaFont: $useDyslexiaFont, highContrastMode: $highContrastMode, dailyAffirmations: $dailyAffirmations, motivatorsDisabled: $motivatorsDisabled, aiEncouragement: $aiEncouragement, openStreakReminders: $openStreakReminders, notificationFrequency: $notificationFrequency, notificationStyle: $notificationStyle, customizationEnabled: $customizationEnabled, useCustomColorPalette: $useCustomColorPalette, allowedColors: $allowedColors, customizedFont: $customizedFont, customizedPrimary: $customizedPrimary, customizedSecondary: $customizedSecondary, rewardTypes: $rewardTypes, skipToday: $skipToday, pauseGoals: $pauseGoals, registrationComplete: $registrationComplete, onboardingCompleted: $onboardingCompleted, eulaAccepted: $eulaAccepted, eulaAcceptedVersion: $eulaAcceptedVersion, eulaAcceptedAt: $eulaAcceptedAt, soundEnabled: $soundEnabled, soundVolume: $soundVolume, dailyAffirmationsTime: $dailyAffirmationsTime, openStreakRemindersTime: $openStreakRemindersTime)';
+    return 'UserPrefsSnapshot(theme: $theme, fontSize: $fontSize, useDyslexiaFont: $useDyslexiaFont, highContrastMode: $highContrastMode, dailyAffirmations: $dailyAffirmations, motivatorsDisabled: $motivatorsDisabled, aiEncouragement: $aiEncouragement, openStreakReminders: $openStreakReminders, notificationFrequency: $notificationFrequency, notificationStyle: $notificationStyle, customizationEnabled: $customizationEnabled, useCustomColorPalette: $useCustomColorPalette, allowedColors: $allowedColors, customizedFont: $customizedFont, customizedPrimary: $customizedPrimary, customizedSecondary: $customizedSecondary, rewardTypes: $rewardTypes, skipToday: $skipToday, pauseGoals: $pauseGoals, username: $username, registrationComplete: $registrationComplete, onboardingCompleted: $onboardingCompleted, eulaAccepted: $eulaAccepted, eulaAcceptedVersion: $eulaAcceptedVersion, eulaAcceptedAt: $eulaAcceptedAt, soundEnabled: $soundEnabled, soundVolume: $soundVolume, dailyAffirmationsTime: $dailyAffirmationsTime, openStreakRemindersTime: $openStreakRemindersTime)';
   }
 
   @override
@@ -653,6 +674,8 @@ class _$UserPrefsSnapshotImpl extends _UserPrefsSnapshot {
                 other.skipToday == skipToday) &&
             (identical(other.pauseGoals, pauseGoals) ||
                 other.pauseGoals == pauseGoals) &&
+            (identical(other.username, username) ||
+                other.username == username) &&
             (identical(other.registrationComplete, registrationComplete) ||
                 other.registrationComplete == registrationComplete) &&
             (identical(other.onboardingCompleted, onboardingCompleted) ||
@@ -698,6 +721,7 @@ class _$UserPrefsSnapshotImpl extends _UserPrefsSnapshot {
     const DeepCollectionEquality().hash(_rewardTypes),
     skipToday,
     pauseGoals,
+    username,
     registrationComplete,
     onboardingCompleted,
     eulaAccepted,
@@ -742,6 +766,7 @@ abstract class _UserPrefsSnapshot extends UserPrefsSnapshot {
     final List<String> rewardTypes,
     final bool skipToday,
     final bool pauseGoals,
+    final String username,
     final bool registrationComplete,
     final bool onboardingCompleted,
     final bool eulaAccepted,
@@ -796,6 +821,10 @@ abstract class _UserPrefsSnapshot extends UserPrefsSnapshot {
   bool get skipToday;
   @override
   bool get pauseGoals;
+
+  /// Optional username from registration. Empty when omitted.
+  @override
+  String get username;
   @override
   bool get registrationComplete;
   @override

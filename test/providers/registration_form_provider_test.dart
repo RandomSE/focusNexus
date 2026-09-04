@@ -9,6 +9,7 @@ void main() {
     expect(form.rewardTypes, isEmpty);
     expect(form.eulaAccepted, isFalse);
     expect(form.ageConfirmed, isFalse);
+    expect(form.username, isEmpty);
     expect(form.canContinue, isFalse);
     expect(
       form.missingRequirementsMessage,
@@ -95,5 +96,31 @@ void main() {
       'Choose at least one reward type, EULA acceptance, and confirmation that you are 13 or older to continue.',
     );
     expect(form.continueBlockedFeedbackMessage, isNot(startsWith('*')));
+  });
+
+  test('username is optional and does not affect canContinue', () {
+    const withoutUsername = RegistrationFormState(
+      frequency: 'Medium',
+      rewardTypes: ['Mini-games'],
+      eulaAccepted: true,
+      ageConfirmed: true,
+    );
+    const withUsername = RegistrationFormState(
+      frequency: 'Medium',
+      rewardTypes: ['Mini-games'],
+      eulaAccepted: true,
+      ageConfirmed: true,
+      username: 'any-name',
+    );
+    expect(withoutUsername.canContinue, isTrue);
+    expect(withUsername.canContinue, isTrue);
+    expect(withoutUsername.username, isEmpty);
+    expect(withUsername.username, 'any-name');
+  });
+
+  test('copyWith updates and clears username', () {
+    const form = RegistrationFormState(username: 'kept');
+    expect(form.copyWith(username: 'next').username, 'next');
+    expect(form.copyWith(clearUsername: true).username, isEmpty);
   });
 }

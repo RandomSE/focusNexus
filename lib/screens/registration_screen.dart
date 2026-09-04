@@ -25,7 +25,28 @@ class RegistrationScreen extends ConsumerStatefulWidget {
 
 class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _usernameController = TextEditingController();
   bool _busy = false;
+  bool _showUsernameField = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _usernameController.addListener(_syncUsernameFromField);
+  }
+
+  @override
+  void dispose() {
+    _usernameController.removeListener(_syncUsernameFromField);
+    _usernameController.dispose();
+    super.dispose();
+  }
+
+  void _syncUsernameFromField() {
+    ref
+        .read(registrationFormProvider.notifier)
+        .setUsername(_usernameController.text);
+  }
 
   Future<void> _saveAndContinue() async {
     if (_busy) return;
@@ -39,6 +60,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
         notificationStyle: form.notificationStyle ??
             NotificationPreferenceOptions.defaultStyle,
         rewardTypes: form.rewardTypes,
+        username: _showUsernameField ? _usernameController.text : '',
         acceptEula: true,
       );
       if (!mounted) return;
@@ -112,6 +134,27 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                     'Choose how FocusNexus should notify and reward you.',
                     style: labelStyle.copyWith(fontWeight: FontWeight.normal),
                   ),
+                  const SizedBox(height: 12),
+                  if (!_showUsernameField)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: CommonUtils.buildTextButton(
+                        _busy
+                            ? null
+                            : () => setState(() => _showUsernameField = true),
+                        'Add username (optional)',
+                        labelStyle.copyWith(fontWeight: FontWeight.normal),
+                      ),
+                    )
+                  else
+                    CommonUtils.buildTextFormField(
+                      _usernameController,
+                      'Username',
+                      labelStyle,
+                      secondaryColor,
+                      true,
+                      null,
+                    ),
                   const SizedBox(height: 20),
                   CommonUtils.buildDropdownButtonFormField(
                     'Notification Frequency',
