@@ -37,6 +37,8 @@ class UserPrefsSnapshot with _$UserPrefsSnapshot {
     @Default(<String>['Mini-games']) List<String> rewardTypes,
     @Default(false) bool skipToday,
     @Default(false) bool pauseGoals,
+    /// Optional username from registration. Empty when omitted.
+    @Default('') String username,
     @Default(false) bool registrationComplete,
     @Default(false) bool onboardingCompleted,
     @Default(false) bool eulaAccepted,

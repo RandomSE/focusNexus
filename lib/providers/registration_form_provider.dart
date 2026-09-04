@@ -10,6 +10,7 @@ class RegistrationFormState {
     this.rewardTypes = const [],
     this.eulaAccepted = false,
     this.ageConfirmed = false,
+    this.username = '',
   });
 
   final String? frequency;
@@ -17,6 +18,7 @@ class RegistrationFormState {
   final List<String> rewardTypes;
   final bool eulaAccepted;
   final bool ageConfirmed;
+  final String username;
 
   bool get requiresNotificationStyle =>
       frequency != null &&
@@ -65,8 +67,10 @@ class RegistrationFormState {
     List<String>? rewardTypes,
     bool? eulaAccepted,
     bool? ageConfirmed,
+    String? username,
     bool clearNotificationStyle = false,
     bool clearFrequency = false,
+    bool clearUsername = false,
   }) {
     return RegistrationFormState(
       frequency: clearFrequency ? null : (frequency ?? this.frequency),
@@ -76,6 +80,7 @@ class RegistrationFormState {
       rewardTypes: rewardTypes ?? this.rewardTypes,
       eulaAccepted: eulaAccepted ?? this.eulaAccepted,
       ageConfirmed: ageConfirmed ?? this.ageConfirmed,
+      username: clearUsername ? '' : (username ?? this.username),
     );
   }
 }
@@ -108,5 +113,9 @@ class RegistrationForm extends _$RegistrationForm {
 
   void setAgeConfirmed(bool value) {
     state = state.copyWith(ageConfirmed: value);
+  }
+
+  void setUsername(String value) {
+    state = state.copyWith(username: value);
   }
 }

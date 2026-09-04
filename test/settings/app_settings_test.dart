@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:focusNexus/repositories/theme_repository.dart';
 import 'package:focusNexus/repositories/user_prefs_repository.dart';
+import 'package:focusNexus/services/storage/storage_keys.dart';
 import 'package:focusNexus/settings/app_settings.dart';
 import 'package:focusNexus/utils/theme_styles.dart';
 import 'package:focusNexus/utils/user_prefs_codec.dart';
@@ -107,6 +108,34 @@ void main() {
       expect(settings.notificationFrequency, 'High');
       expect(settings.notificationStyle, 'Vibrant');
       expect(settings.rewardTypes, ['Mini-games']);
+      expect(settings.username, isEmpty);
+      expect(settings.grantsComplimentaryPaidAccess, isFalse);
+    });
+
+    test('completeRegistration persists optional username', () async {
+      await settings.load();
+      await settings.completeRegistration(
+        notificationFrequency: 'High',
+        notificationStyle: 'Vibrant',
+        rewardTypes: ['Mini-games'],
+        username: '  play-tester  ',
+      );
+      expect(settings.username, 'play-tester');
+      expect(await storage.read(key: StorageKeys.username), 'play-tester');
+      expect(settings.grantsComplimentaryPaidAccess, isFalse);
+    });
+
+    test('tester username grants complimentary paid access after registration',
+        () async {
+      await settings.load();
+      await settings.completeRegistration(
+        notificationFrequency: 'High',
+        notificationStyle: 'Vibrant',
+        rewardTypes: ['Mini-games'],
+        username:
+            'scokologhunjmentlogdirfirelogsabndbasmnbjjxcbbxbsjjasldasljdaskjdwn',
+      );
+      expect(settings.grantsComplimentaryPaidAccess, isTrue);
     });
 
     test('clearEulaAcceptance clears acceptance used by applyDefaultPreferences', () async {

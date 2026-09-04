@@ -6,6 +6,7 @@ import 'package:focusNexus/utils/color_argb.dart';
 import 'package:focusNexus/repositories/user_prefs_repository.dart';
 import 'package:focusNexus/rewards/reward_type_selection.dart';
 import 'package:focusNexus/services/storage/storage_keys.dart';
+import 'package:focusNexus/settings/play_store_tester_access.dart';
 import 'package:focusNexus/utils/theme_styles.dart';
 import 'package:focusNexus/utils/user_prefs_codec.dart';
 
@@ -38,6 +39,9 @@ class AppSettings {
   bool get openStreakReminders => _snapshot.openStreakReminders;
   bool get skipToday => _snapshot.skipToday;
   bool get pauseGoals => _snapshot.pauseGoals;
+  String get username => _snapshot.username;
+  bool get grantsComplimentaryPaidAccess =>
+      PlayStoreTesterAccess.grantsComplimentaryPaidAccess(_snapshot.username);
   bool get registrationComplete => _snapshot.registrationComplete;
   bool get onboardingCompleted => _snapshot.onboardingCompleted;
   bool get eulaAccepted => _snapshot.eulaAccepted;
@@ -248,17 +252,25 @@ class AppSettings {
     required String notificationFrequency,
     required String notificationStyle,
     required List<String> rewardTypes,
+    String username = '',
     bool acceptEula = true,
   }) async {
     await _prefs.writeString(StorageKeys.theme, 'light');
     await setNotificationFrequency(notificationFrequency);
     await setNotificationStyle(notificationStyle);
     await setRewardTypes(rewardTypes);
+    await setUsername(username);
     if (acceptEula) {
       await acceptCurrentEula();
     }
     await setRegistrationComplete(true);
     await setOnboardingCompleted(false);
+  }
+
+  Future<void> setUsername(String value) async {
+    final trimmed = value.trim();
+    await _prefs.writeString(StorageKeys.username, trimmed);
+    _apply(_snapshot.copyWith(username: trimmed));
   }
 
   Future<void> setHighContrastMode(bool value) async {
@@ -397,6 +409,7 @@ class AppSettings {
     await setOpenStreakRemindersTime('20:00');
     await setSkipToday(false);
     await setPauseGoals(false);
+    await setUsername('');
     await setRegistrationComplete(false);
     await setOnboardingCompleted(false);
     await clearEulaAcceptance();

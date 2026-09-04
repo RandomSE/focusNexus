@@ -113,6 +113,9 @@ abstract final class StorageKeys {
   static const openStreakReminders = 'openStreakReminders';
   static const openStreakRemindersTime = 'openStreakRemindersTime';
 
+  /// Optional display username from registration (Play Console tester hook).
+  static const username = 'username';
+
   /// Initial setup form (notification/reward prefs) completed; onboarding may remain.
   static const registrationComplete = 'registrationComplete';
 
