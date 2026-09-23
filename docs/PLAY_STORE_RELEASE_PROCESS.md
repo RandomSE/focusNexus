@@ -32,7 +32,7 @@ You are finished when all of the following are true:
 1. A Google Play developer account exists, is paid, and identity
    verification is complete.
 2. A Play Console app exists with application id
-   `com.randomSE.FocusNexus.FocusNexus`.
+   `com.randomse.focusnexus`.
 3. A **signed** Android App Bundle (AAB) built from this repo is uploaded.
 4. Play App Signing is enrolled (Play holds the app-signing key; you keep
    the upload keystore).
@@ -63,7 +63,7 @@ code and then update this file.
 | Item | Value in this repo |
 |------|--------------------|
 | Public app name | FocusNexus |
-| Android `applicationId` / namespace | `com.randomSE.FocusNexus.FocusNexus` |
+| Android `applicationId` / namespace | `com.randomse.focusnexus` |
 | Dart package name | `focusNexus` |
 | First store version | `1.0.0+1` (`versionName` 1.0.0, `versionCode` 1) |
 | Flutter pin | `.flutter-version` = **3.35.7** (CI uses the same pin) |
@@ -87,10 +87,10 @@ code and then update this file.
 | Category (operator intent) | Productivity |
 | Medical claim | Explicitly **not** a medical / ADHD treatment app |
 
-**Do not change `applicationId` after the first upload.** Play treats it
-as the app's identity forever. The current id is unusual (mixed case,
-`FocusNexus` twice) but valid. Changing it later creates a **new** app
-and loses installs, ratings, and the listing.
+**Do not change `applicationId` after the first successful upload.** Play
+treats it as the app's identity forever. The Play Console app is
+`com.randomse.focusnexus`. Changing it later creates a **new** app and
+loses installs, ratings, and the listing.
 
 **Do not use the Discord invite as the Privacy Policy URL.** Discord is
 contact only. Play needs a normal public HTTPS page.
@@ -814,7 +814,7 @@ You still do **not** need to publish the GitHub repo.
 
 - [ ] App created: name FocusNexus, type App, free
 - [ ] Play App Signing enrolled on first upload
-- [ ] application id on the bundle is `com.randomSE.FocusNexus.FocusNexus`
+- [ ] application id on the bundle is `com.randomse.focusnexus`
 - [ ] Target SDK 36 confirmed on the bundle explorer
 - [ ] No unexpected permissions on the merged manifest
 

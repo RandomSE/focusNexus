@@ -173,6 +173,37 @@ void main() {
       await tester.pump();
     });
 
+    testWidgets('createGoal does not persist when notification confirm declines', (
+      tester,
+    ) async {
+      titleController.text = 'Held Goal';
+      timeController.text = '10';
+      var asked = false;
+
+      await pumpFormHarness(
+        tester,
+        onSubmit:
+            () => actions.createGoal(
+              context: tester.element(find.byType(Scaffold)),
+              bundle: _testBundle(),
+              soundService: SoundService(InMemoryKeyValueStorage()),
+              syncGoalsCompletedToday: () {},
+              isMounted: () => true,
+              confirmNotificationPrefs: () async {
+                asked = true;
+                return false;
+              },
+            ),
+      );
+
+      await tester.tap(find.text('Submit goal'));
+      await tester.pump();
+
+      expect(asked, isTrue);
+      expect(titleController.text, 'Held Goal');
+      expect(container.read(goalsProvider).activeGoals, isEmpty);
+    });
+
     testWidgets('clearGoals removes active goals without repeat dialog', (
       tester,
     ) async {

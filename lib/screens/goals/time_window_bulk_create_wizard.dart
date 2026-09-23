@@ -5,9 +5,11 @@ import 'package:focusNexus/goals/goals_time_window_service.dart';
 import 'package:focusNexus/goals/repeat_rule.dart';
 import 'package:focusNexus/goals/time_window_goal.dart';
 import 'package:focusNexus/models/classes/theme_bundle.dart';
+import 'package:focusNexus/providers/app_settings_provider.dart';
 import 'package:focusNexus/providers/goals_provider.dart';
 import 'package:focusNexus/providers/goals_screen_ui_provider.dart';
 import 'package:focusNexus/providers/theme_bundle_provider.dart';
+import 'package:focusNexus/screens/goals/first_goal_notification_prompt.dart';
 import 'package:focusNexus/screens/goals/time_window_creation_feedback.dart';
 import 'package:focusNexus/screens/goals/widgets/time_window_apply_to_all_section.dart';
 import 'package:focusNexus/screens/goals/widgets/time_window_bulk_draft_card.dart';
@@ -73,6 +75,15 @@ class _TimeWindowBulkCreateWizardState
   }
 
   Future<void> _createAll() async {
+    final goals = ref.read(goalsProvider);
+    final allowed = await ensureFirstGoalNotificationPrefs(
+      context: context,
+      bundle: ref.read(themeBundleProvider),
+      settings: ref.read(appSettingsServiceProvider),
+      hasAnyGoal:
+          goals.activeGoals.isNotEmpty || goals.completedGoals.isNotEmpty,
+    );
+    if (!allowed || !mounted) return;
     final now = DateTime.now();
     final inputs = <CreateTimeWindowGoalInput>[
       for (final draft in _drafts)

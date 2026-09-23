@@ -135,6 +135,10 @@ abstract final class StorageKeys {
   static const notificationStyle = 'notificationStyle';
   static const notificationFrequency = 'notificationFrequency';
 
+  /// `'false'` after signup until the first-goal prompt is answered.
+  /// Absent on installs that already chose notifications during setup.
+  static const notificationPrefsConfirmed = 'notificationPrefsConfirmed';
+
   /// JSON list of enabled reward type storage strings (multi-select).
   static const rewardTypes = 'rewardTypes';
   static const customizationEnabled = 'customizationEnabled';

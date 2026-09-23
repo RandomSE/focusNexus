@@ -164,13 +164,14 @@ class CommonUtils {
 
   static Widget buildDropdownButtonFormField<T>(
     String label,
-    T value,
+    T? value,
     List<T> options,
     TextStyle textStyle,
     Color dropdownColor,
     ValueChanged<T?> onChanged, {
     String? Function(String?)? validator,
     String Function(T)? displayText,
+    bool pinLabelToTop = false,
   }) {
     final itemLabels =
         options
@@ -191,6 +192,9 @@ class CommonUtils {
           label: label,
           textStyle: textStyle,
           isDropdown: true,
+          floatingLabelBehavior: pinLabelToTop && !usesOpenDyslexic(textStyle)
+              ? FloatingLabelBehavior.always
+              : null,
         ),
         selectedItemBuilder: (context) {
           return itemLabels

@@ -55,6 +55,7 @@ class GoalsFormActions {
     required SoundService soundService,
     required void Function() syncGoalsCompletedToday,
     required bool Function() isMounted,
+    Future<bool> Function()? confirmNotificationPrefs,
   }) async {
     if (stepsController.text == '') {
       stepsController.text = '1';
@@ -80,6 +81,11 @@ class GoalsFormActions {
         );
       }
       return;
+    }
+
+    if (confirmNotificationPrefs != null) {
+      final allowed = await confirmNotificationPrefs();
+      if (!allowed || !isMounted()) return;
     }
 
     final hours = int.tryParse(deadlineController.text.trim()) ?? 0;

@@ -28,6 +28,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
   final _usernameController = TextEditingController();
   bool _busy = false;
   bool _showUsernameField = false;
+  bool _showRequirements = false;
 
   @override
   void initState() {
@@ -81,17 +82,11 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
     }
   }
 
-  void _onContinuePressed(TextStyle labelStyle) {
+  void _onContinuePressed() {
     if (_busy) return;
     final form = ref.read(registrationFormProvider);
     if (!form.canContinue) {
-      CommonUtils.showSnackBar(
-        context,
-        form.continueBlockedFeedbackMessage,
-        labelStyle.copyWith(fontWeight: FontWeight.normal),
-        4000,
-        16,
-      );
+      setState(() => _showRequirements = true);
       return;
     }
     if (_formKey.currentState!.validate()) {
@@ -114,7 +109,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
           decoration: TextDecoration.underline,
           color: primaryColor,
         );
-        final canTapContinue = form.canContinue && !_busy;
+        final canTapContinue = !_busy;
 
         return Theme(
           data: bundle.themeData,
@@ -131,7 +126,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                 padding: const EdgeInsets.all(16),
                 children: [
                   Text(
-                    'Choose how FocusNexus should notify and reward you.',
+                    'Choose how FocusNexus should reward you. Notification settings can wait until you create your first goal.',
                     style: labelStyle.copyWith(fontWeight: FontWeight.normal),
                   ),
                   const SizedBox(height: 12),
@@ -156,31 +151,6 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                       null,
                     ),
                   const SizedBox(height: 20),
-                  CommonUtils.buildDropdownButtonFormField(
-                    'Notification Frequency',
-                    form.frequency,
-                    NotificationPreferenceOptions.frequencies,
-                    labelStyle,
-                    secondaryColor,
-                    (value) {
-                      if (_busy) return;
-                      formNotifier.setFrequency(value);
-                    },
-                    validator: (value) =>
-                        value == null ? 'Select frequency' : null,
-                  ),
-                  if (form.requiresNotificationStyle)
-                    CommonUtils.buildDropdownButtonFormField(
-                      'Notification Style',
-                      form.notificationStyle,
-                      NotificationPreferenceOptions.styles,
-                      labelStyle,
-                      secondaryColor,
-                      (value) {
-                        if (_busy) return;
-                        formNotifier.setNotificationStyle(value);
-                      },
-                    ),
                   RewardTypesMultiSelect(
                     selected: form.rewardTypes,
                     onChanged: (values) {
@@ -235,7 +205,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                             formNotifier.setAgeConfirmed(value ?? false),
                   ),
                   const SizedBox(height: 24),
-                  if (!form.canContinue)
+                  if (_showRequirements && !form.canContinue)
                     Text(
                       form.missingRequirementsMessage,
                       style: labelStyle.copyWith(
@@ -243,7 +213,8 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                         fontWeight: FontWeight.normal,
                       ),
                     ),
-                  if (!form.canContinue) const SizedBox(height: 8),
+                  if (_showRequirements && !form.canContinue)
+                    const SizedBox(height: 8),
                   Opacity(
                     opacity: canTapContinue ? 1.0 : 0.55,
                     child: CommonUtils.buildElevatedButton(
@@ -253,9 +224,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                       labelStyle,
                       12,
                       8,
-                      canTapContinue
-                          ? () => _onContinuePressed(labelStyle)
-                          : null,
+                      canTapContinue ? _onContinuePressed : null,
                     ),
                   ),
                   const SizedBox(height: 24),

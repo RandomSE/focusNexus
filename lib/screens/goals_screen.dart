@@ -14,11 +14,13 @@ import 'package:focusNexus/models/classes/goal_set.dart';
 import 'package:focusNexus/models/classes/theme_bundle.dart';
 import 'package:focusNexus/providers/app_repositories_provider.dart';
 import 'package:focusNexus/providers/app_services_provider.dart';
+import 'package:focusNexus/providers/app_settings_provider.dart';
 import 'package:focusNexus/providers/achievement_ready_toast_provider.dart';
 import 'package:focusNexus/providers/goals_provider.dart';
 import 'package:focusNexus/providers/goals_screen_ui_provider.dart';
 import 'package:focusNexus/providers/theme_bundle_provider.dart';
 import 'package:focusNexus/screens/goals/goals_achievement_toast.dart';
+import 'package:focusNexus/screens/goals/first_goal_notification_prompt.dart';
 import 'package:focusNexus/screens/goals/goals_form_actions.dart';
 import 'package:focusNexus/screens/goals/goals_goal_details_dialog.dart';
 import 'package:focusNexus/screens/goals/widgets/edit_time_window_goal_dialog.dart';
@@ -107,6 +109,7 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
       stepsController: _stepsController,
       getUiState: () => ref.read(goalsScreenUiProvider),
       isMounted: () => mounted,
+      confirmNotificationPrefs: _confirmNotificationPrefs,
     );
     _formActions = GoalsFormActions(
       goalsNotifier: ref.read(goalsProvider.notifier),
@@ -174,12 +177,24 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
         isMounted: () => mounted,
       );
 
+  Future<bool> _confirmNotificationPrefs() {
+    final goals = ref.read(goalsProvider);
+    return ensureFirstGoalNotificationPrefs(
+      context: context,
+      bundle: _themeBundle,
+      settings: ref.read(appSettingsServiceProvider),
+      hasAnyGoal:
+          goals.activeGoals.isNotEmpty || goals.completedGoals.isNotEmpty,
+    );
+  }
+
   Future<void> _createGoal() => _formActions.createGoal(
         context: context,
         bundle: _themeBundle,
         soundService: ref.read(soundServiceProvider),
         syncGoalsCompletedToday: _syncGoalsCompletedToday,
         isMounted: () => mounted,
+        confirmNotificationPrefs: _confirmNotificationPrefs,
       );
 
   void _resetControllers() {
@@ -187,6 +202,9 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
     _timeController.clear();
     _deadlineController.clear();
     _stepsController.text = '1';
+    ref.read(goalsScreenUiProvider.notifier).update(
+          (state) => state.copyWith(clearSelectedTemplate: true),
+        );
   }
 
   Future<void> _incrementStepProgress(int goalId) async {

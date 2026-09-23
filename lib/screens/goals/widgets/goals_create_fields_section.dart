@@ -71,7 +71,9 @@ class GoalsCreateFieldsSection extends StatelessWidget {
             ),
             child: CommonUtils.buildDropdownButtonFormField(
               'Template (optional)',
-              null,
+              templateNames.contains(uiState.selectedTemplate)
+                  ? uiState.selectedTemplate
+                  : null,
               templateNames,
               bundle.textStyle,
               bundle.secondaryColor,
@@ -79,6 +81,7 @@ class GoalsCreateFieldsSection extends StatelessWidget {
                 if (val == null) return;
                 onTemplateSelected(val);
               },
+              pinLabelToTop: true,
             ),
           ),
           CommonUtils.buildDropdownButtonFormField(

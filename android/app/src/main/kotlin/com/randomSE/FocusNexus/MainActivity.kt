@@ -1,4 +1,4 @@
-package com.randomSE.FocusNexus.FocusNexus
+package com.randomse.focusnexus
 
 import android.content.Intent
 import android.net.Uri
