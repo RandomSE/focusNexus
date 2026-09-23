@@ -92,6 +92,7 @@ InputDecoration formInputDecoration({
   Color? fillColor,
   bool filled = false,
   bool isDropdown = false,
+  FloatingLabelBehavior? floatingLabelBehavior,
 }) {
   final dyslexia = usesOpenDyslexic(textStyle);
   final expanded = needsExpandedLabelLayout(textStyle);
@@ -102,7 +103,8 @@ InputDecoration formInputDecoration({
     labelText: dyslexia ? null : label,
     labelStyle: dyslexia ? null : textStyle,
     floatingLabelStyle: dyslexia ? null : textStyle,
-    floatingLabelBehavior: formFloatingLabelBehavior(textStyle),
+    floatingLabelBehavior:
+        floatingLabelBehavior ?? formFloatingLabelBehavior(textStyle),
     alignLabelWithHint: !dyslexia,
     isDense: false,
     contentPadding: formFieldContentPadding(textStyle, isDropdown: isDropdown),

@@ -6,6 +6,7 @@ import 'package:focusNexus/utils/color_argb.dart';
 import 'package:focusNexus/repositories/user_prefs_repository.dart';
 import 'package:focusNexus/rewards/reward_type_selection.dart';
 import 'package:focusNexus/services/storage/storage_keys.dart';
+import 'package:focusNexus/settings/notification_preference_options.dart';
 import 'package:focusNexus/settings/play_store_tester_access.dart';
 import 'package:focusNexus/utils/theme_styles.dart';
 import 'package:focusNexus/utils/user_prefs_codec.dart';
@@ -265,6 +266,23 @@ class AppSettings {
     }
     await setRegistrationComplete(true);
     await setOnboardingCompleted(false);
+    await _prefs.writeBool(StorageKeys.notificationPrefsConfirmed, false);
+  }
+
+  Future<String?> notificationPrefsConfirmedRaw() {
+    return _prefs.readString(StorageKeys.notificationPrefsConfirmed);
+  }
+
+  /// Saves the first-goal notification choice and stops further prompts.
+  Future<void> confirmDeferredNotificationPrefs({
+    required String frequency,
+    required String style,
+  }) async {
+    await setNotificationFrequency(frequency);
+    if (!NotificationPreferenceOptions.isDisabled(frequency)) {
+      await setNotificationStyle(style);
+    }
+    await _prefs.writeBool(StorageKeys.notificationPrefsConfirmed, true);
   }
 
   Future<void> setUsername(String value) async {

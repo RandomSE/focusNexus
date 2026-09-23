@@ -16,7 +16,7 @@ void main() {
     await tester.tap(find.text('Get started'));
     await pumpUntilFound(tester, find.text('Set up FocusNexus'));
 
-    expect(find.text('Notification Frequency'), findsOneWidget);
+    expect(find.text('Notification Frequency'), findsNothing);
     expect(find.text('Reward types'), findsOneWidget);
     expect(find.text('I confirm I am 13 or older'), findsOneWidget);
     expect(find.text('Add username (optional)'), findsOneWidget);

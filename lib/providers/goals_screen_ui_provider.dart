@@ -26,6 +26,7 @@ class GoalsScreenUiState {
     this.templateDialogName = '',
     this.showTemplateSaveDialog = false,
     this.editingTemplateKey,
+    this.selectedTemplate,
   });
 
   final String selectedCategoryFilter;
@@ -50,6 +51,7 @@ class GoalsScreenUiState {
   final String templateDialogName;
   final bool showTemplateSaveDialog;
   final String? editingTemplateKey;
+  final String? selectedTemplate;
 
   GoalsScreenUiState copyWith({
     String? selectedCategoryFilter,
@@ -74,6 +76,8 @@ class GoalsScreenUiState {
     bool? showTemplateSaveDialog,
     String? editingTemplateKey,
     bool clearEditingTemplateKey = false,
+    String? selectedTemplate,
+    bool clearSelectedTemplate = false,
   }) {
     return GoalsScreenUiState(
       selectedCategoryFilter:
@@ -106,6 +110,9 @@ class GoalsScreenUiState {
       editingTemplateKey: clearEditingTemplateKey
           ? null
           : (editingTemplateKey ?? this.editingTemplateKey),
+      selectedTemplate: clearSelectedTemplate
+          ? null
+          : (selectedTemplate ?? this.selectedTemplate),
     );
   }
 }

@@ -7,9 +7,11 @@ import 'package:focusNexus/goals/goals_time_window_service.dart';
 import 'package:focusNexus/goals/repeat_rule.dart';
 import 'package:focusNexus/goals/time_window_goal.dart';
 import 'package:focusNexus/goals/time_window_points_label.dart';
+import 'package:focusNexus/providers/app_settings_provider.dart';
 import 'package:focusNexus/providers/goals_provider.dart';
 import 'package:focusNexus/providers/goals_screen_ui_provider.dart';
 import 'package:focusNexus/providers/theme_bundle_provider.dart';
+import 'package:focusNexus/screens/goals/first_goal_notification_prompt.dart';
 import 'package:focusNexus/screens/goals/time_window_creation_feedback.dart';
 import 'package:focusNexus/screens/goals/widgets/time_window_goal_fields_editor.dart';
 import 'package:focusNexus/screens/goals/widgets/time_window_repeat_editor.dart';
@@ -41,6 +43,7 @@ class _TimeSlotGoalCreatePanelState extends ConsumerState<TimeSlotGoalCreatePane
   String _complexity = 'Low';
   String _effort = 'Low';
   String _motivation = 'Low';
+  String? _selectedTemplate;
   final _time = TextEditingController(text: '10');
   final _steps = TextEditingController(text: '1');
 
@@ -53,6 +56,7 @@ class _TimeSlotGoalCreatePanelState extends ConsumerState<TimeSlotGoalCreatePane
   }
 
   void _applyTemplate(String name, Map<String, dynamic> data) {
+    _selectedTemplate = name;
     _title.text = name;
     _category = data['category'] as String;
     _complexity = data['complexity'] as String;
@@ -71,6 +75,7 @@ class _TimeSlotGoalCreatePanelState extends ConsumerState<TimeSlotGoalCreatePane
     _complexity = 'Low';
     _effort = 'Low';
     _motivation = 'Low';
+    _selectedTemplate = null;
     _endAt = defaultTimeWindowEnd();
     _duration = defaultTimeWindowDuration;
     _repeat = RepeatRule.none;
@@ -100,6 +105,15 @@ class _TimeSlotGoalCreatePanelState extends ConsumerState<TimeSlotGoalCreatePane
       }
       return;
     }
+    final goals = ref.read(goalsProvider);
+    final allowed = await ensureFirstGoalNotificationPrefs(
+      context: context,
+      bundle: ref.read(themeBundleProvider),
+      settings: ref.read(appSettingsServiceProvider),
+      hasAnyGoal:
+          goals.activeGoals.isNotEmpty || goals.completedGoals.isNotEmpty,
+    );
+    if (!allowed || !mounted) return;
     final now = DateTime.now();
     await ref.read(goalsProvider.notifier).createTimeWindowGoal(
       input: CreateTimeWindowGoalInput(
@@ -157,7 +171,7 @@ class _TimeSlotGoalCreatePanelState extends ConsumerState<TimeSlotGoalCreatePane
         children: [
           CommonUtils.buildDropdownButtonFormField(
             'Template (optional)',
-            null,
+            templates.containsKey(_selectedTemplate) ? _selectedTemplate : null,
             templates.keys.toList(),
             bundle.textStyle,
             bundle.secondaryColor,
@@ -165,6 +179,7 @@ class _TimeSlotGoalCreatePanelState extends ConsumerState<TimeSlotGoalCreatePane
               if (v == null) return;
               _applyTemplate(v, templates[v]!);
             },
+            pinLabelToTop: true,
           ),
           TimeWindowGoalFieldsEditor(
             bundle: bundle,

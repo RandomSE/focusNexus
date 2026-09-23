@@ -11,7 +11,8 @@ void main() {
   });
 
   test('PLAY_STORE_RELEASE_PROCESS.md locks Play identity and AAB recipe', () {
-    expect(doc, contains('com.randomSE.FocusNexus.FocusNexus'));
+    expect(doc, contains('com.randomse.focusnexus'));
+    expect(doc, isNot(contains('com.randomSE.FocusNexus.FocusNexus')));
     expect(doc, contains('1.0.0+1'));
     expect(doc, contains(kPrivacyPolicyPublicUrl));
     expect(

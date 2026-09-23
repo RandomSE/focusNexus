@@ -108,6 +108,10 @@ void main() {
       expect(settings.notificationFrequency, 'High');
       expect(settings.notificationStyle, 'Vibrant');
       expect(settings.rewardTypes, ['Mini-games']);
+      expect(
+        await storage.read(key: StorageKeys.notificationPrefsConfirmed),
+        'false',
+      );
       expect(settings.username, isEmpty);
       expect(settings.grantsComplimentaryPaidAccess, isFalse);
     });

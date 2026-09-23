@@ -32,6 +32,7 @@ class GoalsTemplateController {
     required this.stepsController,
     required this.getUiState,
     required this.isMounted,
+    this.confirmNotificationPrefs,
   });
 
   final AppRepositories repos;
@@ -51,6 +52,7 @@ class GoalsTemplateController {
   final TextEditingController stepsController;
   final GoalsScreenUiState Function() getUiState;
   final bool Function() isMounted;
+  final Future<bool> Function()? confirmNotificationPrefs;
 
   Future<void> loadTemplates() async {
     final templates = await repos.templates.readUserTemplates();
@@ -260,6 +262,7 @@ class GoalsTemplateController {
         complexity: data['complexity'] as String,
         effort: data['effort'] as String,
         motivation: data['motivation'] as String,
+        selectedTemplate: templateName,
       ),
     );
     timeController.text = data['time'] as String;
@@ -283,6 +286,12 @@ class GoalsTemplateController {
         bundle.secondaryColor,
       );
       return;
+    }
+
+    final confirm = confirmNotificationPrefs;
+    if (confirm != null) {
+      final allowed = await confirm();
+      if (!allowed || !isMounted() || !context.mounted) return;
     }
 
     showDialog<void>(
