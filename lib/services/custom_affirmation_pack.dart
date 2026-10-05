@@ -244,14 +244,17 @@ abstract final class PhrasePackRules {
     return trimmed.substring(0, maxTextLength);
   }
 
+  /// Distinguishes creates that share one [DateTime.millisecondsSinceEpoch].
+  static int _idSequence = 0;
+
   static String newMessageId([int? nowMs]) {
     final ms = nowMs ?? DateTime.now().millisecondsSinceEpoch;
-    return 'm_$ms';
+    return 'm_${ms}_${_idSequence++}';
   }
 
   static String newPresetId([int? nowMs]) {
     final ms = nowMs ?? DateTime.now().millisecondsSinceEpoch;
-    return 'p_$ms';
+    return 'p_${ms}_${_idSequence++}';
   }
 
   static List<PhraseMessage> seedBaselines(
