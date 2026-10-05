@@ -134,6 +134,21 @@ void main() {
     expect((await repo.read(affirmation)).messages.first.text, 'Changed');
   });
 
+  test('message and preset ids stay unique inside one millisecond', () {
+    const ms = 1700000000000;
+    final firstMessage = PhrasePackRules.newMessageId(ms);
+    final secondMessage = PhrasePackRules.newMessageId(ms);
+    expect(firstMessage, isNot(secondMessage));
+    expect(firstMessage, startsWith('m_$ms'));
+    expect(secondMessage, startsWith('m_$ms'));
+
+    final firstPreset = PhrasePackRules.newPresetId(ms);
+    final secondPreset = PhrasePackRules.newPresetId(ms);
+    expect(firstPreset, isNot(secondPreset));
+    expect(firstPreset, startsWith('p_$ms'));
+    expect(secondPreset, startsWith('p_$ms'));
+  });
+
   test('cannot delete last message; delete is free', () async {
     await repo.tryAddMessage(motivator, 'Only');
     final id = (await repo.read(motivator)).messages.single.id;
