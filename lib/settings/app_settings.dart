@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'package:focusNexus/legal/legal_documents.dart';
 import 'package:focusNexus/repositories/theme_repository.dart';

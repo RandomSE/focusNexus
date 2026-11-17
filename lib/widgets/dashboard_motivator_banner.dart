@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:focusNexus/motivators/adhd_motivator_pack.dart';
 
 /// Non-blocking dashboard motivator: tap to swap, dismiss for session.

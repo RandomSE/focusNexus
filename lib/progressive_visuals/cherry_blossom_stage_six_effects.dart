@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Subtle pulse/shimmer for stages 6+ (no painted sky).
 class CherryBlossomStageSixEffects extends StatefulWidget {

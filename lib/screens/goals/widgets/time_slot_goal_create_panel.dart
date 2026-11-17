@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focusNexus/goals/builtin_goal_templates.dart';
 import 'package:focusNexus/goals/goal_form_feedback.dart';

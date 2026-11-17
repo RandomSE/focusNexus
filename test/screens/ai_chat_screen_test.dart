@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:focusNexus/ai/assistant_intro_notice.dart';
 import 'package:focusNexus/providers/app_services_provider.dart';

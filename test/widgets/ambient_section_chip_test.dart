@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:focusNexus/services/ambient_soundscape.dart';
 import 'package:focusNexus/widgets/ambient_section_chip.dart';

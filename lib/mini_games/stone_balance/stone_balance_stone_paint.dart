@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Deterministic irregular cairn outline for a stone of [width] x [height].
 Path cairnStonePath(double width, double height, int seed) {

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Bold outlines, saturated fills, and highlight spots for cartoon zen art.
 abstract final class ZenCartoonStyle {

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Brief confirmation after creating time-slot goal(s).
 void showTimeSlotGoalsCreatedFeedback(

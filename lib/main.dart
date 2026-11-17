@@ -2,7 +2,7 @@
 import 'dart:async';
 import 'dart:ui';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focusNexus/app/app_navigator.dart';
 import 'package:focusNexus/app/app_routes.dart';
@@ -120,7 +120,10 @@ class FocusNexusApp extends ConsumerWidget {
         return MusicLifecycleBinder(
           child: ColoredBox(
             color: bg,
-            child: child ?? const SizedBox.shrink(),
+            // flutter_colorpicker still builds legacy Material widgets.
+            child: MaterialUiCompatibilityBridge( // ignore: deprecated_member_use
+              child: child ?? const SizedBox.shrink(),
+            ),
           ),
         );
       },

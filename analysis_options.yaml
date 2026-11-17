@@ -12,6 +12,10 @@ analyzer:
   # does not attach it to fields. See https://github.com/rrousselGit/freezed
   errors:
     invalid_annotation_target: ignore
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
 
 linter:
   rules:

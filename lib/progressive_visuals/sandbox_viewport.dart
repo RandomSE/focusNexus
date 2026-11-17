@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Converts local canvas coordinates to normalized sandbox space (0-1).
 Offset sandboxNormFromLocal(Offset local, Size size) {

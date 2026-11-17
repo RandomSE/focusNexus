@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:confetti/confetti.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'package:focusNexus/goals/goals_use_case.dart';
 import 'package:focusNexus/models/classes/theme_bundle.dart';

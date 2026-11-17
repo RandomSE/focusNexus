@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:focusNexus/progressive_visuals/garden_state.dart';
 import 'package:focusNexus/progressive_visuals/sandbox_entity.dart';
 import 'package:focusNexus/progressive_visuals/zen_placeable_bounds.dart'
