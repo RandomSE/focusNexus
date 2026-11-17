@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:focusNexus/models/classes/goal_set.dart';
 
 /// Scrolls the goals list until a notification-highlighted goal tile is visible.

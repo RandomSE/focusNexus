@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:focusNexus/models/classes/theme_bundle.dart';
 
 /// Bordered group for one slot boundary (ends / starts) with nested date & time rows.

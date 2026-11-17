@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Persisted consistency heatmap palette choice (display names for the picker).
 enum ConsistencyPaletteId {

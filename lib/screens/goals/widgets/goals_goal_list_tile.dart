@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'package:focusNexus/goals/goal_time_window_label.dart';
 import 'package:focusNexus/goals/repeat_rule.dart';

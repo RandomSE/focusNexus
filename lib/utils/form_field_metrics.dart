@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Whether [style] uses the bundled OpenDyslexic family.
 bool usesOpenDyslexic(TextStyle style) => style.fontFamily == 'OpenDyslexic';

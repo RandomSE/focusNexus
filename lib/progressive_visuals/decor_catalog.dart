@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'cherry_blossom_stage_catalog.dart';
 import 'visual_theme_id.dart';

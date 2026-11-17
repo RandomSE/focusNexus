@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'package:focusNexus/models/classes/theme_bundle.dart';
 import 'package:focusNexus/providers/goals_screen_ui_provider.dart';

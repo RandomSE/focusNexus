@@ -1,6 +1,6 @@
 import 'dart:ui' as ui;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:focusNexus/mini_games/word_bloom/word_bloom_constants.dart';
 import 'package:focusNexus/mini_games/word_bloom/word_bloom_engine.dart';

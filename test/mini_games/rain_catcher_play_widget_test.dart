@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:focusNexus/mini_games/mini_game_round_config.dart';
 import 'package:focusNexus/mini_games/rain_catcher/rain_catcher_constants.dart';

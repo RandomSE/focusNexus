@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:focusNexus/widgets/mini_game_themed_hud.dart';
 
 /// Shared top-bar / score / timer / end chrome using [MiniGameThemedHud.compact].

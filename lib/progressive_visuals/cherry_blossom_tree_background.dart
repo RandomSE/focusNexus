@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Programmatic sky/ground backgrounds for cherry blossom stages 0-5.
 class CherryBlossomTreeBackground extends StatelessWidget {

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:focusNexus/models/classes/goal_set.dart';
 import 'package:focusNexus/screens/goals/goals_highlight_scroll.dart';

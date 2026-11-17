@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:focusNexus/mini_games/breath_pacer/breath_pacer_engine.dart';
 
 class BreathPacerPainter extends CustomPainter {

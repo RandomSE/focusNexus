@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:focusNexus/rewards/reward_type_selection.dart';
 import 'package:focusNexus/utils/common_utils.dart';
 

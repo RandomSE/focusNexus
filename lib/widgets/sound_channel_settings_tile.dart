@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:focusNexus/services/sound_channel.dart';
 
 /// Enable / volume / preview row for one [SoundChannel].

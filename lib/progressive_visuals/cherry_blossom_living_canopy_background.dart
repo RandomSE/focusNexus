@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Rich ambient backdrop for Living Canopy (stage 6) and finale (stage 7).
 class CherryBlossomLivingCanopyBackground extends StatelessWidget {

@@ -1,5 +1,5 @@
 import 'package:focusNexus/mini_games/breath_pacer/breath_pacer_constants.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focusNexus/progressive_visuals/visual_theme_id.dart';
 import 'package:focusNexus/providers/app_settings_provider.dart';

@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focusNexus/achievements/refresh_zen_after_achievement_claim.dart';
 import 'package:focusNexus/models/classes/achievement.dart';

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Contrast-safe section / silence chip for the ambient soundscape picker.
 class AmbientSectionChip extends StatelessWidget {

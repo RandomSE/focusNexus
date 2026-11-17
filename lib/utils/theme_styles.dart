@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'package:focusNexus/settings/notification_preference_options.dart';
 import 'package:focusNexus/utils/user_prefs_codec.dart';

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:focusNexus/mini_games/stone_balance/stone_balance_backdrop.dart';
 import 'package:focusNexus/mini_games/stone_balance/stone_balance_constants.dart';
 import 'package:focusNexus/mini_games/stone_balance/stone_balance_engine.dart';
